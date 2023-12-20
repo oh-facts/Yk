@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <Windows.h>
-#include <types.h>
+#include <defines.h>
 
 typedef struct YK_window YK_window;
 

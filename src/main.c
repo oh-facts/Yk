@@ -2,6 +2,14 @@
 #include <yk.h>
 #include <vulkan/vulkan.h>
 
+#if defined (_WIN32)
+#include <vulkan/vulkan_win32.h>
+#elif defined(__linux__)
+#include <vulkan/vulkan_xcb.h>
+#elif defined(__ANDROID__)
+#include <vulkan/vulkan_android.h>
+#endif
+
 #define DEBUG 1
 
 #if DEBUG
@@ -14,6 +22,7 @@
 #define Megabytes(Value) (Kilobytes(Value) * 1024)
 #define Gigabytes(Value) (Megabytes(Value) * 1024)
 #define Terabytes(Value) (Gigabytes(Value) * 1024)
+
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -90,8 +99,55 @@ int main(int argc, char *argv[])
 
     // vulkan stuff here
 
+    //Note(facts): This will go to its own file later. Until I understand vulkan and win32 api enough, I will use main.c
+    //This will continue until hello triangle
+
+    VkApplicationInfo vk_app_info = { 0 };
+    vk_app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    vk_app_info.pNext = 0;
+    vk_app_info.pApplicationName = "yekate";
+    vk_app_info.applicationVersion = 0;
+    vk_app_info.pEngineName = "yk";
+    vk_app_info.engineVersion = 0;
+    vk_app_info.apiVersion = VK_API_VERSION_1_3;
+
     VkInstanceCreateInfo vk_create_info = {0};
     vk_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    vk_create_info.pNext = 0;
+    vk_create_info.flags = 0;
+    vk_create_info.pApplicationInfo = &vk_app_info;
+
+    char* validation_layers[1];
+    validation_layers[0] = "VK_LAYER_KHRONOS_validation";
+
+    vk_create_info.enabledLayerCount = 1;
+    vk_create_info.ppEnabledLayerNames = validation_layers;
+
+    /*
+        When they adding constexpr to C fr fr
+    */
+    #define num_extensions 2
+    char* enabled_extensions[num_extensions];
+    enabled_extensions[0] = VK_KHR_SURFACE_EXTENSION_NAME;
+    #if defined(_WIN32)
+    enabled_extensions[1] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
+
+    #elif defined(__ANDROID__)
+        enabledExtensions.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+    #elif defined(__linux__)
+        enabledExtensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+    #endif
+
+    vk_create_info.enabledExtensionCount = num_extensions;
+    vk_create_info.ppEnabledExtensionNames = enabled_extensions;
+
+    VkInstance vk_instance;
+    vkCreateInstance(&vk_create_info, 0, &vk_instance);
+    
+    uint32_t extensionCount = 17;
+    VkExtensionProperties ext_prop[17];
+    VkResult aw =  vkEnumerateInstanceExtensionProperties(0, &extensionCount, &ext_prop);
+    
 
     MSG msg;
     while (1)
