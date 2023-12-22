@@ -332,8 +332,21 @@ int main(int argc, char *argv[])
 
     vkGetDeviceQueue(vk_device, 0, 0, &vk_q);
 
-    //Some 7 stuff. I need semawhores
+    //34.2.3
+    //Win 32 surface platform
 
+    VkWin32SurfaceCreateInfoKHR vk_win32_surface_create_info_khr = { 0 };
+    vk_win32_surface_create_info_khr.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    vk_win32_surface_create_info_khr.pNext = 0;
+    vk_win32_surface_create_info_khr.flags = 0;
+    vk_win32_surface_create_info_khr.hinstance = wc.hInstance;
+    vk_win32_surface_create_info_khr.hwnd = window_handle;
+
+    VkSurfaceKHR vk_surface_khr = { 0 };
+    VkResultAssert(vkCreateWin32SurfaceKHR(vk_instance, &vk_win32_surface_create_info_khr, 0, &vk_surface_khr), "Win 32 Surface Creation");
+
+    //Some 7 stuff. I need semawhores
+    /*
     //if semaphores aren't extended with semaphore types, they will be binary
     VkSemaphoreCreateInfo vk_semawhore_create_info = { 0 };
     vk_semawhore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -344,8 +357,21 @@ int main(int argc, char *argv[])
     VkSemaphore vk_semawhore = { 0 };
     VkResultAssert(vkCreateSemaphore(vk_device, &vk_semawhore_create_info, 0, &vk_semawhore), "Semaphore creation");
 
+    VkSemaphoreSubmitInfo vk_semawhore_submit_info = { 0 };
+    vk_semawhore_submit_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    vk_semawhore_submit_info.pNext = 0;
+    vk_semawhore_submit_info.semaphore = vk_semawhore;
+    vk_semawhore_submit_info.value = 0; //ignored
 
 
+    VkSubmitInfo2 vk_submit_info = { 0 };
+    vk_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    vk_submit_info.pNext = 0;
+    // vk_submit_info.
+    // vkQueueSubmit2(vk_queu)
+
+    */
+    
     MSG msg;
     while (1)
     {
