@@ -59,7 +59,7 @@ void check_instance_extension_support()
     printf("Vulkan Instance Available Extensions:\n");
     for (uint32_t i = 0; i < extensionCount; ++i) 
     {
-        printf("%s\n", extensions[i].extensionName);
+        printf("%-100s\n", extensions[i].extensionName);
     }
     printf("\n");
 
@@ -297,6 +297,26 @@ int main(int argc, char *argv[])
     VkDevice vk_device;
     VkResultAssert(vkCreateDevice(device_list[0], &vk_device_create_info, 0, &vk_device), "Vulkan device creation");
 
+    //6 starts here
+
+    VkCommandPoolCreateInfo vk_cmd_pool_create_info = { 0 };
+    vk_cmd_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    vk_cmd_pool_create_info.pNext = 0;
+    vk_cmd_pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vk_cmd_pool_create_info.queueFamilyIndex = 0;
+
+    VkCommandPool vk_cmd_pool;
+    VkResultAssert(vkCreateCommandPool(vk_device, &vk_cmd_pool_create_info, 0, &vk_cmd_pool), "Command pool creation");
+
+    VkCommandBufferAllocateInfo vk_cmd_buffer_alloc_info = { 0 };
+    vk_cmd_buffer_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    vk_cmd_buffer_alloc_info.pNext = 0;
+    vk_cmd_buffer_alloc_info.commandPool = vk_cmd_pool;
+    vk_cmd_buffer_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    vk_cmd_buffer_alloc_info.commandBufferCount = 1;
+
+    VkCommandBuffer vk_cmd_buffer;
+    VkResultAssert(vkAllocateCommandBuffers(vk_device, &vk_cmd_buffer_alloc_info, &vk_cmd_buffer), "Command Buffer creation");
 
 
     
