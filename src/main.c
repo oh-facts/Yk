@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <yk.h>
 #include <vulkan/vulkan.h>
+#include <vulkan/vk_enum_string_helper.h>
 
 #if defined (_WIN32)
 #include <vulkan/vulkan_win32.h>
@@ -17,6 +18,47 @@
 #else
     #define Assert(Expression)
 #endif
+void check_extension_support(VkPhysicalDevice device, const char** enabled_extensions, uint32_t num_extensions) {
+    uint32_t extensionCount = 0;
+    vkEnumerateDeviceExtensionProperties(device, NULL, &extensionCount, NULL);
+    VkExtensionProperties* availableExtensions = malloc(sizeof(VkExtensionProperties) * extensionCount);
+    vkEnumerateDeviceExtensionProperties(device, NULL, &extensionCount, availableExtensions);
+
+        for (uint32_t j = 0; j < extensionCount; ++j) {
+           
+                printf("Extension %s is supported.\n", availableExtensions[j]);
+           
+        }
+    
+
+    free(availableExtensions);
+}
+void _check_vk_result(VkResult result, const char* msg) {
+
+    if (result == VK_SUCCESS)
+    {
+        return;
+    }
+    
+    const char* error_msg = string_VkResult(result);
+    printf("%s: %s\n", msg, error_msg);
+
+    if (result == VK_INCOMPLETE) {
+        return;
+    }
+    else
+    {
+       *(int*)0 = 0;
+    }
+
+}
+
+#if DEBUG
+    #define VkResultAssert(result_expr, msg_expr ) _check_vk_result(result_expr, msg_expr);
+#else
+    #define VkResultAssert(result_expr, msg_expr ) result_expr; 
+#endif
+
 
 #define Kilobytes(Value) ((uint64_t)(Value) * 1024)
 #define Megabytes(Value) (Kilobytes(Value) * 1024)
@@ -53,8 +95,6 @@ typedef struct YkMemory YkMemory;
 #else
     LPVOID base_address = 0;
 #endif
-
-
 
 int main(int argc, char *argv[])
 {
@@ -102,6 +142,23 @@ int main(int argc, char *argv[])
     //Note(facts): This will go to its own file later. Until I understand vulkan and win32 api enough, I will use main.c
     //This will continue until hello triangle
 
+    uint32_t extensionCount = 0;
+    vkEnumerateInstanceExtensionProperties(NULL, &extensionCount, NULL);
+
+    // Allocate memory to store extension properties
+    VkExtensionProperties* extensions = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * extensionCount);
+
+    // Query the extension properties
+    vkEnumerateInstanceExtensionProperties(NULL, &extensionCount, extensions);
+
+    printf("Available Vulkan Extensions:\n");
+    for (uint32_t i = 0; i < extensionCount; ++i) {
+        printf("%s\n", extensions[i].extensionName);
+    }
+
+    // Cleanup
+    //free(extensions);
+
     VkApplicationInfo vk_app_info = { 0 };
     vk_app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     vk_app_info.pNext = 0;
@@ -117,8 +174,11 @@ int main(int argc, char *argv[])
     vk_create_info.flags = 0;
     vk_create_info.pApplicationInfo = &vk_app_info;
 
-    char* validation_layers[1];
+    const char* validation_layers[1] = { 0 };
     validation_layers[0] = "VK_LAYER_KHRONOS_validation";
+
+    //validation layer support check
+    
 
     vk_create_info.enabledLayerCount = 1;
     vk_create_info.ppEnabledLayerNames = validation_layers;
@@ -127,28 +187,86 @@ int main(int argc, char *argv[])
         When they adding constexpr to C fr fr
     */
     #define num_extensions 2
-    char* enabled_extensions[num_extensions];
+    const char* enabled_extensions[num_extensions] = {0};
     enabled_extensions[0] = VK_KHR_SURFACE_EXTENSION_NAME;
+    
     #if defined(_WIN32)
-    enabled_extensions[1] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
-
+        enabled_extensions[1] = VK_KHR_WIN32_SURFACE_EXTENSION_NAME;
     #elif defined(__ANDROID__)
-        enabledExtensions.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
+        enabled_extensions[1] = VK_KHR_ANDROID_SURFACE_EXTENSION_NAME;
     #elif defined(__linux__)
-        enabledExtensions.push_back(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+        enabled_extensions[1] = (VK_KHR_XCB_SURFACE_EXTENSION_NAME);
     #endif
+
 
     vk_create_info.enabledExtensionCount = num_extensions;
     vk_create_info.ppEnabledExtensionNames = enabled_extensions;
 
     VkInstance vk_instance;
-    vkCreateInstance(&vk_create_info, 0, &vk_instance);
-    
-    uint32_t extensionCount = 17;
-    VkExtensionProperties ext_prop[17];
-    VkResult aw =  vkEnumerateInstanceExtensionProperties(0, &extensionCount, &ext_prop);
+    VkResultAssert(vkCreateInstance(&vk_create_info, 0, &vk_instance) , "VkInstance creation failed.")
     
 
+// 5.1 starts here
+    #define max_devices 3
+  
+    int devices = 0;
+    vkEnumeratePhysicalDevices(vk_instance, &devices, 0);
+    
+    Assert(devices <= max_devices)
+
+    VkPhysicalDevice device_list[max_devices] = { 0 };
+    int devices_used = max_devices;
+    
+    VkResultAssert(vkEnumeratePhysicalDevices(vk_instance, &devices_used, device_list), "enumerate physical devices failed")
+
+    //ToDo(facts) poll device properties properly
+    // But I only have one GPU so its fine for now.
+    VkPhysicalDeviceProperties yk_device_props;
+    vkGetPhysicalDeviceProperties(device_list[0], &yk_device_props);
+    
+//5.2 starts here
+    //Nvidia 4090 has 5.
+    #define max_queues 5
+    int queues = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(device_list[0], &queues, 0);
+    
+    Assert(queues <= max_queues)
+
+    VkQueueFamilyProperties vk_q_fam_prop_list[max_queues];
+    int queues_used = max_queues;
+
+    vkGetPhysicalDeviceQueueFamilyProperties(device_list[0], &queues_used, vk_q_fam_prop_list);
+
+    float queue_priority = 1;
+
+    VkDeviceQueueCreateInfo vk_device_q_create_info = { 0 };
+    vk_device_q_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    vk_device_q_create_info.pNext = 0;
+    vk_device_q_create_info.queueFamilyIndex = 0;
+    //this is number of queues you want to create. Not how many queues are available in that queue family
+    vk_device_q_create_info.queueCount = 1;
+    vk_device_q_create_info.pQueuePriorities = &queue_priority;
+    
+    const char* device_extention_names[1] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+    VkDeviceCreateInfo vk_device_create_info = { 0 };   
+    vk_device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    vk_device_create_info.pNext = 0;
+    vk_device_create_info.flags = 0;
+    vk_device_create_info.queueCreateInfoCount = 1;
+    vk_device_create_info.pQueueCreateInfos = &vk_device_q_create_info;
+    vk_device_create_info.enabledLayerCount = 1;
+    vk_device_create_info.ppEnabledLayerNames = 0;
+    vk_device_create_info.enabledExtensionCount = 1;
+    vk_device_create_info.ppEnabledExtensionNames = device_extention_names;
+    vk_device_create_info.pEnabledFeatures = 0;
+
+
+    check_extension_support(device_list[0], enabled_extensions, num_extensions);
+    
+
+    VkDevice vk_device;
+    VkResultAssert(vkCreateDevice(device_list[0], &vk_device_create_info, 0, &vk_device), "Vulkan device creation failed");
+    
     MSG msg;
     while (1)
     {
