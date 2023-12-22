@@ -6,6 +6,9 @@
 #include <Windows.h>
 #include <defines.h>
 
+#define WIN_SIZE_X 800
+#define WIN_SIZE_Y 600
+
 typedef struct YK_window YK_window;
 
 struct YK_window

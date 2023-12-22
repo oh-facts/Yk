@@ -71,7 +71,12 @@ void _check_vk_result(VkResult result, const char* msg) {
     if (result == VK_SUCCESS)
     {   
         #if VK_PRINT_SUCCESS
-            printf("%s is great success\n", msg);
+            
+        const int max_len = 30;
+        const int gap = 5;
+
+        printf("%*s%*sis great success\n", max_len, msg, gap, "");
+    
         #endif
        
         return;
@@ -159,7 +164,7 @@ int main(int argc, char *argv[])
         exit(-1);
 
     window_handle = CreateWindowA(wc.lpszClassName, "yekate", WS_OVERLAPPEDWINDOW,
-                                  CW_USEDEFAULT, CW_USEDEFAULT, 600, 600,
+                                  CW_USEDEFAULT, CW_USEDEFAULT, WIN_SIZE_X, WIN_SIZE_Y,
                                   NULL, NULL, wc.hInstance, NULL);
 
     if (!window_handle)
@@ -345,6 +350,68 @@ int main(int argc, char *argv[])
     //ToDo(facts): Needs to be destroyed on exit. I lost track of what all needs to be destroyed on exit, but this is one of them
     VkSurfaceKHR vk_surface_khr = { 0 };
     VkResultAssert(vkCreateWin32SurfaceKHR(vk_instance, &vk_win32_surface_create_info_khr, 0, &vk_surface_khr), "Win 32 Surface Creation");
+
+    //https://harrylovescode.gitbooks.io/vulkan-api/content/chap06/chap06.html
+    VkSurfaceCapabilitiesKHR vk_surface_caps = { 0 };
+    VkResultAssert(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device_list[0], vk_surface_khr, &vk_surface_caps), "Surface Capabilities poll");
+
+    Assert(vk_surface_caps.maxImageCount >= 1);
+    uint32_t imageCount = vk_surface_caps.minImageCount + 1;
+    if (imageCount > vk_surface_caps.maxImageCount)
+        imageCount = vk_surface_caps.maxImageCount;
+
+    VkExtent2D vk_extent = { 0 };
+    if (vk_surface_caps.currentExtent.width == -1 || vk_surface_caps.currentExtent.height == -1)
+    {
+        vk_extent.width = WIN_SIZE_X;
+        vk_extent.height = WIN_SIZE_Y;
+    }
+    else
+    {
+        vk_extent = vk_surface_caps.currentExtent;
+    }
+ 
+    #define max_present_mode 4
+    u32 vk_present_mode_count = 0;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(device_list[0], vk_surface_khr, &vk_present_mode_count, 0);
+    Assert(vk_present_mode_count > 0)
+    Assert(vk_present_mode_count <= max_present_mode)
+
+    VkPresentModeKHR vk_present_mode_list[max_present_mode] = { 0 };
+
+    VkResultAssert(vkGetPhysicalDeviceSurfacePresentModesKHR(device_list[0], vk_surface_khr, &vk_present_mode_count, vk_present_mode_list), "Device Present Modes")
+
+    VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
+
+    //https://harrylovescode.gitbooks.io/vulkan-api/content/chap06/chap06.html
+    for (u32 i = 0; i < vk_present_mode_count; i++) 
+    {
+        if (vk_present_mode_list[i] == VK_PRESENT_MODE_MAILBOX_KHR) 
+        {
+            present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
+            break;
+        }
+
+        if (vk_present_mode_list[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)
+            present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+    }
+
+    //34.10
+    //Swapchain helps to display rendering results to surface
+    
+    
+    VkSwapchainCreateInfoKHR vk_swapchain_create_info = { 0 };
+    vk_swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    vk_swapchain_create_info.pNext = 0;
+    vk_swapchain_create_info.flags = 0;
+    vk_swapchain_create_info.surface = vk_surface_khr;
+    vk_swapchain_create_info.minImageCount = imageCount;
+    //vk_swapchain_create_info.imageFormat = 
+    //vk_swapchain_create_info
+
+
+    VkSwapchainKHR vk_swapchain = { 0 };
+
 
 
 
