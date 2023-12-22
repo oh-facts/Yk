@@ -370,7 +370,30 @@ int main(int argc, char *argv[])
     {
         vk_extent = vk_surface_caps.currentExtent;
     }
- 
+
+    //ToDo(facts): Start doing this on the heap
+
+    #define max_format_count 5
+    u32 vk_format_count = 0;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device_list[0], vk_surface_khr, &vk_format_count, 0);
+    Assert(vk_format_count > 0)
+    Assert(vk_format_count <= max_format_count)
+
+    VkSurfaceFormatKHR vk_surface_format_list[max_format_count] = { 0 };
+    VkResultAssert(vkGetPhysicalDeviceSurfaceFormatsKHR(device_list[0], vk_surface_khr, &vk_format_count, vk_surface_format_list), "Surface formats obtain")
+
+    //ToDo(facts, 12/22): Stop being a smartass at 5:58am. Go to sleep
+    VkSurfaceFormatKHR surface_format = { 0 };
+    for (i32 i = vk_format_count - 1; i >= 0; i--)
+    {
+        surface_format = vk_surface_format_list[i];
+        if (surface_format.format == VK_FORMAT_B8G8R8A8_SRGB && surface_format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        {
+            break;
+        }
+    }
+
+
     #define max_present_mode 4
     u32 vk_present_mode_count = 0;
     vkGetPhysicalDeviceSurfacePresentModesKHR(device_list[0], vk_surface_khr, &vk_present_mode_count, 0);
