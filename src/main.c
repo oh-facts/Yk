@@ -11,6 +11,8 @@
 #include <vulkan/vulkan_android.h>
 #endif
 
+//ToDo(facts): Better Debug profiles.
+
 #define DEBUG 1
 
 #if DEBUG
@@ -18,21 +20,51 @@
 #else
     #define Assert(Expression)
 #endif
-void check_extension_support(VkPhysicalDevice device, const char** enabled_extensions, uint32_t num_extensions) {
+
+#define VK_EXT_PRINT_DEBUG 0
+
+//ToDo(facts): Use transient memory instead of allocating it
+
+void check_device_extension_support(VkPhysicalDevice device) 
+{
+    
     uint32_t extensionCount = 0;
     vkEnumerateDeviceExtensionProperties(device, NULL, &extensionCount, NULL);
     VkExtensionProperties* availableExtensions = malloc(sizeof(VkExtensionProperties) * extensionCount);
     vkEnumerateDeviceExtensionProperties(device, NULL, &extensionCount, availableExtensions);
 
-        for (uint32_t j = 0; j < extensionCount; ++j) {
+    printf("Vulkan Device Available Extentions ");
+    for (uint32_t j = 0; j < extensionCount; ++j)
+    {
            
-                printf("Extension %s is supported.\n", availableExtensions[j]);
+        printf("%s\n", availableExtensions[j]);
            
-        }
-    
+    }
+    printf("\n");
 
     free(availableExtensions);
 }
+
+void check_instance_extension_support()
+{
+
+    uint32_t extensionCount = 0;
+    vkEnumerateInstanceExtensionProperties(NULL, &extensionCount, NULL);
+
+    VkExtensionProperties* extensions = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * extensionCount);
+
+    vkEnumerateInstanceExtensionProperties(NULL, &extensionCount, extensions);
+
+    printf("Vulkan Instance Available Extensions:\n");
+    for (uint32_t i = 0; i < extensionCount; ++i) 
+    {
+        printf("%s\n", extensions[i].extensionName);
+    }
+    printf("\n");
+
+    free(extensions);
+}
+
 void _check_vk_result(VkResult result, const char* msg) {
 
     if (result == VK_SUCCESS)
@@ -50,7 +82,7 @@ void _check_vk_result(VkResult result, const char* msg) {
     {
        *(int*)0 = 0;
     }
-
+ 
 }
 
 #if DEBUG
@@ -59,6 +91,11 @@ void _check_vk_result(VkResult result, const char* msg) {
     #define VkResultAssert(result_expr, msg_expr ) result_expr; 
 #endif
 
+#if VK_EXT_PRINT_DEBUG
+    #define log_extention(Expression) Expression;
+#else
+    #define log_extention(Expression)
+#endif
 
 #define Kilobytes(Value) ((uint64_t)(Value) * 1024)
 #define Megabytes(Value) (Kilobytes(Value) * 1024)
@@ -142,22 +179,8 @@ int main(int argc, char *argv[])
     //Note(facts): This will go to its own file later. Until I understand vulkan and win32 api enough, I will use main.c
     //This will continue until hello triangle
 
-    uint32_t extensionCount = 0;
-    vkEnumerateInstanceExtensionProperties(NULL, &extensionCount, NULL);
+    log_extention(check_instance_extension_support())
 
-    // Allocate memory to store extension properties
-    VkExtensionProperties* extensions = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * extensionCount);
-
-    // Query the extension properties
-    vkEnumerateInstanceExtensionProperties(NULL, &extensionCount, extensions);
-
-    printf("Available Vulkan Extensions:\n");
-    for (uint32_t i = 0; i < extensionCount; ++i) {
-        printf("%s\n", extensions[i].extensionName);
-    }
-
-    // Cleanup
-    //free(extensions);
 
     VkApplicationInfo vk_app_info = { 0 };
     vk_app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -219,6 +242,8 @@ int main(int argc, char *argv[])
     
     VkResultAssert(vkEnumeratePhysicalDevices(vk_instance, &devices_used, device_list), "enumerate physical devices failed")
 
+    log_extention(check_device_extension_support(device_list[0]))
+
     //ToDo(facts) poll device properties properly
     // But I only have one GPU so its fine for now.
     VkPhysicalDeviceProperties yk_device_props;
@@ -254,14 +279,14 @@ int main(int argc, char *argv[])
     vk_device_create_info.flags = 0;
     vk_device_create_info.queueCreateInfoCount = 1;
     vk_device_create_info.pQueueCreateInfos = &vk_device_q_create_info;
-    vk_device_create_info.enabledLayerCount = 1;
+    vk_device_create_info.enabledLayerCount = 0;
     vk_device_create_info.ppEnabledLayerNames = 0;
     vk_device_create_info.enabledExtensionCount = 1;
     vk_device_create_info.ppEnabledExtensionNames = device_extention_names;
     vk_device_create_info.pEnabledFeatures = 0;
 
 
-    check_extension_support(device_list[0], enabled_extensions, num_extensions);
+    
     
 
     VkDevice vk_device;
