@@ -21,8 +21,24 @@
     #define Assert(Expression)
 #endif
 
+#define VK_USE_VALIDATION_LAYERS 1
 #define VK_EXT_PRINT_DEBUG 0
 #define VK_PRINT_SUCCESS 1
+#define LOG_DEVICE_DETAILS 0
+
+void _print_device_details(VkPhysicalDeviceProperties* vk_phys_device_props)
+{
+    printf("\nSelected Gpu\n");
+    printf("----------\n");
+    printf("%s\n%u\n%s\n", vk_phys_device_props->deviceName, vk_phys_device_props->driverVersion, vk_phys_device_props->deviceType==2?"Discrete GPU" : "Integreted probably");
+    printf("----------\n");
+}
+
+#if LOG_DEVICE_DETAILS
+    #define log_device(Expression) _print_device_details(Expression);
+#else
+    #define log_device(Expession)
+#endif
 
 //ToDo(facts): Use transient memory instead of allocating it
 
@@ -207,6 +223,8 @@ int main(int argc, char *argv[])
     vk_create_info.flags = 0;
     vk_create_info.pApplicationInfo = &vk_app_info;
 
+#if VK_USE_VALIDATION_LAYERS
+   
     const char* validation_layers[1] = { 0 };
     validation_layers[0] = "VK_LAYER_KHRONOS_validation";
 
@@ -215,6 +233,8 @@ int main(int argc, char *argv[])
 
     vk_create_info.enabledLayerCount = 1;
     vk_create_info.ppEnabledLayerNames = validation_layers;
+
+#endif
 
     /*
         When they adding constexpr to C fr fr
@@ -236,41 +256,58 @@ int main(int argc, char *argv[])
     vk_create_info.ppEnabledExtensionNames = enabled_extensions;
 
     VkInstance vk_instance;
-    VkResultAssert(vkCreateInstance(&vk_create_info, 0, &vk_instance) , "Vulkan instance creation")
+    VkResultAssert(vkCreateInstance(&vk_create_info, 0, &vk_instance), "Vulkan instance creation")
+
+
+        // 5.1 starts here
+    VkPhysicalDevice vk_phys_device = { 0 };
+
+    {
+        #define max_devices 3
+
+        int devices = 0;
+        vkEnumeratePhysicalDevices(vk_instance, &devices, 0);
+
+        Assert(devices <= max_devices)
+
+        VkPhysicalDevice device_list[max_devices] = { 0 };
+
+        VkResultAssert(vkEnumeratePhysicalDevices(vk_instance, &devices, device_list), "physical device detection")
+        vk_phys_device = device_list[0];
+      
+        //ToDo(facts) poll device properties properly
+        // But I only have one GPU so its fine for now.
+
+   
+        for (i32 i = 0; i < devices; i++)
+        {
+            VkPhysicalDeviceProperties vk_phys_device_props = { 0 };
+            vkGetPhysicalDeviceProperties(device_list[i], &vk_phys_device_props);
+
+            if (vk_phys_device_props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+            {
+                vk_phys_device = device_list[i];
+                log_device(&vk_phys_device_props)
+                break;
+            }
+        }
+        
+    }
+    log_extention(check_device_extension_support(vk_phys_device))
     
-
-// 5.1 starts here
-    #define max_devices 3
-  
-    int devices = 0;
-    vkEnumeratePhysicalDevices(vk_instance, &devices, 0);
-    
-    Assert(devices <= max_devices)
-
-    VkPhysicalDevice device_list[max_devices] = { 0 };
-    int devices_used = max_devices;
-    
-    VkResultAssert(vkEnumeratePhysicalDevices(vk_instance, &devices_used, device_list), "physical device enumeration")
-
-    log_extention(check_device_extension_support(device_list[0]))
-
-    //ToDo(facts) poll device properties properly
-    // But I only have one GPU so its fine for now.
-    VkPhysicalDeviceProperties yk_device_props;
-    vkGetPhysicalDeviceProperties(device_list[0], &yk_device_props);
     
 //5.2 starts here
     //Nvidia 4090 has 5.
     #define max_queues 5
     int queues = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(device_list[0], &queues, 0);
+    vkGetPhysicalDeviceQueueFamilyProperties(vk_phys_device, &queues, 0);
     
     Assert(queues <= max_queues)
 
     VkQueueFamilyProperties vk_q_fam_prop_list[max_queues];
     int queues_used = max_queues;
 
-    vkGetPhysicalDeviceQueueFamilyProperties(device_list[0], &queues_used, vk_q_fam_prop_list);
+    vkGetPhysicalDeviceQueueFamilyProperties(vk_phys_device, &queues_used, vk_q_fam_prop_list);
 
     float queue_priority = 1;
 
@@ -302,7 +339,7 @@ int main(int argc, char *argv[])
     
 
     VkDevice vk_device;
-    VkResultAssert(vkCreateDevice(device_list[0], &vk_device_create_info, 0, &vk_device), "Vulkan device creation");
+    VkResultAssert(vkCreateDevice(vk_phys_device, &vk_device_create_info, 0, &vk_device), "Vulkan device creation");
 
     //6 starts here
 
@@ -353,7 +390,7 @@ int main(int argc, char *argv[])
 
     //https://harrylovescode.gitbooks.io/vulkan-api/content/chap06/chap06.html
     VkSurfaceCapabilitiesKHR vk_surface_caps = { 0 };
-    VkResultAssert(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device_list[0], vk_surface_khr, &vk_surface_caps), "Surface Capabilities poll");
+    VkResultAssert(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vk_phys_device, vk_surface_khr, &vk_surface_caps), "Surface Capabilities poll");
 
     Assert(vk_surface_caps.maxImageCount >= 1);
     uint32_t imageCount = vk_surface_caps.minImageCount + 1;
@@ -375,12 +412,12 @@ int main(int argc, char *argv[])
 
     #define max_format_count 5
     u32 vk_format_count = 0;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(device_list[0], vk_surface_khr, &vk_format_count, 0);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(vk_phys_device, vk_surface_khr, &vk_format_count, 0);
     Assert(vk_format_count > 0)
     Assert(vk_format_count <= max_format_count)
 
     VkSurfaceFormatKHR vk_surface_format_list[max_format_count] = { 0 };
-    VkResultAssert(vkGetPhysicalDeviceSurfaceFormatsKHR(device_list[0], vk_surface_khr, &vk_format_count, vk_surface_format_list), "Surface formats obtain")
+    VkResultAssert(vkGetPhysicalDeviceSurfaceFormatsKHR(vk_phys_device, vk_surface_khr, &vk_format_count, vk_surface_format_list), "Surface formats obtain")
 
     //ToDo(facts, 12/22): Stop being a smartass at 5:58am. Go to sleep
     VkSurfaceFormatKHR surface_format = { 0 };
@@ -396,13 +433,13 @@ int main(int argc, char *argv[])
 
     #define max_present_mode 4
     u32 vk_present_mode_count = 0;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(device_list[0], vk_surface_khr, &vk_present_mode_count, 0);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(vk_phys_device, vk_surface_khr, &vk_present_mode_count, 0);
     Assert(vk_present_mode_count > 0)
     Assert(vk_present_mode_count <= max_present_mode)
 
     VkPresentModeKHR vk_present_mode_list[max_present_mode] = { 0 };
 
-    VkResultAssert(vkGetPhysicalDeviceSurfacePresentModesKHR(device_list[0], vk_surface_khr, &vk_present_mode_count, vk_present_mode_list), "Device Present Modes")
+    VkResultAssert(vkGetPhysicalDeviceSurfacePresentModesKHR(vk_phys_device, vk_surface_khr, &vk_present_mode_count, vk_present_mode_list), "Device Present Modes")
 
     VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
 
@@ -429,8 +466,12 @@ int main(int argc, char *argv[])
     vk_swapchain_create_info.flags = 0;
     vk_swapchain_create_info.surface = vk_surface_khr;
     vk_swapchain_create_info.minImageCount = imageCount;
-    //vk_swapchain_create_info.imageFormat = 
-    //vk_swapchain_create_info
+    vk_swapchain_create_info.imageColorSpace = surface_format.colorSpace;
+    vk_swapchain_create_info.imageFormat = surface_format.format;
+    vk_swapchain_create_info.imageExtent = vk_extent;
+    vk_swapchain_create_info.imageArrayLayers = 1;
+    vk_swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+   
 
 
     VkSwapchainKHR vk_swapchain = { 0 };
@@ -479,6 +520,10 @@ int main(int argc, char *argv[])
             break;
         }
     }
+
+    // ToDo(facts 11/22 16:22): Remember to destroy window
+    
+    //vkDestroyInstance(vk_instance, 0);
 
     return 0;
 }
