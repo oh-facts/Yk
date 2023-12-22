@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
 
     YkMemory engine_memory = {0};
     engine_memory.perm_storage_size = Megabytes(64);
-    engine_memory.temp_storage_size = Gigabytes(4);
+    engine_memory.temp_storage_size = Megabytes(64);
 
     u64 total_size = engine_memory.perm_storage_size + engine_memory.temp_storage_size;
 
@@ -342,8 +342,11 @@ int main(int argc, char *argv[])
     vk_win32_surface_create_info_khr.hinstance = wc.hInstance;
     vk_win32_surface_create_info_khr.hwnd = window_handle;
 
+    //ToDo(facts): Needs to be destroyed on exit. I lost track of what all needs to be destroyed on exit, but this is one of them
     VkSurfaceKHR vk_surface_khr = { 0 };
     VkResultAssert(vkCreateWin32SurfaceKHR(vk_instance, &vk_win32_surface_create_info_khr, 0, &vk_surface_khr), "Win 32 Surface Creation");
+
+
 
     //Some 7 stuff. I need semawhores
     /*
