@@ -272,10 +272,12 @@ int main(int argc, char *argv[])
     VkDeviceQueueCreateInfo vk_device_q_create_info = { 0 };
     vk_device_q_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     vk_device_q_create_info.pNext = 0;
+    vk_device_q_create_info.flags = 0;
     vk_device_q_create_info.queueFamilyIndex = 0;
     //this is number of queues you want to create. Not how many queues are available in that queue family
     vk_device_q_create_info.queueCount = 1;
     vk_device_q_create_info.pQueuePriorities = &queue_priority;
+    
     
     const char* device_extention_names[1] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
     VkDeviceCreateInfo vk_device_create_info = { 0 };   
@@ -318,8 +320,32 @@ int main(int argc, char *argv[])
     VkCommandBuffer vk_cmd_buffer;
     VkResultAssert(vkAllocateCommandBuffers(vk_device, &vk_cmd_buffer_alloc_info, &vk_cmd_buffer), "Command Buffer creation");
 
-
+    VkCommandBufferBeginInfo vk_cmd_buffer_begin_info = { 0 };
+    vk_cmd_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    vk_cmd_buffer_begin_info.pNext = 0;
+    //0 is fine. flags are mean for specific cases
+    vk_cmd_buffer_begin_info.flags = 0;
+    //for secondary buffers
+    vk_cmd_buffer_begin_info.pInheritanceInfo = 0;
     
+    VkQueue vk_q = { 0 };
+
+    vkGetDeviceQueue(vk_device, 0, 0, &vk_q);
+
+    //Some 7 stuff. I need semawhores
+
+    //if semaphores aren't extended with semaphore types, they will be binary
+    VkSemaphoreCreateInfo vk_semawhore_create_info = { 0 };
+    vk_semawhore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    vk_semawhore_create_info.pNext = 0;
+    vk_semawhore_create_info.flags = 0;
+    
+
+    VkSemaphore vk_semawhore = { 0 };
+    VkResultAssert(vkCreateSemaphore(vk_device, &vk_semawhore_create_info, 0, &vk_semawhore), "Semaphore creation");
+
+
+
     MSG msg;
     while (1)
     {
