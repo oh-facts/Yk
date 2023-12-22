@@ -22,6 +22,7 @@
 #endif
 
 #define VK_EXT_PRINT_DEBUG 0
+#define VK_PRINT_SUCCESS 1
 
 //ToDo(facts): Use transient memory instead of allocating it
 
@@ -68,12 +69,16 @@ void check_instance_extension_support()
 void _check_vk_result(VkResult result, const char* msg) {
 
     if (result == VK_SUCCESS)
-    {
+    {   
+        #if VK_PRINT_SUCCESS
+            printf("%s is great success\n", msg);
+        #endif
+       
         return;
     }
     
     const char* error_msg = string_VkResult(result);
-    printf("%s: %s\n", msg, error_msg);
+    printf("%s failed %s\n", msg, error_msg);
 
     if (result == VK_INCOMPLETE) {
         return;
@@ -226,7 +231,7 @@ int main(int argc, char *argv[])
     vk_create_info.ppEnabledExtensionNames = enabled_extensions;
 
     VkInstance vk_instance;
-    VkResultAssert(vkCreateInstance(&vk_create_info, 0, &vk_instance) , "VkInstance creation failed.")
+    VkResultAssert(vkCreateInstance(&vk_create_info, 0, &vk_instance) , "Vulkan instance creation")
     
 
 // 5.1 starts here
@@ -240,7 +245,7 @@ int main(int argc, char *argv[])
     VkPhysicalDevice device_list[max_devices] = { 0 };
     int devices_used = max_devices;
     
-    VkResultAssert(vkEnumeratePhysicalDevices(vk_instance, &devices_used, device_list), "enumerate physical devices failed")
+    VkResultAssert(vkEnumeratePhysicalDevices(vk_instance, &devices_used, device_list), "physical device enumeration")
 
     log_extention(check_device_extension_support(device_list[0]))
 
@@ -290,7 +295,10 @@ int main(int argc, char *argv[])
     
 
     VkDevice vk_device;
-    VkResultAssert(vkCreateDevice(device_list[0], &vk_device_create_info, 0, &vk_device), "Vulkan device creation failed");
+    VkResultAssert(vkCreateDevice(device_list[0], &vk_device_create_info, 0, &vk_device), "Vulkan device creation");
+
+
+
     
     MSG msg;
     while (1)
