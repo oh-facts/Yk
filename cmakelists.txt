@@ -12,6 +12,7 @@ include_directories(src)
 find_package(Vulkan REQUIRED)
 
 include_directories(
+    src
     include
     ${Vulkan_INCLUDE_DIRS}
 )
@@ -21,7 +22,7 @@ set(yk_src "src/yk.c")
 add_library(${PROJECT_NAME} ${yk_src})
 target_link_libraries(${PROJECT_NAME}  ${Vulkan_LIBRARIES})
 
-add_executable(yk_test "src/main.c")
+add_executable(yk_test "src/main.c" "src/yk_file_reader.c")
 target_link_libraries(yk_test yk )
 
 #---------------------#
