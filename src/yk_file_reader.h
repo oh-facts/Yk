@@ -12,8 +12,11 @@
     Reads a file at filepath and retuns data as a char *
     The returned char* needs to be freed by the caller.
 */
-char* yk_file_reader(const char* filepath);
+char* yk_read_text_file(const char* filepath);
 
-
-
+/*
+    Reads a binary file (no next transformations applied) at filepath and retuns data as a char *
+    The returned char* needs to be freed by the caller.
+*/
+char* yk_read_binary_file(const char* filename, size_t* fileSize);
 #endif

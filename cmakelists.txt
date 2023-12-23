@@ -30,6 +30,33 @@ target_link_libraries(yk_test yk )
 
 #----------copy files----------#
 
+set(files_copied FALSE)
+
+function(copy_directory_if_changed source_dir destination_dir)
+    file(GLOB_RECURSE source_files "${source_dir}/*")
+    foreach(source_file IN LISTS source_files)
+        file(RELATIVE_PATH relative_path "${source_dir}" "${source_file}")
+        set(destination_file "${destination_dir}/${relative_path}")
+
+        execute_process(
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${source_file}" "${destination_file}"
+            RESULT_VARIABLE copy_result
+        )
+
+        if(NOT copy_result EQUAL 0)
+            message(FATAL_ERROR "Error copying file: ${source_file}")
+        else()
+            set(files_copied TRUE)
+        endif()
+    endforeach()
+endfunction()
+
+copy_directory_if_changed(${CMAKE_CURRENT_SOURCE_DIR}/res ${CMAKE_CURRENT_BINARY_DIR}/res)
+
+if (NOT files_copied)
+    message("No files were copied.")
+endif()
+
 
 #|---compile-commands-|
 

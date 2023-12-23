@@ -541,6 +541,31 @@ int main(int argc, char *argv[])
         VkResultAssert(vkCreateImageView(vk_device, &vk_image_view_create_info, 0, &vk_swapchain_image_view_list[i]), str);
     }
 
+    //Graphics Pipeline starts here
+
+    int vert_len = { 0 };
+    int frag_len = { 0 };
+    const char* vert_shader_code = yk_read_binary_file("res/vert.spv", &vert_len);
+    const char* frag_shader_code = yk_read_binary_file("res/frag.spv", &frag_len);
+
+    VkShaderModuleCreateInfo vk_shader_vert_module_create_info = { 0 };
+    vk_shader_vert_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    vk_shader_vert_module_create_info.codeSize = vert_len;
+    vk_shader_vert_module_create_info.pCode = (u32*)vert_shader_code;
+
+    VkShaderModule vk_shader_vert_module = { 0 };
+    VkResultAssert(vkCreateShaderModule(vk_device, &vk_shader_vert_module_create_info, 0, &vk_shader_vert_module), "Vert Shader Module Creation");
+
+    VkShaderModuleCreateInfo vk_shader_frag_module_create_info = { 0 };
+    vk_shader_frag_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    vk_shader_frag_module_create_info.codeSize = frag_len;
+    vk_shader_frag_module_create_info.pCode = (u32*)frag_shader_code;
+
+    VkShaderModule vk_shader_frag_module = { 0 };
+    VkResultAssert(vkCreateShaderModule(vk_device, &vk_shader_frag_module_create_info, 0, &vk_shader_frag_module), "Frag Shader Module Creation");
+
+    free(vert_shader_code);
+    free(frag_shader_code);
 
 
     //6 starts here
@@ -625,7 +650,9 @@ int main(int argc, char *argv[])
     }
    
     */
-    
+
+    //vkDestroyShaderModule(vk_device, vk_shader_frag_module, 0);
+    //vkDestroyShaderModule(vk_device, vk_shader_vert_module, 0);
     // vkDestroySwapchainKHR(vk_device, vk_swapchain, 0);
     // vkDestroyDevice(vk_device, 0);
     // vkDestroySurfaceKHR(vk_instance, vk_surface, 0);

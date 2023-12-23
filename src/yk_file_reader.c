@@ -7,7 +7,7 @@ fopen_s() is only defined in windows
 #define fopen_s(pFile, filepath, mode) ((*(pFile)) = fopen((filepath), (mode))) == NULL
 #endif
 
-char* yk_file_reader(const char* filepath)
+char* yk_read_text_file(const char* filepath)
 {
     FILE* file;
     fopen_s(&file, filepath, "r");
@@ -50,4 +50,37 @@ char* yk_file_reader(const char* filepath)
     fclose(file);
 
     return string;
+}
+
+char* yk_read_binary_file(const char* filename, size_t* fileSize) 
+{
+    FILE* file = fopen(filename, "rb");
+
+    if (!file) {
+        perror("Failed to open file");
+        return NULL;
+    }
+
+    fseek(file, 0, SEEK_END);
+    *fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    char* buffer = (char*)malloc(*fileSize);
+    if (!buffer) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return NULL;
+    }
+
+    if (fread(buffer, 1, *fileSize, file) != *fileSize) 
+    {
+        perror("Failed to read file");
+        free(buffer);
+        fclose(file);
+        return NULL;
+    }
+
+    fclose(file);
+
+    return buffer;
 }
