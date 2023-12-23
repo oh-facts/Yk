@@ -548,25 +548,39 @@ int main(int argc, char *argv[])
     const char* vert_shader_code = yk_read_binary_file("res/vert.spv", &vert_len);
     const char* frag_shader_code = yk_read_binary_file("res/frag.spv", &frag_len);
 
-    VkShaderModuleCreateInfo vk_shader_vert_module_create_info = { 0 };
-    vk_shader_vert_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    vk_shader_vert_module_create_info.codeSize = vert_len;
-    vk_shader_vert_module_create_info.pCode = (u32*)vert_shader_code;
+    VkShaderModuleCreateInfo vk_vert_shader_module_create_info = { 0 };
+    vk_vert_shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    vk_vert_shader_module_create_info.codeSize = vert_len;
+    vk_vert_shader_module_create_info.pCode = (u32*)vert_shader_code;
 
-    VkShaderModule vk_shader_vert_module = { 0 };
-    VkResultAssert(vkCreateShaderModule(vk_device, &vk_shader_vert_module_create_info, 0, &vk_shader_vert_module), "Vert Shader Module Creation");
+    VkShaderModule vk_vert_shader_module = { 0 };
+    VkResultAssert(vkCreateShaderModule(vk_device, &vk_vert_shader_module_create_info, 0, &vk_vert_shader_module), "Vert Shader Module Creation");
 
-    VkShaderModuleCreateInfo vk_shader_frag_module_create_info = { 0 };
-    vk_shader_frag_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    vk_shader_frag_module_create_info.codeSize = frag_len;
-    vk_shader_frag_module_create_info.pCode = (u32*)frag_shader_code;
+    VkShaderModuleCreateInfo vk_frag_shader_module_create_info = { 0 };
+    vk_frag_shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    vk_frag_shader_module_create_info.codeSize = frag_len;
+    vk_frag_shader_module_create_info.pCode = (u32*)frag_shader_code;
 
-    VkShaderModule vk_shader_frag_module = { 0 };
-    VkResultAssert(vkCreateShaderModule(vk_device, &vk_shader_frag_module_create_info, 0, &vk_shader_frag_module), "Frag Shader Module Creation");
+    VkShaderModule vk_frag_shader_module = { 0 };
+    VkResultAssert(vkCreateShaderModule(vk_device, &vk_frag_shader_module_create_info, 0, &vk_frag_shader_module), "Frag Shader Module Creation");
 
     free(vert_shader_code);
     free(frag_shader_code);
 
+    VkPipelineShaderStageCreateInfo vk_vert_shader_stage_info = {0};
+    vk_vert_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vk_vert_shader_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vk_vert_shader_stage_info.module = vk_vert_shader_module;
+    vk_vert_shader_stage_info.pName = "main";
+
+    VkPipelineShaderStageCreateInfo vk_frag_shader_stage_info = { 0 };
+    vk_frag_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vk_frag_shader_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    vk_frag_shader_stage_info.module = vk_frag_shader_module;
+    vk_frag_shader_stage_info.pName = "main";
+
+
+    VkPipelineShaderStageCreateInfo vk_shader_stages[] = { vk_vert_shader_stage_info, vk_frag_shader_stage_info };
 
     //6 starts here
     // These happen after swapchain and image so I moved it down
