@@ -500,6 +500,49 @@ int main(int argc, char *argv[])
     VkSwapchainKHR vk_swapchain = { 0 };
     VkResultAssert(vkCreateSwapchainKHR(vk_device, &vk_swapchain_create_info, 0, &vk_swapchain), "Created Swapchain");
 
+
+    //Images here
+    // my gpu can support 8. I will go with 3. I think 2 is better.
+    // Come back to this when you understand this better
+    #define max_images 3
+
+    i32 vk_image_num = 0;
+    vkGetSwapchainImagesKHR(vk_device, vk_swapchain, &vk_image_num, 0);
+    Assert(vk_image_num <= max_images, "More swapchain images than expected")
+
+    VkImage vk_swapchain_image_list[max_images] = { 0 };
+    VkResultAssert(vkGetSwapchainImagesKHR(vk_device, vk_swapchain, &vk_image_num, vk_swapchain_image_list), "Swapchain images found");
+
+    VkImageView vk_swapchain_image_view_list[max_images] = { 0 };
+
+    for (i32 i = 0; i < vk_image_num; i++)
+    {
+        VkImageViewCreateInfo vk_image_view_create_info = { 0 };
+        vk_image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        vk_image_view_create_info.pNext = 0;
+        vk_image_view_create_info.image = vk_swapchain_image_list[i];
+        vk_image_view_create_info.viewType = VK_IMAGE_TYPE_2D;
+        vk_image_view_create_info.format = surface_format.format;
+
+        VkComponentMapping mapping = { VK_COMPONENT_SWIZZLE_IDENTITY };
+        vk_image_view_create_info.components = mapping;
+
+        VkImageSubresourceRange subresourcerange = {
+                                                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                                    .baseMipLevel = 0,
+                                                    .levelCount = 1  ,
+                                                    .baseArrayLayer = 0,
+                                                    .layerCount = 1
+        };
+
+        vk_image_view_create_info.subresourceRange = subresourcerange;
+        char str[25];
+        sprintf(str, "Image View Creation %d", i);
+        VkResultAssert(vkCreateImageView(vk_device, &vk_image_view_create_info, 0, &vk_swapchain_image_view_list[i]), str);
+    }
+
+
+
     //6 starts here
     // These happen after swapchain and image so I moved it down
     VkCommandPoolCreateInfo vk_cmd_pool_create_info = { 0 };
@@ -574,6 +617,15 @@ int main(int argc, char *argv[])
     }
 
     // ToDo(facts 11/22 16:22): Remember to destroy window
+   
+    /*
+    for (i32 i = 0; i < vk_image_num; i++)
+    {
+        vkDestroyImageView(vk_device, vk_swapchain_image_view_list[i], 0);
+    }
+   
+    */
+    
     // vkDestroySwapchainKHR(vk_device, vk_swapchain, 0);
     // vkDestroyDevice(vk_device, 0);
     // vkDestroySurfaceKHR(vk_instance, vk_surface, 0);
