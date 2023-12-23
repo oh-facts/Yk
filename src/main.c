@@ -379,18 +379,21 @@ int main(int argc, char *argv[])
     vk_device_q_create_info.queueCount = 1;
     vk_device_q_create_info.pQueuePriorities = &queue_priority;
     
-    
-    const char* device_extention_names[1] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+    VkPhysicalDeviceDynamicRenderingFeaturesKHR vk_dynamic_rendering_feature = { 0 };
+    vk_dynamic_rendering_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+    vk_dynamic_rendering_feature.dynamicRendering = VK_TRUE;
+
+    const char* device_extention_names[2] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME };
 
     VkDeviceCreateInfo vk_device_create_info = { 0 };   
     vk_device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    vk_device_create_info.pNext = 0;
+    vk_device_create_info.pNext = &vk_dynamic_rendering_feature;
     vk_device_create_info.flags = 0;
     vk_device_create_info.queueCreateInfoCount = 1;
     vk_device_create_info.pQueueCreateInfos = &vk_device_q_create_info;
     vk_device_create_info.enabledLayerCount = 0;    //ignored
     vk_device_create_info.ppEnabledLayerNames = 0;  //ignored
-    vk_device_create_info.enabledExtensionCount = 1;
+    vk_device_create_info.enabledExtensionCount = 2;
     vk_device_create_info.ppEnabledExtensionNames = device_extention_names;
     vk_device_create_info.pEnabledFeatures = 0;
 
@@ -584,14 +587,170 @@ int main(int argc, char *argv[])
 
     //Note(facts 12/23 0223) : Complete pipeline. Then rendering.
 
+    VkDynamicState vk_dynamic_states[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+
+    VkPipelineDynamicStateCreateInfo vk_dyn_state_create_info = { 0 };
+    vk_dyn_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    vk_dyn_state_create_info.dynamicStateCount = 2;
+    vk_dyn_state_create_info.pDynamicStates = vk_dynamic_states;
+
+    VkPipelineVertexInputStateCreateInfo vk_vertex_input_info = { 0 };
+    vk_vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+    VkPipelineInputAssemblyStateCreateInfo vk_input_asm = { 0 };
+    vk_input_asm.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    vk_input_asm.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    vk_input_asm.primitiveRestartEnable = VK_FALSE;
+
+    VkViewport vk_viewport = { 0 };
+    vk_viewport.x = 0.0f;
+    vk_viewport.y = 0.0f;
+    vk_viewport.width = (f32)vk_extent.width;
+    vk_viewport.height = (f32)vk_extent.height;
+    vk_viewport.minDepth = 0.0f;
+    vk_viewport.maxDepth = 1.0f;
+
+    VkRect2D vk_scissor = { 0 };
+    vk_scissor.offset = (VkOffset2D){ 0,0 };
+    vk_scissor.extent = vk_extent;
+
+    VkPipelineViewportStateCreateInfo vk_viewport_state = { 0 };
+    vk_viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    vk_viewport_state.viewportCount = 1;
+    vk_viewport_state.pViewports = &vk_viewport;
+    vk_viewport_state.scissorCount = 1;
+    vk_viewport_state.pScissors = &vk_scissor;
+
+    VkPipelineRasterizationStateCreateInfo vk_rasterizer = { 0 };
+    vk_rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    vk_rasterizer.depthClampEnable = VK_FALSE;
+    vk_rasterizer.rasterizerDiscardEnable = VK_FALSE;
+    vk_rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+    vk_rasterizer.lineWidth = 1.0f;
+    vk_rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    vk_rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+
+    //Note(facts 12/23 2:20): come back to this later
+    vk_rasterizer.depthBiasEnable = VK_FALSE;
+    vk_rasterizer.depthBiasConstantFactor = 0.0f;
+    vk_rasterizer.depthBiasClamp = 0.0f; 
+    vk_rasterizer.depthBiasSlopeFactor = 0.0f;
+
+    VkPipelineMultisampleStateCreateInfo vk_multisampling = { 0 };
+    vk_multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    vk_multisampling.sampleShadingEnable = VK_FALSE;
+    vk_multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    vk_multisampling.minSampleShading = 1.0f;
+    vk_multisampling.pSampleMask = 0;
+    vk_multisampling.alphaToCoverageEnable = VK_FALSE;
+    vk_multisampling.alphaToOneEnable = VK_FALSE;
+
+    VkPipelineColorBlendAttachmentState vk_color_blend_attatchment = { 0 };
+    vk_color_blend_attatchment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    vk_color_blend_attatchment.blendEnable = VK_FALSE;
+    vk_color_blend_attatchment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+    vk_color_blend_attatchment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+    vk_color_blend_attatchment.colorBlendOp = VK_BLEND_OP_ADD;
+    vk_color_blend_attatchment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    vk_color_blend_attatchment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    vk_color_blend_attatchment.alphaBlendOp = VK_BLEND_OP_ADD;
+    vk_color_blend_attatchment.blendEnable = VK_TRUE;
+    vk_color_blend_attatchment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    vk_color_blend_attatchment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    vk_color_blend_attatchment.colorBlendOp = VK_BLEND_OP_ADD;
+    vk_color_blend_attatchment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    vk_color_blend_attatchment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    vk_color_blend_attatchment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+    //ToDo(facts): I have no fucking idea what this means
+    //I just want a triangle
+    VkPipelineColorBlendStateCreateInfo vk_color_blending = { 0 };
+    vk_color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    vk_color_blending.logicOpEnable = VK_FALSE;
+    vk_color_blending.logicOp = VK_LOGIC_OP_COPY;
+    vk_color_blending.attachmentCount = 1;
+    vk_color_blending.pAttachments = &vk_color_blend_attatchment;
+    vk_color_blending.blendConstants[0] = 0.0f;
+    vk_color_blending.blendConstants[1] = 0.0f;
+    vk_color_blending.blendConstants[2] = 0.0f;
+    vk_color_blending.blendConstants[3] = 0.0f;
+
+    VkPipelineLayoutCreateInfo vk_pipeline_layout_info = { 0 };
+    vk_pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    vk_pipeline_layout_info.setLayoutCount = 0; 
+    vk_pipeline_layout_info.pSetLayouts = 0; 
+    vk_pipeline_layout_info.pushConstantRangeCount = 0;  
+    vk_pipeline_layout_info.pPushConstantRanges = 0;
+
+    VkPipelineLayout vk_pipeline_layout = { 0 };
+    
+    VkResultAssert(vkCreatePipelineLayout(vk_device, &vk_pipeline_layout_info, 0, &vk_pipeline_layout), "Pipeline layout creation");
+
+    //graphics pipeline.
+    //we want to do dynamic rendering
+    VkGraphicsPipelineCreateInfo vk_graphics_pipeline_create_info = { 0 };
+    vk_graphics_pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    vk_graphics_pipeline_create_info.stageCount = 2;
+    vk_graphics_pipeline_create_info.pStages = vk_shader_stages;
+    vk_graphics_pipeline_create_info.pDynamicState = &vk_dyn_state_create_info;
+    vk_graphics_pipeline_create_info.pVertexInputState = &vk_vertex_input_info;
+    vk_graphics_pipeline_create_info.pInputAssemblyState = &vk_input_asm;
+    vk_graphics_pipeline_create_info.pViewportState = &vk_viewport_state;
+    vk_graphics_pipeline_create_info.pRasterizationState = &vk_rasterizer;
+    vk_graphics_pipeline_create_info.pMultisampleState = &vk_multisampling;
+    vk_graphics_pipeline_create_info.pColorBlendState = &vk_color_blending;
+    vk_graphics_pipeline_create_info.layout = vk_pipeline_layout;
+    vk_graphics_pipeline_create_info.renderPass = VK_NULL_HANDLE;
+
+    VkRenderingAttachmentInfoKHR vk_color_attachment = { 0 };
+    vk_color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+    vk_color_attachment.imageView = vk_swapchain_image_view_list[0];
+    vk_color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    vk_color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    vk_color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    vk_color_attachment.clearValue.color = (VkClearColorValue){ 0.0f, 0.0f, 0.0f, 1.0f };
+
+    VkRenderingAttachmentInfoKHR vk_depth_attachment = { 0 };
+    vk_depth_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+    vk_depth_attachment.imageView = vk_swapchain_image_view_list[1];
+    vk_depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    vk_depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    vk_depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    vk_depth_attachment.clearValue.depthStencil = (VkClearDepthStencilValue){ 1.0f, 0 };
+
+    VkRenderingAttachmentInfoKHR vk_stencil_attachment = { 0 };
+    vk_stencil_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+    vk_stencil_attachment.imageView = vk_swapchain_image_view_list[2];
+    vk_stencil_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    vk_stencil_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    vk_stencil_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    vk_stencil_attachment.clearValue.depthStencil = (VkClearDepthStencilValue){ 0.0f, 0 };
+
+
+    VkRenderingInfoKHR vk_rendering_info = { 0 };
+    vk_rendering_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
+    vk_rendering_info.pNext = 0;
+    vk_rendering_info.flags = 0;
+    vk_rendering_info.renderArea = vk_scissor;
+    vk_rendering_info.layerCount = 1;
+    vk_rendering_info.viewMask = 0;
+    vk_rendering_info.colorAttachmentCount = 1;
+    vk_rendering_info.pColorAttachments = &vk_color_attachment;
+    vk_rendering_info.pDepthAttachment = VK_NULL_HANDLE; //&vk_depth_attachment;
+    vk_rendering_info.pStencilAttachment = VK_NULL_HANDLE; //&vk_stencil_attachment;
+
+    VkPipeline vk_graphics_pipeline = { 0 };
+    VkResultAssert(vkCreateGraphicsPipelines(vk_device, VK_NULL_HANDLE, 1, &vk_graphics_pipeline_create_info, 0, &vk_graphics_pipeline), "Graphics pipeline creation");
+
 
     //6 starts here
     // These happen after swapchain and image so I moved it down
+    // Commands are issued to do things. Commands are created from command pools
     VkCommandPoolCreateInfo vk_cmd_pool_create_info = { 0 };
     vk_cmd_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     vk_cmd_pool_create_info.pNext = 0;
     vk_cmd_pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vk_cmd_pool_create_info.queueFamilyIndex = 0;
+    vk_cmd_pool_create_info.queueFamilyIndex = vk_graphics_qfam;
 
     VkCommandPool vk_cmd_pool;
     VkResultAssert(vkCreateCommandPool(vk_device, &vk_cmd_pool_create_info, 0, &vk_cmd_pool), "Command pool creation");
@@ -604,44 +763,40 @@ int main(int argc, char *argv[])
     vk_cmd_buffer_alloc_info.commandBufferCount = 1;
 
     VkCommandBuffer vk_cmd_buffer;
-    VkResultAssert(vkAllocateCommandBuffers(vk_device, &vk_cmd_buffer_alloc_info, &vk_cmd_buffer), "Command Buffer creation");
+    VkResultAssert(vkAllocateCommandBuffers(vk_device, &vk_cmd_buffer_alloc_info, &vk_cmd_buffer), "Command Buffer allocation");
 
-    VkCommandBufferBeginInfo vk_cmd_buffer_begin_info = { 0 };
-    vk_cmd_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    vk_cmd_buffer_begin_info.pNext = 0;
-    //0 is fine. flags are mean for specific cases
-    vk_cmd_buffer_begin_info.flags = 0;
-    //for secondary buffers
-    vk_cmd_buffer_begin_info.pInheritanceInfo = 0;
+   
 
 
-
+    //https://vulkan-tutorial.com/en/Drawing_a_triangle/Drawing/Rendering_and_presentation
+    
     //Some 7 stuff. I need semawhores
-    /*
+    
     //if semaphores aren't extended with semaphore types, they will be binary
+    
+    VkSemaphore vk_image_available_semawhore = { 0 };
+    VkSemaphore vk_render_finished_semawhore = { 0 };
+    VkFence vk_in_flight_fence = { 0 };
+
     VkSemaphoreCreateInfo vk_semawhore_create_info = { 0 };
     vk_semawhore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     vk_semawhore_create_info.pNext = 0;
     vk_semawhore_create_info.flags = 0;
     
+    VkFenceCreateInfo vk_fence_create_info = { 0 };
+    vk_fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    vk_fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    
+    VkResultAssert(vkCreateSemaphore(vk_device, &vk_semawhore_create_info, 0, &vk_image_available_semawhore), "Image ready semaphore");
+    VkResultAssert(vkCreateSemaphore(vk_device, &vk_semawhore_create_info, 0, &vk_render_finished_semawhore), "Render finished semaphore");
+    VkResultAssert(vkCreateFence(vk_device, &vk_fence_create_info, 0, &vk_in_flight_fence), "flight fence");
 
-    VkSemaphore vk_semawhore = { 0 };
-    VkResultAssert(vkCreateSemaphore(vk_device, &vk_semawhore_create_info, 0, &vk_semawhore), "Semaphore creation");
+    PFN_vkCmdBeginRenderingKHR vkCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(vk_device, "vkCmdBeginRenderingKHR");
+    PFN_vkCmdEndRenderingKHR vkCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)vkGetDeviceProcAddr(vk_device, "vkCmdEndRenderingKHR");
 
-    VkSemaphoreSubmitInfo vk_semawhore_submit_info = { 0 };
-    vk_semawhore_submit_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-    vk_semawhore_submit_info.pNext = 0;
-    vk_semawhore_submit_info.semaphore = vk_semawhore;
-    vk_semawhore_submit_info.value = 0; //ignored
+    
 
-
-    VkSubmitInfo2 vk_submit_info = { 0 };
-    vk_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
-    vk_submit_info.pNext = 0;
-    // vk_submit_info.
-    // vkQueueSubmit2(vk_queu)
-
-    */
+    
     
     MSG msg;
     while (1)
@@ -656,10 +811,115 @@ int main(int argc, char *argv[])
         {
             break;
         }
-    }
 
+        //Draw Frame
+
+        vkWaitForFences(vk_device, 1, &vk_in_flight_fence, VK_TRUE, UINT64_MAX);
+        vkResetFences(vk_device, 1, &vk_in_flight_fence);
+
+        uint32_t imageIndex = -1;
+        vkAcquireNextImageKHR(vk_device, vk_swapchain, UINT64_MAX, vk_image_available_semawhore, VK_NULL_HANDLE, &imageIndex);
+
+        vkResetCommandBuffer(vk_cmd_buffer, 0);
+
+        //command buffer record
+
+        VkCommandBufferBeginInfo vk_cmd_buffer_begin_info = { 0 };
+        vk_cmd_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vk_cmd_buffer_begin_info.pNext = 0;
+        //0 is fine. flags are mean for specific cases
+        vk_cmd_buffer_begin_info.flags = 0;
+        //for secondary buffers
+        vk_cmd_buffer_begin_info.pInheritanceInfo = 0;
+
+        VkResultAssert(vkBeginCommandBuffer(vk_cmd_buffer, &vk_cmd_buffer_begin_info), "Command buffer begin");
+
+        // Begin rendering
+        vkCmdBeginRenderingKHR(vk_cmd_buffer, &vk_rendering_info);
+
+        // Bind the graphics pipeline
+        vkCmdBindPipeline(vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_graphics_pipeline);
+
+        // Set the viewport and scissor
+        vkCmdSetViewport(vk_cmd_buffer, 0, 1, &vk_viewport);
+        vkCmdSetScissor(vk_cmd_buffer, 0, 1, &vk_scissor);
+
+        // Issue the draw command to draw the triangle
+        vkCmdDraw(vk_cmd_buffer, 3, 1, 0, 0);
+
+        // End rendering
+        vkCmdEndRenderingKHR(vk_cmd_buffer);
+
+        VkImageMemoryBarrier barrier = { 0 };
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image = vk_swapchain_image_list[imageIndex];
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.baseMipLevel = 0;
+        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount = 1;
+        barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+
+        vkCmdPipelineBarrier(
+            vk_cmd_buffer,
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+            0,
+            0, 0,
+            0, 0,
+            1, &barrier
+        );
+
+        VkResultAssert(vkEndCommandBuffer(vk_cmd_buffer), "Command buffer end");
+
+        //command buffer recording over
+
+        VkSubmitInfo vk_submit_info = { 0 };
+        vk_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        vk_submit_info.pNext = 0;
+
+        VkSemaphore vk_wait_semawhores[] = { vk_image_available_semawhore };
+        VkPipelineStageFlags vk_wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+        vk_submit_info.waitSemaphoreCount = 1;
+        vk_submit_info.pWaitSemaphores = vk_wait_semawhores;
+        vk_submit_info.pWaitDstStageMask = vk_wait_stages;
+
+        vk_submit_info.commandBufferCount = 1;
+        vk_submit_info.pCommandBuffers = &vk_cmd_buffer;
+
+        VkSemaphore vk_signal_semawhores[] = { vk_render_finished_semawhore };
+        vk_submit_info.signalSemaphoreCount = 1;
+        vk_submit_info.pSignalSemaphores = vk_signal_semawhores;
+
+        VkResultAssert(vkQueueSubmit(vk_graphics_q, 1, &vk_submit_info, vk_in_flight_fence), "Draw command buffer submitted");
+
+        VkPresentInfoKHR vk_present_info = { 0 };
+        vk_present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+        vk_present_info.waitSemaphoreCount = 1;
+        vk_present_info.pWaitSemaphores = vk_signal_semawhores;
+
+        VkSwapchainKHR vk_swapchains[] = { vk_swapchain };
+        vk_present_info.swapchainCount = 1;
+        vk_present_info.pSwapchains = vk_swapchains;
+        vk_present_info.pImageIndices = &imageIndex;
+
+        vk_present_info.pResults = 0;
+
+        //present q same as graphics for now
+        VkResultAssert(vkQueuePresentKHR(vk_graphics_q, &vk_present_info), "Present queue")
+
+
+
+    }
+    vkDeviceWaitIdle(vk_device);
     // ToDo(facts 11/22 16:22): Remember to destroy window
-   
+    //vkDestroyPipelineLayout(vk_device, vk_pipeline_layout, 0);
     /*
     for (i32 i = 0; i < vk_image_num; i++)
     {
