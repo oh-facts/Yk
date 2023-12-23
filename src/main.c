@@ -12,6 +12,10 @@
 #endif
 
 //ToDo(facts): Better Debug profiles.
+// 11/23 1758
+//ToDo(facts): Fix flickering triangle (sync problem I think).
+//ToDo(facts): Posix window so my linux friends can see my triangle
+//ToDo(facts): Renderer Abstraction :skull:
 
 #define DEBUG 1
 
