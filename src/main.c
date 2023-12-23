@@ -582,6 +582,9 @@ int main(int argc, char *argv[])
 
     VkPipelineShaderStageCreateInfo vk_shader_stages[] = { vk_vert_shader_stage_info, vk_frag_shader_stage_info };
 
+    //Note(facts 12/23 0223) : Complete pipeline. Then rendering.
+
+
     //6 starts here
     // These happen after swapchain and image so I moved it down
     VkCommandPoolCreateInfo vk_cmd_pool_create_info = { 0 };
