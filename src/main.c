@@ -16,7 +16,7 @@
 #define DEBUG 1
 
 #if DEBUG
-    #define Assert(Expression) if(!(Expression)) {*(int *)0 = 0;}
+    #define Assert(Expression, msg) if(!(Expression)) {printf("Fatal: %s",msg); *(int *)0 = 0;}
 #else
     #define Assert(Expression)
 #endif
@@ -258,8 +258,24 @@ int main(int argc, char *argv[])
     VkInstance vk_instance;
     VkResultAssert(vkCreateInstance(&vk_create_info, 0, &vk_instance), "Vulkan instance creation")
 
+   //Needs to be done first because queues need to be able to present and for that I need a surface
+   //34.2.3
+   //Win 32 surface platform
 
-        // 5.1 starts here
+    VkWin32SurfaceCreateInfoKHR vk_win32_surface_create_info_khr = { 0 };
+    vk_win32_surface_create_info_khr.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    vk_win32_surface_create_info_khr.pNext = 0;
+    vk_win32_surface_create_info_khr.flags = 0;
+    vk_win32_surface_create_info_khr.hinstance = wc.hInstance;
+    vk_win32_surface_create_info_khr.hwnd = window_handle;
+
+    //ToDo(facts): Needs to be destroyed on exit. I lost track of what all needs to be destroyed on exit, but this is one of them
+    VkSurfaceKHR vk_surface_khr = { 0 };
+    VkResultAssert(vkCreateWin32SurfaceKHR(vk_instance, &vk_win32_surface_create_info_khr, 0, &vk_surface_khr), "Win 32 Surface Creation");
+
+
+    // 5.1 starts here
+    //Physical Device
     VkPhysicalDevice vk_phys_device = { 0 };
 
     {
@@ -268,7 +284,7 @@ int main(int argc, char *argv[])
         int devices = 0;
         vkEnumeratePhysicalDevices(vk_instance, &devices, 0);
 
-        Assert(devices <= max_devices)
+        Assert(devices <= max_devices, "More than 3 graphics cards? Wth?")
 
         VkPhysicalDevice device_list[max_devices] = { 0 };
 
@@ -294,55 +310,198 @@ int main(int argc, char *argv[])
         
     }
     log_extention(check_device_extension_support(vk_phys_device))
-    
-    
-//5.2 starts here
-    //Nvidia 4090 has 5.
-    #define max_queues 5
-    int queues = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(vk_phys_device, &queues, 0);
-    
-    Assert(queues <= max_queues)
 
-    VkQueueFamilyProperties vk_q_fam_prop_list[max_queues];
-    int queues_used = max_queues;
 
-    vkGetPhysicalDeviceQueueFamilyProperties(vk_phys_device, &queues_used, vk_q_fam_prop_list);
+    //5.2 starts here
+    
+    //Queues
+    i32 vk_graphics_qfam = { -1 };
+    i32 vk_graphics_compute_qfam = { -1 };
+    i32 vk_present_qfam = { -1 };
+    {
+        //Nvidia 4090 has 5.
+        #define max_queues 5
+        int queues = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(vk_phys_device, &queues, 0);
 
+        Assert(queues <= max_queues, "More queues found than supported")
+
+        VkQueueFamilyProperties vk_q_fam_prop_list[max_queues];
+        int current_queues = max_queues;
+        vkGetPhysicalDeviceQueueFamilyProperties(vk_phys_device, &current_queues, vk_q_fam_prop_list);
+
+       
+
+        for (i32 i = 0; i < current_queues; i++)
+        {
+            VkQueueFlags qflags = vk_q_fam_prop_list[i].queueFlags;
+            if (qflags & VK_QUEUE_GRAPHICS_BIT)
+            {
+                vk_graphics_qfam = i;
+            }
+
+            if ((qflags & VK_QUEUE_GRAPHICS_BIT) && (qflags & VK_QUEUE_COMPUTE_BIT))
+            {
+                vk_graphics_compute_qfam = i;
+            }
+
+            if (vk_present_qfam == -1)
+            {
+                VkBool32 present_support = VK_FALSE;
+                vkGetPhysicalDeviceSurfaceSupportKHR(vk_phys_device, i, vk_surface_khr, &present_support);
+
+                if (present_support == VK_TRUE)
+                {
+                    vk_present_qfam = i;
+                }
+            }
+           
+        }
+
+    }
+    Assert(vk_graphics_qfam != -1, "Graphics Queue not found")
+    Assert(vk_graphics_compute_qfam != -1, "Graphics Compute Queue not found")
+    Assert(vk_present_qfam != -1, "Present Queue not found")
+
+
+    //Logical Device starts here
     float queue_priority = 1;
+
+    // Note(facts): The graphic , compute and present queue families are all index 0. And this is common behaviour. For now I am leaving this
+    // like this. Later, I will make sure that incase they are different families, each gets its own queue
 
     VkDeviceQueueCreateInfo vk_device_q_create_info = { 0 };
     vk_device_q_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     vk_device_q_create_info.pNext = 0;
     vk_device_q_create_info.flags = 0;
-    vk_device_q_create_info.queueFamilyIndex = 0;
+    vk_device_q_create_info.queueFamilyIndex = vk_graphics_qfam;
     //this is number of queues you want to create. Not how many queues are available in that queue family
     vk_device_q_create_info.queueCount = 1;
     vk_device_q_create_info.pQueuePriorities = &queue_priority;
     
     
     const char* device_extention_names[1] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+
     VkDeviceCreateInfo vk_device_create_info = { 0 };   
     vk_device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     vk_device_create_info.pNext = 0;
     vk_device_create_info.flags = 0;
     vk_device_create_info.queueCreateInfoCount = 1;
     vk_device_create_info.pQueueCreateInfos = &vk_device_q_create_info;
-    vk_device_create_info.enabledLayerCount = 0;
-    vk_device_create_info.ppEnabledLayerNames = 0;
+    vk_device_create_info.enabledLayerCount = 0;    //ignored
+    vk_device_create_info.ppEnabledLayerNames = 0;  //ignored
     vk_device_create_info.enabledExtensionCount = 1;
     vk_device_create_info.ppEnabledExtensionNames = device_extention_names;
     vk_device_create_info.pEnabledFeatures = 0;
 
-
-    
-    
-
     VkDevice vk_device;
     VkResultAssert(vkCreateDevice(vk_phys_device, &vk_device_create_info, 0, &vk_device), "Vulkan device creation");
+    
+    // same as present queue for now
+    VkQueue vk_graphics_q = { 0 };
+    vkGetDeviceQueue(vk_device, vk_graphics_qfam, 0, &vk_graphics_q);
+
+   //more 32
+
+    //https://harrylovescode.gitbooks.io/vulkan-api/content/chap06/chap06.html
+    VkSurfaceCapabilitiesKHR vk_surface_caps = { 0 };
+    VkResultAssert(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vk_phys_device, vk_surface_khr, &vk_surface_caps), "Surface Capabilities poll");
+
+    Assert(vk_surface_caps.maxImageCount >= 1, "Max images supported than 1");
+    uint32_t imageCount = vk_surface_caps.minImageCount + 1;
+    if (imageCount > vk_surface_caps.maxImageCount)
+        imageCount = vk_surface_caps.maxImageCount;
+
+    VkExtent2D vk_extent = { 0 };
+    if (vk_surface_caps.currentExtent.width == -1 || vk_surface_caps.currentExtent.height == -1)
+    {
+        vk_extent.width = WIN_SIZE_X;
+        vk_extent.height = WIN_SIZE_Y;
+    }
+    else
+    {
+        vk_extent = vk_surface_caps.currentExtent;
+    }
+
+    //ToDo(facts): Start doing this on the heap
+
+    #define max_format_count 5
+    u32 vk_format_count = 0;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(vk_phys_device, vk_surface_khr, &vk_format_count, 0);
+    Assert(vk_format_count > 0, "Format count less than 1")
+    Assert(vk_format_count <= max_format_count, "Too many formats")
+
+    VkSurfaceFormatKHR vk_surface_format_list[max_format_count] = { 0 };
+    VkResultAssert(vkGetPhysicalDeviceSurfaceFormatsKHR(vk_phys_device, vk_surface_khr, &vk_format_count, vk_surface_format_list), "Surface formats obtain")
+
+    //ToDo(facts, 12/22): Stop being a smartass at 5:58am. Go to sleep
+    VkSurfaceFormatKHR surface_format = { 0 };
+    for (i32 i = vk_format_count - 1; i >= 0; i--)
+    {
+        surface_format = vk_surface_format_list[i];
+        if (surface_format.format == VK_FORMAT_B8G8R8A8_SRGB && surface_format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        {
+            break;
+        }
+    }
+
+
+    #define max_present_mode 4
+    u32 vk_present_mode_count = 0;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(vk_phys_device, vk_surface_khr, &vk_present_mode_count, 0);
+    Assert(vk_present_mode_count > 0, "Less than 1 present modes found")
+    Assert(vk_present_mode_count <= max_present_mode, "Too many present modes")
+
+    VkPresentModeKHR vk_present_mode_list[max_present_mode] = { 0 };
+
+    VkResultAssert(vkGetPhysicalDeviceSurfacePresentModesKHR(vk_phys_device, vk_surface_khr, &vk_present_mode_count, vk_present_mode_list), "Device Present Modes")
+
+    VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
+
+    //https://harrylovescode.gitbooks.io/vulkan-api/content/chap06/chap06.html
+    for (u32 i = 0; i < vk_present_mode_count; i++) 
+    {
+        if (vk_present_mode_list[i] == VK_PRESENT_MODE_MAILBOX_KHR) 
+        {
+            present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
+            break;
+        }
+
+        if (vk_present_mode_list[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)
+            present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+    }
+
+    //34.10
+    //Swapchain helps to display rendering results to surface
+    
+    u32 vk_qfam_indices[1] = { 0 };
+    VkSwapchainCreateInfoKHR vk_swapchain_create_info = { 0 };
+    vk_swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    vk_swapchain_create_info.pNext = 0;
+    vk_swapchain_create_info.flags = 0;
+    vk_swapchain_create_info.surface = vk_surface_khr;
+    vk_swapchain_create_info.minImageCount = imageCount;
+    vk_swapchain_create_info.imageColorSpace = surface_format.colorSpace;
+    vk_swapchain_create_info.imageFormat = surface_format.format;
+    vk_swapchain_create_info.imageExtent = vk_extent;
+    vk_swapchain_create_info.imageArrayLayers = 1;
+    vk_swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    vk_swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    vk_swapchain_create_info.queueFamilyIndexCount = 1;
+    vk_swapchain_create_info.pQueueFamilyIndices = vk_qfam_indices;
+    vk_swapchain_create_info.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    vk_swapchain_create_info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    vk_swapchain_create_info.presentMode = present_mode;
+    vk_swapchain_create_info.oldSwapchain = 0; //ToDo(facts): Get back to later
+    vk_swapchain_create_info.clipped = VK_TRUE; //Note(facts): Read about later
+
+
+
+    VkSwapchainKHR vk_swapchain = { 0 };
+    VkResultAssert(vkCreateSwapchainKHR(vk_device, &vk_swapchain_create_info, 0, &vk_swapchain), "Created Swapchain");
 
     //6 starts here
-
+    // These happen after swapchain and image so I moved it down
     VkCommandPoolCreateInfo vk_cmd_pool_create_info = { 0 };
     vk_cmd_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     vk_cmd_pool_create_info.pNext = 0;
@@ -369,113 +528,6 @@ int main(int argc, char *argv[])
     vk_cmd_buffer_begin_info.flags = 0;
     //for secondary buffers
     vk_cmd_buffer_begin_info.pInheritanceInfo = 0;
-    
-    VkQueue vk_q = { 0 };
-
-    vkGetDeviceQueue(vk_device, 0, 0, &vk_q);
-
-    //34.2.3
-    //Win 32 surface platform
-
-    VkWin32SurfaceCreateInfoKHR vk_win32_surface_create_info_khr = { 0 };
-    vk_win32_surface_create_info_khr.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    vk_win32_surface_create_info_khr.pNext = 0;
-    vk_win32_surface_create_info_khr.flags = 0;
-    vk_win32_surface_create_info_khr.hinstance = wc.hInstance;
-    vk_win32_surface_create_info_khr.hwnd = window_handle;
-
-    //ToDo(facts): Needs to be destroyed on exit. I lost track of what all needs to be destroyed on exit, but this is one of them
-    VkSurfaceKHR vk_surface_khr = { 0 };
-    VkResultAssert(vkCreateWin32SurfaceKHR(vk_instance, &vk_win32_surface_create_info_khr, 0, &vk_surface_khr), "Win 32 Surface Creation");
-
-    //https://harrylovescode.gitbooks.io/vulkan-api/content/chap06/chap06.html
-    VkSurfaceCapabilitiesKHR vk_surface_caps = { 0 };
-    VkResultAssert(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vk_phys_device, vk_surface_khr, &vk_surface_caps), "Surface Capabilities poll");
-
-    Assert(vk_surface_caps.maxImageCount >= 1);
-    uint32_t imageCount = vk_surface_caps.minImageCount + 1;
-    if (imageCount > vk_surface_caps.maxImageCount)
-        imageCount = vk_surface_caps.maxImageCount;
-
-    VkExtent2D vk_extent = { 0 };
-    if (vk_surface_caps.currentExtent.width == -1 || vk_surface_caps.currentExtent.height == -1)
-    {
-        vk_extent.width = WIN_SIZE_X;
-        vk_extent.height = WIN_SIZE_Y;
-    }
-    else
-    {
-        vk_extent = vk_surface_caps.currentExtent;
-    }
-
-    //ToDo(facts): Start doing this on the heap
-
-    #define max_format_count 5
-    u32 vk_format_count = 0;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(vk_phys_device, vk_surface_khr, &vk_format_count, 0);
-    Assert(vk_format_count > 0)
-    Assert(vk_format_count <= max_format_count)
-
-    VkSurfaceFormatKHR vk_surface_format_list[max_format_count] = { 0 };
-    VkResultAssert(vkGetPhysicalDeviceSurfaceFormatsKHR(vk_phys_device, vk_surface_khr, &vk_format_count, vk_surface_format_list), "Surface formats obtain")
-
-    //ToDo(facts, 12/22): Stop being a smartass at 5:58am. Go to sleep
-    VkSurfaceFormatKHR surface_format = { 0 };
-    for (i32 i = vk_format_count - 1; i >= 0; i--)
-    {
-        surface_format = vk_surface_format_list[i];
-        if (surface_format.format == VK_FORMAT_B8G8R8A8_SRGB && surface_format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-        {
-            break;
-        }
-    }
-
-
-    #define max_present_mode 4
-    u32 vk_present_mode_count = 0;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(vk_phys_device, vk_surface_khr, &vk_present_mode_count, 0);
-    Assert(vk_present_mode_count > 0)
-    Assert(vk_present_mode_count <= max_present_mode)
-
-    VkPresentModeKHR vk_present_mode_list[max_present_mode] = { 0 };
-
-    VkResultAssert(vkGetPhysicalDeviceSurfacePresentModesKHR(vk_phys_device, vk_surface_khr, &vk_present_mode_count, vk_present_mode_list), "Device Present Modes")
-
-    VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
-
-    //https://harrylovescode.gitbooks.io/vulkan-api/content/chap06/chap06.html
-    for (u32 i = 0; i < vk_present_mode_count; i++) 
-    {
-        if (vk_present_mode_list[i] == VK_PRESENT_MODE_MAILBOX_KHR) 
-        {
-            present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
-            break;
-        }
-
-        if (vk_present_mode_list[i] == VK_PRESENT_MODE_IMMEDIATE_KHR)
-            present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-    }
-
-    //34.10
-    //Swapchain helps to display rendering results to surface
-    
-    
-    VkSwapchainCreateInfoKHR vk_swapchain_create_info = { 0 };
-    vk_swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    vk_swapchain_create_info.pNext = 0;
-    vk_swapchain_create_info.flags = 0;
-    vk_swapchain_create_info.surface = vk_surface_khr;
-    vk_swapchain_create_info.minImageCount = imageCount;
-    vk_swapchain_create_info.imageColorSpace = surface_format.colorSpace;
-    vk_swapchain_create_info.imageFormat = surface_format.format;
-    vk_swapchain_create_info.imageExtent = vk_extent;
-    vk_swapchain_create_info.imageArrayLayers = 1;
-    vk_swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-   
-
-
-    VkSwapchainKHR vk_swapchain = { 0 };
-
 
 
 
@@ -522,8 +574,10 @@ int main(int argc, char *argv[])
     }
 
     // ToDo(facts 11/22 16:22): Remember to destroy window
-    
-    //vkDestroyInstance(vk_instance, 0);
+    // vkDestroySwapchainKHR(vk_device, vk_swapchain, 0);
+    // vkDestroyDevice(vk_device, 0);
+    // vkDestroySurfaceKHR(vk_instance, vk_surface, 0);
+    // vkDestroyInstance(vk_instance, 0);
 
     return 0;
 }
