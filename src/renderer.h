@@ -6,6 +6,12 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
 
+#define VkDEBUG 0
+
+#define VK_USE_VALIDATION_LAYERS 0
+#define VK_EXT_PRINT_DEBUG 0
+#define VK_PRINT_SUCCESS 0
+#define LOG_DEVICE_DETAILS 0
 
 
 //Note(facts 0513 12/24): I don't know why I arrived at 3 with this. I'll get back to it later
@@ -46,6 +52,10 @@ struct YkRenderer
 	VkFence in_flight_fences[MAX_FRAMES_IN_FLIGHT];
 
 	uint32_t current_frame;
+
+#if VK_USE_VALIDATION_LAYERS
+	VkDebugUtilsMessengerEXT debug_messenger;
+#endif
 };
 
 enum Q_FAM

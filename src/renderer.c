@@ -10,12 +10,7 @@
 #endif
 
 
-#define VkDEBUG 1
 
-#define VK_USE_VALIDATION_LAYERS 1
-#define VK_EXT_PRINT_DEBUG 0
-#define VK_PRINT_SUCCESS 0
-#define LOG_DEVICE_DETAILS 0
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -135,7 +130,7 @@ void yk_create_gfx_pipeline(YkRenderer* renderer);
 void yk_create_cmd_pool(YkRenderer* renderer);
 void yk_create_cmd_buffer(YkRenderer* renderer);
 void yk_create_sync_objs(YkRenderer* renderer);
-void yk_recreate_swapchain(YkRenderer* renderer);
+b8 yk_recreate_swapchain(YkRenderer* renderer);
 
 
 void yk_innit_renderer(YkRenderer* renderer, YkWindow* window)
@@ -179,6 +174,12 @@ void yk_free_renderer(YkRenderer* renderer)
     vkDestroySwapchainKHR(renderer->device, renderer->swapchain, 0);
     vkDestroyDevice(renderer->device, 0);
     vkDestroySurfaceKHR(renderer->vk_instance, renderer->surface, 0);
+
+#if VK_USE_VALIDATION_LAYERS
+    PFN_vkDestroyDebugUtilsMessengerEXT phunk = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(renderer->vk_instance, "vkDestroyDebugUtilsMessengerEXT");
+    phunk(renderer->vk_instance, renderer->debug_messenger, 0);
+#endif
+
     vkDestroyInstance(renderer->vk_instance, 0);
 }
 
@@ -258,11 +259,9 @@ void  yk_innit_vulkan(YkRenderer* renderer)
     vk_debug_messenger_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     vk_debug_messenger_create_info.pfnUserCallback = debugCallback;
 
-    VkDebugUtilsMessengerEXT vk_debug_messenger = { 0 };
-
-    PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(renderer->vk_instance, "vkCreateDebugUtilsMessengerEXT");
-    VkResultAssert(vkCreateDebugUtilsMessengerEXT(renderer->vk_instance, &vk_debug_messenger_create_info, 0, &vk_debug_messenger), "Debug messenger");
-
+     PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(renderer->vk_instance, "vkCreateDebugUtilsMessengerEXT");
+    VkResultAssert(vkCreateDebugUtilsMessengerEXT(renderer->vk_instance, &vk_debug_messenger_create_info, 0, &renderer->debug_messenger), "Debug messenger");
+    
 #endif
 
 
@@ -803,7 +802,10 @@ void vk_draw_frame(YkRenderer* renderer)
         renderer->image_available_semawhores[renderer->current_frame],
         VK_NULL_HANDLE, &imageIndex) == VK_ERROR_OUT_OF_DATE_KHR)
     {
-        yk_recreate_swapchain(renderer);
+        if (yk_recreate_swapchain(renderer) == false)
+        {
+            return;
+        }
     }
 
 
@@ -947,7 +949,10 @@ void vk_draw_frame(YkRenderer* renderer)
 
     if (qpresent_result == VK_ERROR_OUT_OF_DATE_KHR || qpresent_result == VK_SUBOPTIMAL_KHR)
     {
-        yk_recreate_swapchain(renderer);
+        if (yk_recreate_swapchain(renderer) == false)
+        {
+            return;
+        }
     }
 
     renderer->current_frame = (renderer->current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
@@ -959,11 +964,22 @@ void yk_renderer_wait(YkRenderer* renderer)
     vkDeviceWaitIdle(renderer->device);
 }
 
-void yk_recreate_swapchain(YkRenderer* renderer)
+b8 yk_recreate_swapchain(YkRenderer* renderer)
 {
+    if (is_closed == true)
+    {
+        return false;
+    }
+
     vkDeviceWaitIdle(renderer->device);
-    
+
+    while (is_minimized == true)
+    {
+        yk_window_poll();
+    }
+   
     vkDestroySwapchainKHR(renderer->device, renderer->swapchain, 0);
+
     yk_create_swapchain(renderer);
     
 }

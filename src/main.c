@@ -57,15 +57,17 @@ int main(int argc, char *argv[])
     yk_innit_renderer(&ren, &win);
    
   
-    while (1)
+    while (is_closed == false)
     {
         yk_window_poll();
-
         vk_draw_frame(&ren);
-       
     }
 
     yk_renderer_wait(&ren);
+
+    yk_free_renderer(&ren);
+
+    yk_free_window(&win);
 
     return 0;
 }

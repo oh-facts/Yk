@@ -1,10 +1,26 @@
 #include <win32_window.h>
 
+b8 is_minimized;
+b8 is_closed;
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch (msg)
     {
+    case WM_SIZE:
+        if (wParam == SIZE_MINIMIZED)
+        {
+            is_minimized = true;
+        }
+        else if (wParam == SIZE_RESTORED)
+        {
+            is_minimized = false;
+        }
+
+        break;
+
     case WM_DESTROY:
+        is_closed = true;
         PostQuitMessage(0);
         break;
     default:
@@ -16,8 +32,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 void yk_innit_window(YkWindow* window)
 {   
+    is_minimized = false;
+    is_closed = false;
+    window->is_minimized = false;
     window->hinstance = GetModuleHandle(0);
-    
+ 
     WNDCLASS wc = { 0 };
     wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WndProc;
