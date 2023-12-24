@@ -20,8 +20,9 @@
 // 
 // 12/24 0825
 // ToDo(facts): Fix all those warnings
-//
+//              Fixed.
 // ToDo(facts): Window callbacks instead of globals
+//              
 
 
 
@@ -64,7 +65,7 @@ int main(int argc, char *argv[])
     yk_innit_renderer(&ren, &win);
    
   
-    while (is_closed == false)
+    while (win.is_running)
     {
         yk_window_poll();
         vk_draw_frame(&ren);

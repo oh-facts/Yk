@@ -1,26 +1,30 @@
 #include <win32_window.h>
 
-b8 is_minimized;
-b8 is_closed;
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+    YkWindow* win = (YkWindow*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+
     switch (msg)
     {
+    case WM_CREATE:
+        win = (YkWindow*)((CREATESTRUCT*)lParam)->lpCreateParams;
+        SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)win);
+        break;
     case WM_SIZE:
         if (wParam == SIZE_MINIMIZED)
         {
-            is_minimized = true;
+            if (win)
+                win->is_minimized = true;
         }
         else if (wParam == SIZE_RESTORED)
         {
-            is_minimized = false;
+            if (win)
+                win->is_minimized = false;
         }
-
         break;
-
     case WM_DESTROY:
-        is_closed = true;
+        win->is_running = false;
         PostQuitMessage(0);
         break;
     default:
@@ -29,14 +33,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-
 void yk_innit_window(YkWindow* window)
-{   
-    is_minimized = false;
-    is_closed = false;
+{
+    window->is_running = true;
     window->is_minimized = false;
     window->hinstance = GetModuleHandle(0);
- 
+
     WNDCLASS wc = { 0 };
     wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WndProc;
@@ -54,14 +56,13 @@ void yk_innit_window(YkWindow* window)
 
     window->win_handle = CreateWindowA(wc.lpszClassName, "yekate", WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, WIN_SIZE_X, WIN_SIZE_Y,
-        NULL, NULL, wc.hInstance, NULL);
+        NULL, NULL, wc.hInstance, window);
 
     if (!window->win_handle)
     {
         printf("Win32 window Creation failure");
         exit(-1);
     }
-        
 
     ShowWindow(window->win_handle, SW_SHOWNORMAL);
     UpdateWindow(window->win_handle);
@@ -75,10 +76,9 @@ void yk_free_window(YkWindow* window)
 void yk_window_poll()
 {
     MSG message;
-    while (PeekMessageA(&message, NULL, 0, 0, PM_REMOVE)) 
+    while (PeekMessageA(&message, NULL, 0, 0, PM_REMOVE))
     {
         TranslateMessage(&message);
         DispatchMessageA(&message);
     }
-
 }

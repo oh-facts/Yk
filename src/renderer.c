@@ -967,14 +967,14 @@ void yk_renderer_wait(YkRenderer* renderer)
 
 b8 yk_recreate_swapchain(YkRenderer* renderer)
 {
-    if (is_closed == true)
+    if (!renderer->window_handle->is_running)
     {
         return false;
     }
 
     vkDeviceWaitIdle(renderer->device);
 
-    while (is_minimized == true)
+    while (renderer->window_handle->is_minimized)
     {
         yk_window_poll();
     }
