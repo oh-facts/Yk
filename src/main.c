@@ -27,10 +27,22 @@
     #define Assert(Expression)
 #endif
 
+#define MAX_FRAMES_IN_FLIGHT 2
 #define VK_USE_VALIDATION_LAYERS 1
 #define VK_EXT_PRINT_DEBUG 0
 #define VK_PRINT_SUCCESS 0
 #define LOG_DEVICE_DETAILS 0
+
+static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    VkDebugUtilsMessageTypeFlagsEXT messageType,
+    const VkDebugUtilsMessengerCallbackDataEXT * pCallbackData,
+    void* pUserData) {
+
+    fprintf(stderr, "validation layer: %s\n", pCallbackData->pMessage);
+
+    return VK_FALSE;
+}
 
 void _print_device_details(VkPhysicalDeviceProperties* vk_phys_device_props)
 {
@@ -230,14 +242,14 @@ int main(int argc, char *argv[])
     vk_create_info.pApplicationInfo = &vk_app_info;
 
 #if VK_USE_VALIDATION_LAYERS
-   
-    const char* validation_layers[1] = { 0 };
+#define VALIDATION_LAYERS_NUM 1
+    const char* validation_layers[VALIDATION_LAYERS_NUM] = { 0 };
     validation_layers[0] = "VK_LAYER_KHRONOS_validation";
 
     //validation layer support check
     
 
-    vk_create_info.enabledLayerCount = 1;
+    vk_create_info.enabledLayerCount = VALIDATION_LAYERS_NUM;
     vk_create_info.ppEnabledLayerNames = validation_layers;
 
 #endif
@@ -245,7 +257,7 @@ int main(int argc, char *argv[])
     /*
         When they adding constexpr to C fr fr
     */
-    #define num_extensions 2
+    #define num_extensions 3
     const char* enabled_extensions[num_extensions] = {0};
     enabled_extensions[0] = VK_KHR_SURFACE_EXTENSION_NAME;
     
@@ -257,12 +269,30 @@ int main(int argc, char *argv[])
         enabled_extensions[1] = (VK_KHR_XCB_SURFACE_EXTENSION_NAME);
     #endif
 
+#if VK_USE_VALIDATION_LAYERS
+        enabled_extensions[2] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+#endif
+
 
     vk_create_info.enabledExtensionCount = num_extensions;
     vk_create_info.ppEnabledExtensionNames = enabled_extensions;
 
     VkInstance vk_instance;
     VkResultAssert(vkCreateInstance(&vk_create_info, 0, &vk_instance), "Vulkan instance creation")
+
+    //Debug messenger
+
+    VkDebugUtilsMessengerCreateInfoEXT vk_debug_messenger_create_info = {0};
+    vk_debug_messenger_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+    vk_debug_messenger_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    vk_debug_messenger_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    vk_debug_messenger_create_info.pfnUserCallback = debugCallback;
+
+    VkDebugUtilsMessengerEXT vk_debug_messenger = { 0 };
+       
+    PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vk_instance, "vkCreateDebugUtilsMessengerEXT");
+    VkResultAssert(vkCreateDebugUtilsMessengerEXT(vk_instance, &vk_debug_messenger_create_info, 0, &vk_debug_messenger), "Debug messenger");
+    
 
    //Needs to be done first because queues need to be able to present and for that I need a surface
    //34.2.3
@@ -708,42 +738,7 @@ int main(int argc, char *argv[])
     vk_graphics_pipeline_create_info.layout = vk_pipeline_layout;
     vk_graphics_pipeline_create_info.renderPass = VK_NULL_HANDLE;
 
-    VkRenderingAttachmentInfoKHR vk_color_attachment = { 0 };
-    vk_color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
-    vk_color_attachment.imageView = vk_swapchain_image_view_list[0];
-    vk_color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    vk_color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    vk_color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    vk_color_attachment.clearValue.color = (VkClearColorValue){ 0.0f, 0.0f, 0.0f, 1.0f };
-
-    VkRenderingAttachmentInfoKHR vk_depth_attachment = { 0 };
-    vk_depth_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
-    vk_depth_attachment.imageView = vk_swapchain_image_view_list[1];
-    vk_depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    vk_depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    vk_depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    vk_depth_attachment.clearValue.depthStencil = (VkClearDepthStencilValue){ 1.0f, 0 };
-
-    VkRenderingAttachmentInfoKHR vk_stencil_attachment = { 0 };
-    vk_stencil_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
-    vk_stencil_attachment.imageView = vk_swapchain_image_view_list[2];
-    vk_stencil_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    vk_stencil_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    vk_stencil_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    vk_stencil_attachment.clearValue.depthStencil = (VkClearDepthStencilValue){ 0.0f, 0 };
-
-
-    VkRenderingInfoKHR vk_rendering_info = { 0 };
-    vk_rendering_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
-    vk_rendering_info.pNext = 0;
-    vk_rendering_info.flags = 0;
-    vk_rendering_info.renderArea = vk_scissor;
-    vk_rendering_info.layerCount = 1;
-    vk_rendering_info.viewMask = 0;
-    vk_rendering_info.colorAttachmentCount = 1;
-    vk_rendering_info.pColorAttachments = &vk_color_attachment;
-    vk_rendering_info.pDepthAttachment = VK_NULL_HANDLE; //&vk_depth_attachment;
-    vk_rendering_info.pStencilAttachment = VK_NULL_HANDLE; //&vk_stencil_attachment;
+   
 
     VkPipeline vk_graphics_pipeline = { 0 };
     VkResultAssert(vkCreateGraphicsPipelines(vk_device, VK_NULL_HANDLE, 1, &vk_graphics_pipeline_create_info, 0, &vk_graphics_pipeline), "Graphics pipeline creation");
@@ -823,6 +818,49 @@ int main(int argc, char *argv[])
         VkResultAssert(vkResetCommandBuffer(vk_cmd_buffer, 0), "Cmd buffer reset");
 
         //command buffer record
+
+
+        VkRenderingAttachmentInfoKHR vk_color_attachment = { 0 };
+        vk_color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+        vk_color_attachment.imageView = vk_swapchain_image_view_list[imageIndex];
+        vk_color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        vk_color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        vk_color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        vk_color_attachment.clearValue.color = (VkClearColorValue){ 0.0f, 0.0f, 0.0f, 1.0f };
+
+        VkRenderingAttachmentInfoKHR vk_depth_attachment = { 0 };
+        vk_depth_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+        vk_depth_attachment.imageView = vk_swapchain_image_view_list[1];
+        vk_depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        vk_depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        vk_depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        vk_depth_attachment.clearValue.depthStencil = (VkClearDepthStencilValue){ 1.0f, 0 };
+
+        VkRenderingAttachmentInfoKHR vk_stencil_attachment = { 0 };
+        vk_stencil_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+        vk_stencil_attachment.imageView = vk_swapchain_image_view_list[2];
+        vk_stencil_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        vk_stencil_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        vk_stencil_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        vk_stencil_attachment.clearValue.depthStencil = (VkClearDepthStencilValue){ 0.0f, 0 };
+
+
+        VkRenderingInfoKHR vk_rendering_info = { 0 };
+        vk_rendering_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
+        vk_rendering_info.pNext = 0;
+        vk_rendering_info.flags = 0;
+        vk_rendering_info.renderArea = vk_scissor;
+        vk_rendering_info.layerCount = 1;
+        vk_rendering_info.viewMask = 0;
+        vk_rendering_info.colorAttachmentCount = 1;
+        vk_rendering_info.pColorAttachments = &vk_color_attachment;
+        vk_rendering_info.pDepthAttachment = VK_NULL_HANDLE; //&vk_depth_attachment;
+        vk_rendering_info.pStencilAttachment = VK_NULL_HANDLE; //&vk_stencil_attachment;
+
+
+
+
+
 
         VkCommandBufferBeginInfo vk_cmd_buffer_begin_info = { 0 };
         vk_cmd_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
