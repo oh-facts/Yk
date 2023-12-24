@@ -12,7 +12,7 @@ size is in bits
 #define DEBUG 1
 
 #if DEBUG
-#define Assert(Expression, msg) if(!(Expression)) {printf("Fatal: %s",msg); *(int *)0 = 0;}
+#define Assert(Expression, msg) if(!(Expression)) {printf("Fatal: %s",msg); volatile int* ptr = 0; *ptr = 0;}
 #else
 #define Assert(Expression)
 #endif

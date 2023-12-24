@@ -51,7 +51,7 @@ void check_device_extension_support(VkPhysicalDevice device)
     for (uint32_t j = 0; j < extensionCount; ++j)
     {
 
-        printf("%s\n", availableExtensions[j]);
+        printf("%s\n", availableExtensions[j].extensionName);
 
     }
     printf("\n");
@@ -103,7 +103,8 @@ void _check_vk_result(VkResult result, const char* msg) {
     }
     else
     {
-        *(int*)0 = 0;
+        volatile int* ptr = 0; 
+        *ptr = 0;
     }
 
 }
@@ -294,7 +295,7 @@ void yk_pick_physdevice(YkRenderer* renderer)
     
     #define max_devices 3
 
-    int devices = 0;
+    u32 devices = 0;
     vkEnumeratePhysicalDevices(renderer->vk_instance, &devices, 0);
 
     Assert(devices <= max_devices, "More than 3 graphics cards? Wth?")
@@ -329,13 +330,13 @@ void yk_find_queues(YkRenderer* renderer)
 {
     //Nvidia 4090 has 5. I only intend to use 3. 99% chance are they all refer to the same queue.
     #define max_queues 5
-    int queues = 0;
+    u32 queues = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(renderer->phys_device, &queues, 0);
 
     Assert(queues <= max_queues, "More queues found than supported")
-
+        //w
     VkQueueFamilyProperties vk_q_fam_prop_list[max_queues];
-    int current_queues = max_queues;
+    u32 current_queues = max_queues;
     vkGetPhysicalDeviceQueueFamilyProperties(renderer->phys_device, &current_queues, vk_q_fam_prop_list);
 
     i32 present_queue_found = -1;
@@ -520,7 +521,7 @@ void yk_create_swapchain(YkRenderer* renderer)
 
     #define max_images 3
 
-    i32 vk_image_num = 0;
+    u32 vk_image_num = 0;
     vkGetSwapchainImagesKHR(renderer->device, renderer->swapchain, &vk_image_num, 0);
     Assert(vk_image_num <= max_images, "More swapchain images than expected")
 
@@ -535,7 +536,7 @@ void yk_create_swapchain(YkRenderer* renderer)
         vk_image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         vk_image_view_create_info.pNext = 0;
         vk_image_view_create_info.image = renderer->swapchain_image_list[i];
-        vk_image_view_create_info.viewType = VK_IMAGE_TYPE_2D;
+        vk_image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
         vk_image_view_create_info.format = surface_format.format;
 
         VkComponentMapping mapping = { VK_COMPONENT_SWIZZLE_IDENTITY };
@@ -582,8 +583,8 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
     VkShaderModule vk_frag_shader_module = { 0 };
     VkResultAssert(vkCreateShaderModule(renderer->device, &vk_frag_shader_module_create_info, 0, &vk_frag_shader_module), "Frag Shader Module Creation");
 
-    free(vert_shader_code);
-    free(frag_shader_code);
+    free((char*)vert_shader_code);
+    free((char*)frag_shader_code);
 
     VkPipelineShaderStageCreateInfo vk_vert_shader_stage_info = { 0 };
     vk_vert_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -982,4 +983,5 @@ b8 yk_recreate_swapchain(YkRenderer* renderer)
 
     yk_create_swapchain(renderer);
     
+    return true;
 }
