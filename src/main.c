@@ -4,17 +4,24 @@
 
 
 //ToDo(facts): Better Debug profiles.
-// 11/23 1758
-//ToDo(facts): Fix flickering triangle (sync problem I think)
+// 12/23 1758
+// ToDo(facts): Fix flickering triangle (sync problem I think)
 //             Fixed.
 //                  1. I was handling cmds incorrectly in win32
 //                  2. My rendering attatchment info was outside of loop
-//ToDo(facts): Destroy resources
-//ToDo(facts): Posix window so my linux friends can see my triangle
-//ToDo(facts): Window Abstraction
-//ToDo(facts): Renderer Abstraction :skull:
-//ToDo(facts): VkAssertResult profiles?
-
+// ToDo(facts): Destroy resources
+//             Fixed.
+// ToDo(facts): Posix window so my linux friends can see my triangle
+// ToDo(facts): Window Abstraction
+//             Fixed.
+// ToDo(facts): Renderer Abstraction :skull:
+//             Fixed.
+// ToDo(facts): VkAssertResult profiles?
+// 
+// 12/24 0825
+// ToDo(facts): Fix all those warnings
+//
+// ToDo(facts): Window callbacks instead of globals
 
 
 
