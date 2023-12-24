@@ -135,6 +135,7 @@ void yk_create_gfx_pipeline(YkRenderer* renderer);
 void yk_create_cmd_pool(YkRenderer* renderer);
 void yk_create_cmd_buffer(YkRenderer* renderer);
 void yk_create_sync_objs(YkRenderer* renderer);
+void yk_recreate_swapchain(YkRenderer* renderer);
 
 
 void yk_innit_renderer(YkRenderer* renderer, YkWindow* window)
@@ -796,13 +797,20 @@ void vk_draw_frame(YkRenderer* renderer)
 
     VkResultAssert(vkWaitForFences(renderer->device, 1, &renderer->in_flight_fences[renderer->current_frame], VK_TRUE, UINT64_MAX), "Wait for fences")
 
+    uint32_t imageIndex = -1;
+
+    if (vkAcquireNextImageKHR(renderer->device, renderer->swapchain, UINT64_MAX,
+        renderer->image_available_semawhores[renderer->current_frame],
+        VK_NULL_HANDLE, &imageIndex) == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        yk_recreate_swapchain(renderer);
+    }
+
+
     VkResultAssert(vkResetFences(renderer->device, 1, &renderer->in_flight_fences[renderer->current_frame]), "Reset fences");
 
-    uint32_t imageIndex = -1;
-    vkAcquireNextImageKHR(renderer->device, renderer->swapchain, UINT64_MAX, 
-                          renderer->image_available_semawhores[renderer->current_frame], 
-                          VK_NULL_HANDLE, &imageIndex);
-
+    
+   
     VkResultAssert(vkResetCommandBuffer(renderer->cmd_buffers[renderer->current_frame], 0), "Cmd buffer reset");
 
     //command buffer record
@@ -935,7 +943,12 @@ void vk_draw_frame(YkRenderer* renderer)
     vk_present_info.pResults = 0;
 
     //present q same as graphics for now
-    vkQueuePresentKHR(renderer->gfx_q, &vk_present_info);
+    VkResult qpresent_result = vkQueuePresentKHR(renderer->gfx_q, &vk_present_info);
+
+    if (qpresent_result == VK_ERROR_OUT_OF_DATE_KHR || qpresent_result == VK_SUBOPTIMAL_KHR)
+    {
+        yk_recreate_swapchain(renderer);
+    }
 
     renderer->current_frame = (renderer->current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
     // printf("we");
@@ -944,4 +957,13 @@ void vk_draw_frame(YkRenderer* renderer)
 void yk_renderer_wait(YkRenderer* renderer)
 {
     vkDeviceWaitIdle(renderer->device);
+}
+
+void yk_recreate_swapchain(YkRenderer* renderer)
+{
+    vkDeviceWaitIdle(renderer->device);
+    
+    vkDestroySwapchainKHR(renderer->device, renderer->swapchain, 0);
+    yk_create_swapchain(renderer);
+    
 }
