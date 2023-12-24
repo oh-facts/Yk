@@ -11,11 +11,17 @@
 #include <vulkan/vulkan_android.h>
 #endif
 
+#define MAX_FRAMES_IN_FLIGHT 2
+
 //ToDo(facts): Better Debug profiles.
 // 11/23 1758
-//ToDo(facts): Fix flickering triangle (sync problem I think).
+//ToDo(facts): Fix flickering triangle (sync problem I think)
+//             Fixed.
+//                  1. I was handling cmds incorrectly in win32
+//                  2. My rendering attatchment info was outside of loop
 //ToDo(facts): Destroy resources
 //ToDo(facts): Posix window so my linux friends can see my triangle
+//ToDo(facts): Window Abstraction
 //ToDo(facts): Renderer Abstraction :skull:
 
 #define DEBUG 1
@@ -28,7 +34,7 @@
 #endif
 
 #define MAX_FRAMES_IN_FLIGHT 2
-#define VK_USE_VALIDATION_LAYERS 1
+#define VK_USE_VALIDATION_LAYERS 0
 #define VK_EXT_PRINT_DEBUG 0
 #define VK_PRINT_SUCCESS 0
 #define LOG_DEVICE_DETAILS 0
@@ -257,7 +263,12 @@ int main(int argc, char *argv[])
     /*
         When they adding constexpr to C fr fr
     */
+    #if VK_USE_VALIDATION_LAYERS
     #define num_extensions 3
+    #else
+    #define num_extensions 2
+    #endif
+           
     const char* enabled_extensions[num_extensions] = {0};
     enabled_extensions[0] = VK_KHR_SURFACE_EXTENSION_NAME;
     
@@ -281,6 +292,7 @@ int main(int argc, char *argv[])
     VkResultAssert(vkCreateInstance(&vk_create_info, 0, &vk_instance), "Vulkan instance creation")
 
     //Debug messenger
+#if VK_USE_VALIDATION_LAYERS
 
     VkDebugUtilsMessengerCreateInfoEXT vk_debug_messenger_create_info = {0};
     vk_debug_messenger_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -293,6 +305,7 @@ int main(int argc, char *argv[])
     PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vk_instance, "vkCreateDebugUtilsMessengerEXT");
     VkResultAssert(vkCreateDebugUtilsMessengerEXT(vk_instance, &vk_debug_messenger_create_info, 0, &vk_debug_messenger), "Debug messenger");
     
+#endif
 
    //Needs to be done first because queues need to be able to present and for that I need a surface
    //34.2.3
@@ -761,10 +774,10 @@ int main(int argc, char *argv[])
     vk_cmd_buffer_alloc_info.pNext = 0;
     vk_cmd_buffer_alloc_info.commandPool = vk_cmd_pool;
     vk_cmd_buffer_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vk_cmd_buffer_alloc_info.commandBufferCount = 1;
+    vk_cmd_buffer_alloc_info.commandBufferCount = MAX_FRAMES_IN_FLIGHT;
 
-    VkCommandBuffer vk_cmd_buffer;
-    VkResultAssert(vkAllocateCommandBuffers(vk_device, &vk_cmd_buffer_alloc_info, &vk_cmd_buffer), "Command Buffer allocation");
+    VkCommandBuffer vk_cmd_buffers[MAX_FRAMES_IN_FLIGHT] = { 0 };
+    VkResultAssert(vkAllocateCommandBuffers(vk_device, &vk_cmd_buffer_alloc_info, vk_cmd_buffers), "Command Buffer allocation");
 
    
 
@@ -775,9 +788,9 @@ int main(int argc, char *argv[])
     
     //if semaphores aren't extended with semaphore types, they will be binary
     
-    VkSemaphore vk_image_available_semawhore = { 0 };
-    VkSemaphore vk_render_finished_semawhore = { 0 };
-    VkFence vk_in_flight_fence = { 0 };
+    VkSemaphore vk_image_available_semawhores[MAX_FRAMES_IN_FLIGHT] = {0};
+    VkSemaphore vk_render_finished_semawhores[MAX_FRAMES_IN_FLIGHT] = {0};
+    VkFence vk_in_flight_fences[MAX_FRAMES_IN_FLIGHT] = {0};
 
     VkSemaphoreCreateInfo vk_semawhore_create_info = { 0 };
     vk_semawhore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -788,17 +801,21 @@ int main(int argc, char *argv[])
     vk_fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     vk_fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
     
-    VkResultAssert(vkCreateSemaphore(vk_device, &vk_semawhore_create_info, 0, &vk_image_available_semawhore), "Image ready semaphore");
-    VkResultAssert(vkCreateSemaphore(vk_device, &vk_semawhore_create_info, 0, &vk_render_finished_semawhore), "Render finished semaphore");
-    VkResultAssert(vkCreateFence(vk_device, &vk_fence_create_info, 0, &vk_in_flight_fence), "flight fence");
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        VkResultAssert(vkCreateSemaphore(vk_device, &vk_semawhore_create_info, 0, &vk_image_available_semawhores[i]), "Image ready semaphore");
+        VkResultAssert(vkCreateSemaphore(vk_device, &vk_semawhore_create_info, 0, &vk_render_finished_semawhores[i]), "Render finished semaphore");
+        VkResultAssert(vkCreateFence(vk_device, &vk_fence_create_info, 0, &vk_in_flight_fences[i]), "flight fence");
 
+    }
+   
     PFN_vkCmdBeginRenderingKHR vkCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(vk_device, "vkCmdBeginRenderingKHR");
     PFN_vkCmdEndRenderingKHR vkCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)vkGetDeviceProcAddr(vk_device, "vkCmdEndRenderingKHR");
 
     
 
    
-    
+    uint32_t currentFrame = 0;
   
     while (1)
     {
@@ -808,14 +825,14 @@ int main(int argc, char *argv[])
             DispatchMessageA(&message);
         }
 
-        VkResultAssert(vkWaitForFences(vk_device, 1, &vk_in_flight_fence, VK_TRUE, UINT64_MAX), "Wait for fences")
+        VkResultAssert(vkWaitForFences(vk_device, 1, &vk_in_flight_fences[currentFrame], VK_TRUE, UINT64_MAX), "Wait for fences")
 
-        VkResultAssert(vkResetFences(vk_device, 1, &vk_in_flight_fence), "Reset fences");
+        VkResultAssert(vkResetFences(vk_device, 1, &vk_in_flight_fences[currentFrame]), "Reset fences");
 
         uint32_t imageIndex = -1;
-        VkResultAssert(vkAcquireNextImageKHR(vk_device, vk_swapchain, UINT64_MAX, vk_image_available_semawhore, VK_NULL_HANDLE, &imageIndex), "Aquire next image");
+        vkAcquireNextImageKHR(vk_device, vk_swapchain, UINT64_MAX, vk_image_available_semawhores[currentFrame], VK_NULL_HANDLE, &imageIndex), "Aquire next image";
 
-        VkResultAssert(vkResetCommandBuffer(vk_cmd_buffer, 0), "Cmd buffer reset");
+        VkResultAssert(vkResetCommandBuffer(vk_cmd_buffers[currentFrame], 0), "Cmd buffer reset");
 
         //command buffer record
 
@@ -870,23 +887,23 @@ int main(int argc, char *argv[])
         //for secondary buffers
         vk_cmd_buffer_begin_info.pInheritanceInfo = 0;
 
-        VkResultAssert(vkBeginCommandBuffer(vk_cmd_buffer, &vk_cmd_buffer_begin_info), "Command buffer begin");
+        VkResultAssert(vkBeginCommandBuffer(vk_cmd_buffers[currentFrame], &vk_cmd_buffer_begin_info), "Command buffer begin");
 
         // Begin rendering
-        vkCmdBeginRenderingKHR(vk_cmd_buffer, &vk_rendering_info);
+        vkCmdBeginRenderingKHR(vk_cmd_buffers[currentFrame], &vk_rendering_info);
 
         // Bind the graphics pipeline
-        vkCmdBindPipeline(vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_graphics_pipeline);
+        vkCmdBindPipeline(vk_cmd_buffers[currentFrame], VK_PIPELINE_BIND_POINT_GRAPHICS, vk_graphics_pipeline);
 
         // Set the viewport and scissor
-        vkCmdSetViewport(vk_cmd_buffer, 0, 1, &vk_viewport);
-        vkCmdSetScissor(vk_cmd_buffer, 0, 1, &vk_scissor);
+        vkCmdSetViewport(vk_cmd_buffers[currentFrame], 0, 1, &vk_viewport);
+        vkCmdSetScissor(vk_cmd_buffers[currentFrame], 0, 1, &vk_scissor);
 
         // Issue the draw command to draw the triangle
-        vkCmdDraw(vk_cmd_buffer, 3, 1, 0, 0);
+        vkCmdDraw(vk_cmd_buffers[currentFrame], 3, 1, 0, 0);
 
         // End rendering
-        vkCmdEndRenderingKHR(vk_cmd_buffer);
+        vkCmdEndRenderingKHR(vk_cmd_buffers[currentFrame]);
 
         VkImageMemoryBarrier barrier = { 0 };
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -907,7 +924,7 @@ int main(int argc, char *argv[])
         barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 
         vkCmdPipelineBarrier(
-            vk_cmd_buffer,
+            vk_cmd_buffers[currentFrame],
             VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
             0,
@@ -916,7 +933,7 @@ int main(int argc, char *argv[])
             1, &barrier
         );
 
-        VkResultAssert(vkEndCommandBuffer(vk_cmd_buffer), "Command buffer end");
+        VkResultAssert(vkEndCommandBuffer(vk_cmd_buffers[currentFrame]), "Command buffer end");
 
         //command buffer recording over
 
@@ -924,20 +941,20 @@ int main(int argc, char *argv[])
         vk_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         vk_submit_info.pNext = 0;
 
-        VkSemaphore vk_wait_semawhores[] = { vk_image_available_semawhore };
+        VkSemaphore vk_wait_semawhores[] = { vk_image_available_semawhores[currentFrame] };
         VkPipelineStageFlags vk_wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
         vk_submit_info.waitSemaphoreCount = 1;
         vk_submit_info.pWaitSemaphores = vk_wait_semawhores;
         vk_submit_info.pWaitDstStageMask = vk_wait_stages;
 
         vk_submit_info.commandBufferCount = 1;
-        vk_submit_info.pCommandBuffers = &vk_cmd_buffer;
+        vk_submit_info.pCommandBuffers = &vk_cmd_buffers[currentFrame];
 
-        VkSemaphore vk_signal_semawhores[] = { vk_render_finished_semawhore };
+        VkSemaphore vk_signal_semawhores[] = { vk_render_finished_semawhores[currentFrame] };
         vk_submit_info.signalSemaphoreCount = 1;
         vk_submit_info.pSignalSemaphores = vk_signal_semawhores;
 
-        VkResultAssert(vkQueueSubmit(vk_graphics_q, 1, &vk_submit_info, vk_in_flight_fence), "Draw command buffer submitted");
+        VkResultAssert(vkQueueSubmit(vk_graphics_q, 1, &vk_submit_info, vk_in_flight_fences[currentFrame]), "Draw command buffer submitted");
 
         VkPresentInfoKHR vk_present_info = { 0 };
         vk_present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -953,12 +970,15 @@ int main(int argc, char *argv[])
         vk_present_info.pResults = 0;
 
         //present q same as graphics for now
-        VkResultAssert(vkQueuePresentKHR(vk_graphics_q, &vk_present_info), "Present queue")
+        vkQueuePresentKHR(vk_graphics_q, &vk_present_info);
+
+        currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
            // printf("we");
     }
     vkDeviceWaitIdle(vk_device);
+
     // ToDo(facts 11/22 16:22): Remember to destroy window
-    //vkDestroyPipelineLayout(vk_device, vk_pipeline_layout, 0);
+    vkDestroyPipelineLayout(vk_device, vk_pipeline_layout, 0);
     /*
     for (i32 i = 0; i < vk_image_num; i++)
     {
@@ -972,7 +992,7 @@ int main(int argc, char *argv[])
     // vkDestroySwapchainKHR(vk_device, vk_swapchain, 0);
     // vkDestroyDevice(vk_device, 0);
     // vkDestroySurfaceKHR(vk_instance, vk_surface, 0);
-    // vkDestroyInstance(vk_instance, 0);
+    vkDestroyInstance(vk_instance, 0);
 
     return 0;
 }
