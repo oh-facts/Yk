@@ -19,7 +19,7 @@
 //ToDo(facts): Renderer Abstraction :skull:
 
 #define DEBUG 1
-#define VkDEBUG 0
+#define VkDEBUG 1
 
 #if DEBUG
     #define Assert(Expression, msg) if(!(Expression)) {printf("Fatal: %s",msg); *(int *)0 = 0;}
@@ -802,7 +802,7 @@ int main(int argc, char *argv[])
 
     
 
-    
+   
     
   
     while (1)
@@ -813,13 +813,14 @@ int main(int argc, char *argv[])
             DispatchMessageA(&message);
         }
 
-        vkWaitForFences(vk_device, 1, &vk_in_flight_fence, VK_TRUE, UINT64_MAX);
-        vkResetFences(vk_device, 1, &vk_in_flight_fence);
+        VkResultAssert(vkWaitForFences(vk_device, 1, &vk_in_flight_fence, VK_TRUE, UINT64_MAX), "Wait for fences")
+
+        VkResultAssert(vkResetFences(vk_device, 1, &vk_in_flight_fence), "Reset fences");
 
         uint32_t imageIndex = -1;
-        vkAcquireNextImageKHR(vk_device, vk_swapchain, UINT64_MAX, vk_image_available_semawhore, VK_NULL_HANDLE, &imageIndex);
+        VkResultAssert(vkAcquireNextImageKHR(vk_device, vk_swapchain, UINT64_MAX, vk_image_available_semawhore, VK_NULL_HANDLE, &imageIndex), "Aquire next image");
 
-        vkResetCommandBuffer(vk_cmd_buffer, 0);
+        VkResultAssert(vkResetCommandBuffer(vk_cmd_buffer, 0), "Cmd buffer reset");
 
         //command buffer record
 
@@ -915,7 +916,7 @@ int main(int argc, char *argv[])
 
         //present q same as graphics for now
         VkResultAssert(vkQueuePresentKHR(vk_graphics_q, &vk_present_info), "Present queue")
-            printf("we");
+           // printf("we");
     }
     vkDeviceWaitIdle(vk_device);
     // ToDo(facts 11/22 16:22): Remember to destroy window
