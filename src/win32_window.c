@@ -3,29 +3,38 @@
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    YkWindow* win = (YkWindow*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
-
+    
     switch (msg)
     {
     case WM_CREATE:
-        win = (YkWindow*)((CREATESTRUCT*)lParam)->lpCreateParams;
+        {
+        YkWindow* win = (YkWindow*)((CREATESTRUCT*)lParam)->lpCreateParams;
         SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)win);
+        }
+      
         break;
     case WM_SIZE:
         if (wParam == SIZE_MINIMIZED)
         {
+            YkWindow* win = (YkWindow*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
             if (win)
                 win->is_minimized = true;
         }
         else if (wParam == SIZE_RESTORED)
         {
+            YkWindow* win = (YkWindow*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
             if (win)
                 win->is_minimized = false;
         }
         break;
     case WM_DESTROY:
+    {
+        YkWindow* win = (YkWindow*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+        if(win)
         win->is_running = false;
         PostQuitMessage(0);
+    }
+      
         break;
     default:
         return DefWindowProc(hwnd, msg, wParam, lParam);
