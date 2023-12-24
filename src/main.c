@@ -14,10 +14,12 @@
 //ToDo(facts): Better Debug profiles.
 // 11/23 1758
 //ToDo(facts): Fix flickering triangle (sync problem I think).
+//ToDo(facts): Destroy resources
 //ToDo(facts): Posix window so my linux friends can see my triangle
 //ToDo(facts): Renderer Abstraction :skull:
 
 #define DEBUG 1
+#define VkDEBUG 0
 
 #if DEBUG
     #define Assert(Expression, msg) if(!(Expression)) {printf("Fatal: %s",msg); *(int *)0 = 0;}
@@ -27,7 +29,7 @@
 
 #define VK_USE_VALIDATION_LAYERS 1
 #define VK_EXT_PRINT_DEBUG 0
-#define VK_PRINT_SUCCESS 1
+#define VK_PRINT_SUCCESS 0
 #define LOG_DEVICE_DETAILS 0
 
 void _print_device_details(VkPhysicalDeviceProperties* vk_phys_device_props)
@@ -115,7 +117,7 @@ void _check_vk_result(VkResult result, const char* msg) {
  
 }
 
-#if DEBUG
+#if VkDEBUG
     #define VkResultAssert(result_expr, msg_expr ) _check_vk_result(result_expr, msg_expr);
 #else
     #define VkResultAssert(result_expr, msg_expr ) result_expr; 
@@ -550,8 +552,8 @@ int main(int argc, char *argv[])
 
     //Graphics Pipeline starts here
 
-    int vert_len = { 0 };
-    int frag_len = { 0 };
+    size_t vert_len = 0;
+    size_t frag_len = 0;
     const char* vert_shader_code = yk_read_binary_file("res/vert.spv", &vert_len);
     const char* frag_shader_code = yk_read_binary_file("res/frag.spv", &frag_len);
 
@@ -802,21 +804,14 @@ int main(int argc, char *argv[])
 
     
     
-    MSG msg;
+  
     while (1)
     {
-        BOOL message_result = GetMessage(&msg, 0, 0, 0);
-        if (message_result > 0)
-        {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
+        MSG message;
+        while (PeekMessageA(&message, NULL, 0, 0, PM_REMOVE)) {
+            TranslateMessage(&message);
+            DispatchMessageA(&message);
         }
-        else
-        {
-            break;
-        }
-
-        //Draw Frame
 
         vkWaitForFences(vk_device, 1, &vk_in_flight_fence, VK_TRUE, UINT64_MAX);
         vkResetFences(vk_device, 1, &vk_in_flight_fence);
@@ -860,6 +855,9 @@ int main(int argc, char *argv[])
         barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+        Assert(imageIndex < max_images, "Too many images.")
+
         barrier.image = vk_swapchain_image_list[imageIndex];
         barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         barrier.subresourceRange.baseMipLevel = 0;
@@ -917,9 +915,7 @@ int main(int argc, char *argv[])
 
         //present q same as graphics for now
         VkResultAssert(vkQueuePresentKHR(vk_graphics_q, &vk_present_info), "Present queue")
-
-
-
+            printf("we");
     }
     vkDeviceWaitIdle(vk_device);
     // ToDo(facts 11/22 16:22): Remember to destroy window
