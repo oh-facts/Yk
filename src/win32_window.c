@@ -25,7 +25,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             if (win)
                 win->is_minimized = true;
         }
-        else if (wParam == SIZE_RESTORED)
+        else if (wParam == SIZE_RESTORED || wParam == SIZE_MAXIMIZED )
         {
             if (win)
                 win->is_minimized = false;
