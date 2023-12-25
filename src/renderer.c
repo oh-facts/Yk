@@ -791,10 +791,10 @@ void yk_create_cmd_pool(YkRenderer* renderer)
 }
 
 const vertex vertices[] = {
- {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+    {{-0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}},   // Light purple
+    {{0.5f, -0.5f}, {163/255.f, 163 / 255.f, 163 / 255.f}},    // Light green
+    {{0.5f, 0.5f}, {1.f, 1.f, 1.f}},     // Light blue
+    {{-0.5f, 0.5f}, {128 / 255.f, 0.f, 128 / 255.f}}     // Light yellow
 };
 
 const u16 indices[] = {
