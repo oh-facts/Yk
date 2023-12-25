@@ -49,8 +49,12 @@ struct YkRenderer
 	VkImage swapchain_image_list[max_images];
 	VkImageView swapchain_image_view_list[max_images];
 
+	VkDescriptorSetLayout descriptorSetLayout;
 	VkPipelineLayout pipeline_layout;
 	VkPipeline gfx_pipeline;
+
+	VkDescriptorPool descriptorPool;
+	VkDescriptorSet descriptorSets[MAX_FRAMES_IN_FLIGHT];
 
 	VkCommandPool cmd_pool;
 	VkCommandBuffer cmd_buffers[MAX_FRAMES_IN_FLIGHT];
@@ -66,6 +70,10 @@ struct YkRenderer
 
 	VkBuffer index_buffer;
 	VkDeviceMemory index_buffer_memory;
+
+	VkBuffer uniformBuffers[MAX_FRAMES_IN_FLIGHT];
+	VkDeviceMemory uniformBuffersMemory[MAX_FRAMES_IN_FLIGHT];
+	void* uniformBuffersMapped[MAX_FRAMES_IN_FLIGHT];
 
 
 #if VK_USE_VALIDATION_LAYERS
@@ -99,4 +107,12 @@ struct vertex
 VkVertexInputBindingDescription vk_get_binding_desc();
 void get_attrib_desc(VkVertexInputAttributeDescription out[]);
 
+struct ubo
+{
+	m4 model;
+	m4 view;
+	m4 proj;
+};
+
+typedef struct ubo ubo;
 #endif

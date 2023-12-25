@@ -8,5 +8,6 @@
 #include <win32_window.h>
 #include <renderer.h>
 #include <yk_math.h>
+#include <time.h>
 
 #endif

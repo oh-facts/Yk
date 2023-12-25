@@ -10,7 +10,7 @@
 #endif
 
 
-
+clock_t start_time;
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -128,20 +128,26 @@ void yk_pick_physdevice(YkRenderer* renderer);
 void yk_find_queues(YkRenderer* renderer);
 void yk_create_device(YkRenderer* renderer);
 void yk_create_swapchain(YkRenderer* renderer);
+void createDescriptorSetLayout(YkRenderer* renderer);
 void yk_create_gfx_pipeline(YkRenderer* renderer);
 void yk_create_cmd_pool(YkRenderer* renderer);
 void yk_create_vert_buffer(YkRenderer* renderer);
 void yk_create_index_buffer(YkRenderer* renderer);
+void createUniformBuffers(YkRenderer* renderer);
+void createDescriptorPool(YkRenderer* renderer);
+void createDescriptorSets(YkRenderer* renderer);
 void yk_create_cmd_buffer(YkRenderer* renderer);
 void yk_create_sync_objs(YkRenderer* renderer);
 b8 yk_recreate_swapchain(YkRenderer* renderer);
 void copyBuffer(YkRenderer* renderer,VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+void updateUniformBuffer(YkRenderer* renderer, uint32_t currentImage);
 
 void create_buffer(YkRenderer* ren, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory);
 
 
 void yk_innit_renderer(YkRenderer* renderer, YkWindow* window)
 {
+    start_time = clock();
     renderer->window_handle = window;
 
     yk_innit_vulkan(renderer);
@@ -150,10 +156,14 @@ void yk_innit_renderer(YkRenderer* renderer, YkWindow* window)
     yk_find_queues(renderer);
     yk_create_device(renderer);
     yk_create_swapchain(renderer);
+    createDescriptorSetLayout(renderer);
     yk_create_gfx_pipeline(renderer);
     yk_create_cmd_pool(renderer);
     yk_create_vert_buffer(renderer);
     yk_create_index_buffer(renderer);
+    createUniformBuffers(renderer);
+    createDescriptorPool(renderer);
+    createDescriptorSets(renderer);
     yk_create_cmd_buffer(renderer);
     yk_create_sync_objs(renderer);
 
@@ -181,6 +191,14 @@ void yk_free_renderer(YkRenderer* renderer)
     }
 
     vkDestroySwapchainKHR(renderer->device, renderer->swapchain, 0);
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        vkDestroyBuffer(renderer->device, renderer->uniformBuffers[i], 0);
+        vkFreeMemory(renderer->device, renderer->uniformBuffersMemory[i], 0);
+    }
+
+    vkDestroyDescriptorPool(renderer->device, renderer->descriptorPool, 0);
+    vkDestroyDescriptorSetLayout(renderer->device, renderer->descriptorSetLayout, 0);
 
     vkDestroyBuffer(renderer->device, renderer->index_buffer, 0);
     vkFreeMemory(renderer->device, renderer->index_buffer_memory, 0);
@@ -593,6 +611,22 @@ void yk_create_swapchain(YkRenderer* renderer)
 
 }
 
+void createDescriptorSetLayout(YkRenderer* renderer)
+{
+    VkDescriptorSetLayoutBinding uboLayoutBinding = { 0 };
+    uboLayoutBinding.binding = 0;
+    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uboLayoutBinding.descriptorCount = 1;
+    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo = {0};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = 1;
+    layoutInfo.pBindings = &uboLayoutBinding;
+
+    VkResultAssert(vkCreateDescriptorSetLayout(renderer->device, &layoutInfo, 0, &renderer->descriptorSetLayout), "descr set layout")
+}
+
 void yk_create_gfx_pipeline(YkRenderer* renderer)
 {
     size_t vert_len = 0;
@@ -688,7 +722,7 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
     vk_rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     vk_rasterizer.lineWidth = 1.0f;
     vk_rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    vk_rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    vk_rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
     //Note(facts 12/23 2:20): come back to this later
     vk_rasterizer.depthBiasEnable = VK_FALSE;
@@ -737,8 +771,8 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
 
     VkPipelineLayoutCreateInfo vk_pipeline_layout_info = { 0 };
     vk_pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    vk_pipeline_layout_info.setLayoutCount = 0;
-    vk_pipeline_layout_info.pSetLayouts = 0;
+    vk_pipeline_layout_info.setLayoutCount = 1;
+    vk_pipeline_layout_info.pSetLayouts = &renderer->descriptorSetLayout;
     vk_pipeline_layout_info.pushConstantRangeCount = 0;
     vk_pipeline_layout_info.pPushConstantRanges = 0;
 
@@ -858,6 +892,66 @@ void yk_create_index_buffer(YkRenderer* renderer)
     vkFreeMemory(renderer->device, stagingBufferMemory, 0);
 }
 
+void createUniformBuffers(YkRenderer* renderer)
+{
+    VkDeviceSize bufferSize = sizeof(ubo);
+
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            &renderer->uniformBuffers[i], &renderer->uniformBuffersMemory[i]);
+
+        vkMapMemory(renderer->device, renderer->uniformBuffersMemory[i], 0, bufferSize, 0, &renderer->uniformBuffersMapped[i]);
+    }
+}
+
+void createDescriptorPool(YkRenderer* renderer)
+{
+    VkDescriptorPoolSize poolSize = {0};
+    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSize.descriptorCount = MAX_FRAMES_IN_FLIGHT;
+
+    VkDescriptorPoolCreateInfo poolInfo = {0};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.poolSizeCount = 1;
+    poolInfo.pPoolSizes = &poolSize;
+
+    poolInfo.maxSets = MAX_FRAMES_IN_FLIGHT;
+
+    VkResultAssert(vkCreateDescriptorPool(renderer->device, &poolInfo, 0 , &renderer->descriptorPool), "descripter pool")
+
+}
+
+void createDescriptorSets(YkRenderer* renderer)
+{
+    VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT] = {renderer->descriptorSetLayout,renderer->descriptorSetLayout };
+    VkDescriptorSetAllocateInfo allocInfo = {0};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = renderer->descriptorPool;
+    allocInfo.descriptorSetCount = MAX_FRAMES_IN_FLIGHT;
+    allocInfo.pSetLayouts = layouts;
+
+    VkResultAssert(vkAllocateDescriptorSets(renderer->device, &allocInfo, &renderer->descriptorSets[0]), "descriptor sets")
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        VkDescriptorBufferInfo bufferInfo = { 0 };
+        bufferInfo.buffer = renderer->uniformBuffers[i];
+        bufferInfo.offset = 0;
+        bufferInfo.range = sizeof(ubo);
+
+        VkWriteDescriptorSet descriptorWrite = {0};
+        descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite.dstSet = renderer->descriptorSets[i];
+        descriptorWrite.dstBinding = 0;
+        descriptorWrite.dstArrayElement = 0;
+        descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrite.descriptorCount = 1;
+        descriptorWrite.pBufferInfo = &bufferInfo;
+
+        vkUpdateDescriptorSets(renderer->device, 1, &descriptorWrite, 0, 0);
+    }
+}
+
 void yk_create_cmd_buffer(YkRenderer* renderer)
 {
     VkCommandBufferAllocateInfo vk_cmd_buffer_alloc_info = { 0 };
@@ -899,6 +993,26 @@ void yk_create_sync_objs(YkRenderer* renderer)
 
 }
 
+
+
+void updateUniformBuffer(YkRenderer* renderer, uint32_t currentImage)
+{
+    clock_t current_time = clock();
+    f32 time = (f32)(current_time - start_time) / CLOCKS_PER_SEC;
+
+    ubo ubo = {0};
+
+    ubo.model = yk_m4_rotate(yk_m4_identity(), time * DEG_TO_RAD * 90.f, (v3) { 0, 0, 1 });
+    ubo.view = yk_m4_look_at((v3) { 2, 2, 2 }, (v3) { 0, 0, 0 }, (v3) { 0, 0, 1 });
+    ubo.proj = yk_m4_perspective(DEG_TO_RAD * 45., renderer->extent.width / (f32)renderer->extent.height, 0.1f, 10.0f);
+
+
+    ubo.proj.e[1][1] *=  -1;
+
+    memcpy(renderer->uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
+}
+
+
 void vk_draw_frame(YkRenderer* renderer)
 {
 
@@ -921,7 +1035,7 @@ void vk_draw_frame(YkRenderer* renderer)
         }
     }
 
-
+    updateUniformBuffer(renderer,renderer->current_frame);
     VkResultAssert(vkResetFences(renderer->device, 1, &renderer->in_flight_fences[renderer->current_frame]), "Reset fences");
 
     
@@ -993,7 +1107,8 @@ void vk_draw_frame(YkRenderer* renderer)
     vkCmdBindVertexBuffers(renderer->cmd_buffers[renderer->current_frame], 0, 1, vertex_buffers, offsets );
     vkCmdBindIndexBuffer(renderer->cmd_buffers[renderer->current_frame], renderer->index_buffer, 0, VK_INDEX_TYPE_UINT16);
 
-//    vkCmdDraw(renderer->cmd_buffers[renderer->current_frame], sizeof(vertices) / sizeof(vertex), 1, 0, 0);
+    vkCmdBindDescriptorSets(renderer->cmd_buffers[renderer->current_frame], VK_PIPELINE_BIND_POINT_GRAPHICS,
+        renderer->pipeline_layout, 0, 1, &renderer->descriptorSets[renderer->current_frame], 0, 0);
     vkCmdDrawIndexed(renderer->cmd_buffers[renderer->current_frame], 6, 1, 0, 0, 0);
 
 
