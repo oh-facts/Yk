@@ -4,8 +4,7 @@
 #include<yk.h>
 #include <Windows.h>
 
-#define WIN_SIZE_X 800
-#define WIN_SIZE_Y 600
+
 
 typedef struct YkWindow YkWindow;
 typedef b8(*win_closed)(void);
@@ -16,7 +15,8 @@ struct YkWindow
 	HINSTANCE hinstance;
 	b8 is_minimized;
 	b8 is_running;
-
+	i32 size_x;
+	i32 size_y;
 };
 
 void yk_innit_window(YkWindow* window);

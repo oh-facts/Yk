@@ -1,5 +1,7 @@
 #include <win32_window.h>
 
+#define WIN_SIZE_X 800
+#define WIN_SIZE_Y 600
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -14,19 +16,21 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
       
         break;
     case WM_SIZE:
+    {
+        YkWindow* win = (YkWindow*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+        win->size_x = LOWORD(lParam);
+        win->size_y = HIWORD(lParam);
         if (wParam == SIZE_MINIMIZED)
         {
-            YkWindow* win = (YkWindow*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
             if (win)
                 win->is_minimized = true;
         }
         else if (wParam == SIZE_RESTORED)
         {
-            YkWindow* win = (YkWindow*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
             if (win)
                 win->is_minimized = false;
         }
-        break;
+    } break;
     case WM_DESTROY:
     {
         YkWindow* win = (YkWindow*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
@@ -47,6 +51,8 @@ void yk_innit_window(YkWindow* window)
     window->is_running = true;
     window->is_minimized = false;
     window->hinstance = GetModuleHandle(0);
+    window->size_x = WIN_SIZE_X;
+    window->size_y = WIN_SIZE_Y;
 
     WNDCLASS wc = { 0 };
     wc.style = CS_HREDRAW | CS_VREDRAW;

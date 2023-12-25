@@ -437,8 +437,8 @@ void yk_create_swapchain(YkRenderer* renderer)
     VkExtent2D vk_extent = { 0 };
     if (vk_surface_caps.currentExtent.width == -1 || vk_surface_caps.currentExtent.height == -1)
     {
-        vk_extent.width = WIN_SIZE_X;
-        vk_extent.height = WIN_SIZE_Y;
+        vk_extent.width = renderer->window_handle->size_x;
+        vk_extent.height = renderer->window_handle->size_y;
     }
     else
     {

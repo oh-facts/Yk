@@ -22,7 +22,15 @@
 // ToDo(facts): Fix all those warnings
 //              Fixed.
 // ToDo(facts): Window callbacks instead of globals
-//              
+//              Fixed.
+// 12/24 1010
+// ToDo(facts): Clean up triangle renderer
+//
+// 12/24 1834: Port to C++? I want to do this because I want to be able to use a physics engine in the future. 
+//             This is the only reason. constexpr and templates are just nice to have.
+//             I have decided against it. I will just whip my own physics engine out. Thats what source 2 did.
+//
+//       1854: Work on dll reloading.
 
 
 
