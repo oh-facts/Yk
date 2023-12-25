@@ -445,6 +445,25 @@ void yk_create_swapchain(YkRenderer* renderer)
         vk_extent = vk_surface_caps.currentExtent;
     }
 
+    //cursed fuckery
+    renderer->extent = vk_extent;
+
+    VkViewport vk_viewport = { 0 };
+    vk_viewport.x = 0.0f;
+    vk_viewport.y = 0.0f;
+    vk_viewport.width = (f32)renderer->extent.width;
+    vk_viewport.height = (f32)renderer->extent.height;
+    vk_viewport.minDepth = 0.0f;
+    vk_viewport.maxDepth = 1.0f;
+
+    VkRect2D vk_scissor = { 0 };
+    vk_scissor.offset = (VkOffset2D){ 0,0 };
+    vk_scissor.extent = renderer->extent;
+
+    renderer->scissor = vk_scissor;
+    renderer->viewport = vk_viewport;
+
+
     //ToDo(facts): Start doing this on the heap
 
 #define max_format_count 5
@@ -466,7 +485,6 @@ void yk_create_swapchain(YkRenderer* renderer)
             break;
         }
     }
-
 
     #define max_present_mode 4
     u32 vk_present_mode_count = 0;
@@ -556,7 +574,7 @@ void yk_create_swapchain(YkRenderer* renderer)
         VkResultAssert(vkCreateImageView(renderer->device, &vk_image_view_create_info, 0, &renderer->swapchain_image_view_list[i]), str);
     }
 
-    renderer->extent = vk_extent;
+   
 
 }
 
@@ -979,9 +997,15 @@ b8 yk_recreate_swapchain(YkRenderer* renderer)
         yk_window_poll();
     }
    
+    for (i32 i = 0; i < max_images; i++)
+    {
+        vkDestroyImageView(renderer->device, renderer->swapchain_image_view_list[i], 0);
+    }
+
     vkDestroySwapchainKHR(renderer->device, renderer->swapchain, 0);
 
+ 
     yk_create_swapchain(renderer);
-    
+
     return true;
 }

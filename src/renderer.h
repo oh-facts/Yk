@@ -6,7 +6,7 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
 
-#define VkDEBUG 0
+#define VkDEBUG 1
 
 #define VK_USE_VALIDATION_LAYERS 1
 #define VK_EXT_PRINT_DEBUG 0
