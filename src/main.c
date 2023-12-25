@@ -31,8 +31,14 @@
 //             I have decided against it. I will just whip my own physics engine out. Thats what source 2 did.
 //
 //       1854: Work on dll reloading.
-
-
+//
+//             Fix swapchain recreation bugs. Handle all window events. fix validation errors
+//             Done
+// 
+// 12/24 2122: One translational unit. Maybe better to have multiple "single translational units".
+//             
+//             Math
+// 
 
 struct YkMemory
 {
@@ -71,6 +77,8 @@ int main(int argc, char *argv[])
 
     YkRenderer ren = { 0 };
     yk_innit_renderer(&ren, &win);
+
+    v4 a = yk_v4_add((v4) { 1, 2, 3, 4 }, (v4) { 4, 3, 2, 1 });
    
   
     while (win.is_running)

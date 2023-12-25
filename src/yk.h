@@ -7,5 +7,6 @@
 #include <yk_file_reader.h>
 #include <win32_window.h>
 #include <renderer.h>
+#include <yk_math.h>
 
 #endif

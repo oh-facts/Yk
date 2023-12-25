@@ -79,6 +79,7 @@ void check_instance_extension_support()
     free(extensions);
 }
 
+//ToDo(facts): Strict mode, where anything apart from success is a crash
 void _check_vk_result(VkResult result, const char* msg) {
 
     if (result == VK_SUCCESS)
@@ -129,9 +130,14 @@ void yk_create_device(YkRenderer* renderer);
 void yk_create_swapchain(YkRenderer* renderer);
 void yk_create_gfx_pipeline(YkRenderer* renderer);
 void yk_create_cmd_pool(YkRenderer* renderer);
+void yk_create_vert_buffer(YkRenderer* renderer);
+void yk_create_index_buffer(YkRenderer* renderer);
 void yk_create_cmd_buffer(YkRenderer* renderer);
 void yk_create_sync_objs(YkRenderer* renderer);
 b8 yk_recreate_swapchain(YkRenderer* renderer);
+void copyBuffer(YkRenderer* renderer,VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
+void create_buffer(YkRenderer* ren, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory);
 
 
 void yk_innit_renderer(YkRenderer* renderer, YkWindow* window)
@@ -146,6 +152,8 @@ void yk_innit_renderer(YkRenderer* renderer, YkWindow* window)
     yk_create_swapchain(renderer);
     yk_create_gfx_pipeline(renderer);
     yk_create_cmd_pool(renderer);
+    yk_create_vert_buffer(renderer);
+    yk_create_index_buffer(renderer);
     yk_create_cmd_buffer(renderer);
     yk_create_sync_objs(renderer);
 
@@ -173,6 +181,13 @@ void yk_free_renderer(YkRenderer* renderer)
     }
 
     vkDestroySwapchainKHR(renderer->device, renderer->swapchain, 0);
+
+    vkDestroyBuffer(renderer->device, renderer->index_buffer, 0);
+    vkFreeMemory(renderer->device, renderer->index_buffer_memory, 0);
+
+    vkDestroyBuffer(renderer->device, renderer->vert_buffer, 0);
+    vkFreeMemory(renderer->device, renderer->vert_buffer_memory, 0);
+
     vkDestroyDevice(renderer->device, 0);
     vkDestroySurfaceKHR(renderer->vk_instance, renderer->surface, 0);
 
@@ -628,8 +643,19 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
     vk_dyn_state_create_info.dynamicStateCount = 2;
     vk_dyn_state_create_info.pDynamicStates = vk_dynamic_states;
 
+    
+
+    VkVertexInputBindingDescription binding_desc = vk_get_binding_desc();
+    VkVertexInputAttributeDescription attrib_desc[2] = { 0 };
+    get_attrib_desc(attrib_desc);
+
+
     VkPipelineVertexInputStateCreateInfo vk_vertex_input_info = { 0 };
     vk_vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vk_vertex_input_info.vertexBindingDescriptionCount = 1;
+    vk_vertex_input_info.pVertexBindingDescriptions = &binding_desc;
+    vk_vertex_input_info.vertexAttributeDescriptionCount = 2;
+    vk_vertex_input_info.pVertexAttributeDescriptions = attrib_desc;
 
     VkPipelineInputAssemblyStateCreateInfo vk_input_asm = { 0 };
     vk_input_asm.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -764,6 +790,74 @@ void yk_create_cmd_pool(YkRenderer* renderer)
    
 }
 
+const vertex vertices[] = {
+ {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+};
+
+const u16 indices[] = {
+    0, 1, 2, 2, 3, 0
+};
+
+u32 findMemoryType(YkRenderer* renderer ,u32 typeFilter, VkMemoryPropertyFlags properties) {
+    VkPhysicalDeviceMemoryProperties memProperties;
+    vkGetPhysicalDeviceMemoryProperties(renderer->phys_device, &memProperties);
+
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+            return i;
+        }
+    }
+
+    Assert(false, "Failed to find suitable memory type!");
+    return 69420;
+}
+
+void yk_create_vert_buffer(YkRenderer* renderer)
+{//we
+
+    VkDeviceSize bufferSize = sizeof(vertices[0]) * 4;
+
+    VkBuffer staging_buffer = { 0 };
+    VkDeviceMemory staging_buffer_memory = { 0 };
+        
+    create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
+
+    void* data;
+    vkMapMemory(renderer->device,staging_buffer_memory, 0, bufferSize, 0, &data);
+    memcpy(data, vertices, (size_t)bufferSize);
+
+    create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &renderer->vert_buffer, &renderer->vert_buffer_memory);
+
+    copyBuffer(renderer,staging_buffer, renderer->vert_buffer, bufferSize);
+
+    vkDestroyBuffer(renderer->device, staging_buffer, 0);
+    vkFreeMemory(renderer->device, staging_buffer_memory,0);
+}
+
+void yk_create_index_buffer(YkRenderer* renderer)
+{
+    VkDeviceSize bufferSize = sizeof(indices[0]) * 6;
+
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    create_buffer(renderer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, &stagingBufferMemory);
+
+    void* data;
+    vkMapMemory(renderer->device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, indices, (size_t)bufferSize);
+    vkUnmapMemory(renderer->device, stagingBufferMemory);
+
+    create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &renderer->index_buffer, &renderer->index_buffer_memory);
+
+    copyBuffer(renderer,stagingBuffer, renderer->index_buffer, bufferSize);
+
+    vkDestroyBuffer(renderer->device, stagingBuffer, 0);
+    vkFreeMemory(renderer->device, stagingBufferMemory, 0);
+}
+
 void yk_create_cmd_buffer(YkRenderer* renderer)
 {
     VkCommandBufferAllocateInfo vk_cmd_buffer_alloc_info = { 0 };
@@ -893,8 +987,15 @@ void vk_draw_frame(YkRenderer* renderer)
     vkCmdSetViewport(renderer->cmd_buffers[renderer->current_frame], 0, 1, &renderer->viewport);
     vkCmdSetScissor(renderer->cmd_buffers[renderer->current_frame], 0, 1, &renderer->scissor);
 
+    VkBuffer vertex_buffers[] = { renderer->vert_buffer };
+    VkDeviceSize offsets[] = { 0 };
 
-    vkCmdDraw(renderer->cmd_buffers[renderer->current_frame], 3, 1, 0, 0);
+    vkCmdBindVertexBuffers(renderer->cmd_buffers[renderer->current_frame], 0, 1, vertex_buffers, offsets );
+    vkCmdBindIndexBuffer(renderer->cmd_buffers[renderer->current_frame], renderer->index_buffer, 0, VK_INDEX_TYPE_UINT16);
+
+//    vkCmdDraw(renderer->cmd_buffers[renderer->current_frame], sizeof(vertices) / sizeof(vertex), 1, 0, 0);
+    vkCmdDrawIndexed(renderer->cmd_buffers[renderer->current_frame], 6, 1, 0, 0, 0);
+
 
     // End rendering
     vkCmdEndRenderingKHR(renderer->cmd_buffers[renderer->current_frame]);
@@ -1008,4 +1109,90 @@ b8 yk_recreate_swapchain(YkRenderer* renderer)
     yk_create_swapchain(renderer);
 
     return true;
+}
+
+VkVertexInputBindingDescription vk_get_binding_desc()
+{
+    VkVertexInputBindingDescription bindingDescription = { 0 };
+
+    bindingDescription.binding = 0;
+    bindingDescription.stride = sizeof(vertex);
+    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+    return bindingDescription;
+}
+
+void get_attrib_desc(VkVertexInputAttributeDescription out[])
+{
+    out[0].binding = 0;
+    out[0].location = 0;
+    out[0].format = VK_FORMAT_R32G32_SFLOAT;
+    out[0].offset = offsetof(vertex, pos);
+
+    out[1].binding = 0;
+    out[1].location = 1;
+    out[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+    out[1].offset = offsetof(vertex, color);
+
+}
+
+void create_buffer(YkRenderer* ren, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory)
+{
+    VkBufferCreateInfo bufferInfo = {0};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = size;
+    bufferInfo.usage = usage;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VkResultAssert(vkCreateBuffer(ren->device, &bufferInfo, 0, buffer), "Created buffer")
+
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(ren->device, *buffer, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo = {0};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = findMemoryType(ren,memRequirements.memoryTypeBits, properties);
+
+    VkResultAssert(vkAllocateMemory(ren->device, &allocInfo, 0, bufferMemory), "Buffer memory allocation");
+
+    vkBindBufferMemory(ren->device, *buffer, *bufferMemory, 0);
+
+}
+
+void copyBuffer(YkRenderer* renderer, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
+{
+    VkCommandBufferAllocateInfo allocInfo = {0};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = renderer->cmd_pool;
+    allocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(renderer->device, &allocInfo, &commandBuffer);
+
+    VkCommandBufferBeginInfo beginInfo = {0};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+    VkBufferCopy copyRegion = {0};
+    copyRegion.srcOffset = 0; // Optional
+    copyRegion.dstOffset = 0; // Optional
+    copyRegion.size = size;
+    vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+    vkEndCommandBuffer(commandBuffer);
+
+    VkSubmitInfo submitInfo = {0};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffer;
+
+    vkQueueSubmit(renderer->gfx_q, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(renderer->gfx_q);
+
+    vkFreeCommandBuffers(renderer->device, renderer->cmd_pool, 1, &commandBuffer);
+
 }

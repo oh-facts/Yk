@@ -5,6 +5,8 @@
 #include <yk.h>
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
+#include <yk_math.h>
+#include <yk_math.h>
 
 #define VkDEBUG 1
 
@@ -14,6 +16,8 @@
 #define LOG_DEVICE_DETAILS 0
 
 
+typedef struct vertex vertex;
+
 //Note(facts 0513 12/24): I don't know why I arrived at 3 with this. I'll get back to it later
 #define max_images 3
 
@@ -21,6 +25,10 @@
 
 typedef struct YkRenderer YkRenderer;
 
+/*
+* Most of this is internal state and unrequired by other structs. Still, I don't know enough about vulkan to want to abstract this away.
+* So this will be a megastruct until then.
+*/
 struct YkRenderer
 {
 	VkInstance vk_instance;
@@ -53,6 +61,13 @@ struct YkRenderer
 
 	uint32_t current_frame;
 
+	VkBuffer vert_buffer;
+	VkDeviceMemory vert_buffer_memory;
+
+	VkBuffer index_buffer;
+	VkDeviceMemory index_buffer_memory;
+
+
 #if VK_USE_VALIDATION_LAYERS
 	VkDebugUtilsMessengerEXT debug_messenger;
 #endif
@@ -72,5 +87,16 @@ void yk_free_renderer(YkRenderer* renderer);
 void vk_draw_frame(YkRenderer* renderer);
 
 void yk_renderer_wait(YkRenderer* renderer);
+
+
+struct vertex
+{
+	v2 pos;
+	v3 color;
+};
+
+
+VkVertexInputBindingDescription vk_get_binding_desc();
+void get_attrib_desc(VkVertexInputAttributeDescription out[]);
 
 #endif
