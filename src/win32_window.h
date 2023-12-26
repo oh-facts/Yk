@@ -7,7 +7,6 @@
 
 
 typedef struct YkWindow YkWindow;
-typedef struct YkWindow* YkWindow_p;
 typedef b8(*win_closed)(void);
 
 struct YkWindow
