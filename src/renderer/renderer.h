@@ -7,21 +7,7 @@
 #include <vulkan/vk_enum_string_helper.h>
 #include <yk_math.h>
 #include <yk_math.h>
-
-#define VkDEBUG 1
-
-#define VK_USE_VALIDATION_LAYERS 1
-#define VK_EXT_PRINT_DEBUG 0
-#define VK_PRINT_SUCCESS 0
-#define LOG_DEVICE_DETAILS 0
-
-
-typedef struct vertex vertex;
-
-//Note(facts 0513 12/24): I don't know why I arrived at 3 with this. I'll get back to it later
-#define max_images 3
-
-#define MAX_FRAMES_IN_FLIGHT 2
+#include <renderer/common.h>
 
 typedef struct YkRenderer YkRenderer;
 
@@ -79,13 +65,6 @@ struct YkRenderer
 #if VK_USE_VALIDATION_LAYERS
 	VkDebugUtilsMessengerEXT debug_messenger;
 #endif
-};
-
-enum Q_FAM
-{
-	Q_FAM_GFX,
-	Q_FAM_GFX_COMPUTE,
-	Q_FAM_PRESENT
 };
 
 void yk_innit_renderer(YkRenderer* renderer, struct YkWindow* window);
