@@ -1,6 +1,10 @@
 #ifndef YK_RENDERER_COMMON_H
 #define YK_RENDERER_COMMON_H
 
+#define max_images 3
+
+#define MAX_FRAMES_IN_FLIGHT 2
+
 
 #define VkDEBUG 1
 
@@ -9,14 +13,12 @@
 #define VK_PRINT_SUCCESS 0
 #define LOG_DEVICE_DETAILS 0
 
-
-typedef struct vertex vertex;
+#include <stdio.h>
+#include <stdlib.h>
+#include <vulkan/vulkan.h>
+#include <vulkan/vk_enum_string_helper.h>
 
 //Note(facts 0513 12/24): I don't know why I arrived at 3 with this. I'll get back to it later
-#define max_images 3
-
-#define MAX_FRAMES_IN_FLIGHT 2
-
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -128,12 +130,5 @@ static void _check_vk_result(VkResult result, const char* msg) {
 #define log_extention(Expression)
 #endif
 
-enum Q_FAM
-{
-    Q_FAM_GFX,
-    Q_FAM_GFX_COMPUTE,
-    Q_FAM_PRESENT,
-    Q_FAM_SIZE
-};
 
 #endif // !YK_RENDERER_COMMON_H

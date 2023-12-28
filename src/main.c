@@ -1,7 +1,7 @@
 
 #include <yk.h>
-
-
+#include <renderer/ella.h>
+#include <renderer/renderer.h>
 
 //ToDo(facts): Better Debug profiles.
 // 12/23 1758
@@ -51,8 +51,6 @@ struct YkMemory
 
 typedef struct YkMemory YkMemory;
 
-
-
 #if DEBUG
     LPVOID base_address = (LPVOID)Terabytes(2);
 #else
@@ -75,22 +73,17 @@ int main(int argc, char *argv[])
     YkWindow win = { 0 };
     yk_innit_window(&win);
 
-    YkRenderer ren = { 0 };
-    yk_innit_renderer(&ren, &win);
+    yk_renderer ren = { 0 };
+    yk_renderer_innit(&ren, &(window_data) {.is_minimized = false, .is_running = true, .win_handle = win.win_handle, .x = win.size_x, .y = win.size_y} );
 
-    v4 a = yk_v4_add((v4) { 1, 2, 3, 4 }, (v4) { 4, 3, 2, 1 });
-   
   
     while (win.is_running)
     {
+        yk_renderer_draw(&ren);
         yk_window_poll();
-        vk_draw_frame(&ren);
     }
 
-    yk_renderer_wait(&ren);
-
-    yk_free_renderer(&ren);
-
+   
     yk_free_window(&win);
 
     return 0;

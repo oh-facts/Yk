@@ -7,6 +7,13 @@
 #define DEG_TO_RAD (PI/180.f)
 #define RAD_TO_DEG (180.f/PI)
 
+typedef union v2 v2;
+typedef union v3 v3;
+typedef union v4 v4;
+
+typedef struct m4x4 m4;
+
+
 union v2 {
 	struct 
 	{
@@ -38,12 +45,6 @@ struct m4x4
 {
 	f32 e[4][4];
 };
-
-typedef union v2 v2;
-typedef union v3 v3;
-typedef union v4 v4;
-
-typedef struct m4x4 m4;
 
 inline f32 yk_v3_length(const v3 a)
 {

@@ -1,0 +1,4 @@
+#ifndef RENDERER_ELLA_H
+#define RENDERER_ELLA_H
+
+#endif // !RENDERER_ELLA

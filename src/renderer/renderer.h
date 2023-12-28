@@ -1,47 +1,45 @@
-#ifndef YK_RENDERER_H
-#define YK_RENDERER_H
+#ifndef RENDERER_H
+#define RENDERER_H
 
-
-#include <yk.h>
-#include <vulkan/vulkan.h>
-#include <vulkan/vk_enum_string_helper.h>
-#include <yk_math.h>
-#include <yk_math.h>
-#include <renderer/common.h>
-
-typedef struct YkRenderer YkRenderer;
-
+#include "context.h"
+#include "device.h"
+#include "swapchain.h"
+#include "pipeline.h"
 /*
-* Most of this is internal state and unrequired by other structs. Still, I don't know enough about vulkan to want to abstract this away.
-* So this will be a megastruct until then.
+	renderer. Internally, the  renderer is called ella.
+	Arbitrary easy to write name. It is to avoid having
+	to write  yk_renderer_device_create and just  write
+	ella_device_create(). This  is only internal naming
+	and no  one interacting with the renderer front end
+	should bother
 */
-struct YkRenderer
-{
-	VkInstance vk_instance;
-	//ToDo(facts 12/24 0341): Does renderer receive a window handle? Or does the renderer own the window? I want to be able to support multiple windows
-	//for whatever reason. I will get back to this later. For now, a window handle should be fine.
-	struct YkWindow* window_handle;
-	VkSurfaceKHR surface;
-	VkPhysicalDevice phys_device;
-	VkDevice device;
-	VkQueue gfx_q;
-	i32 qfams[3];
-	VkSwapchainKHR swapchain;
 
-	VkViewport viewport;
-	VkRect2D scissor;
-	VkExtent2D extent;
-	
-	VkImage swapchain_image_list[max_images];
-	VkImageView swapchain_image_view_list[max_images];
+typedef struct yk_renderer yk_renderer;
+typedef struct window_data window_data;
+struct yk_renderer
+{
+	struct mn_context context;
+	struct mn_device device;
+	VkSurfaceKHR surface;
+	struct mn_swapchain swapchain;
+	struct mn_pipeline pipeline;
 
 	VkDescriptorSetLayout descriptorSetLayout;
-	VkPipelineLayout pipeline_layout;
-	VkPipeline gfx_pipeline;
-
 	VkDescriptorPool descriptorPool;
-	VkDescriptorSet descriptorSets[MAX_FRAMES_IN_FLIGHT];
+	VkDescriptorSet descriptorSets[2];
 
+	// 
+	VkBuffer vert_buffer;
+	VkDeviceMemory vert_buffer_memory;
+
+	VkBuffer index_buffer;
+	VkDeviceMemory index_buffer_memory;
+
+	VkBuffer uniformBuffers[2];
+	VkDeviceMemory uniformBuffersMemory[2];
+	void* uniformBuffersMapped[2];
+
+	//
 	VkCommandPool cmd_pool;
 	VkCommandBuffer cmd_buffers[MAX_FRAMES_IN_FLIGHT];
 
@@ -51,47 +49,30 @@ struct YkRenderer
 
 	uint32_t current_frame;
 
-	VkBuffer vert_buffer;
-	VkDeviceMemory vert_buffer_memory;
+	window_data* win_data;
 
-	VkBuffer index_buffer;
-	VkDeviceMemory index_buffer_memory;
-
-	VkBuffer uniformBuffers[MAX_FRAMES_IN_FLIGHT];
-	VkDeviceMemory uniformBuffersMemory[MAX_FRAMES_IN_FLIGHT];
-	void* uniformBuffersMapped[MAX_FRAMES_IN_FLIGHT];
-
-
-#if VK_USE_VALIDATION_LAYERS
-	VkDebugUtilsMessengerEXT debug_messenger;
-#endif
 };
 
-void yk_innit_renderer(YkRenderer* renderer, struct YkWindow* window);
-
-void yk_free_renderer(YkRenderer* renderer);
-
-void vk_draw_frame(YkRenderer* renderer);
-
-void yk_renderer_wait(YkRenderer* renderer);
-
-
-struct vertex
+struct window_data
 {
-	v2 pos;
-	v3 color;
+	b8 is_running;
+	b8 is_minimized;
+	f32 x, y;
+	void* win_handle;
 };
 
+void yk_renderer_innit(yk_renderer* self, window_data * window_data);
 
-VkVertexInputBindingDescription vk_get_binding_desc();
-void get_attrib_desc(VkVertexInputAttributeDescription out[]);
+void yk_renderer_draw(yk_renderer* self);
 
-struct ubo
+
+enum Q_FAM
 {
-	m4 model;
-	m4 view;
-	m4 proj;
+	Q_FAM_GFX,
+	Q_FAM_GFX_COMPUTE,
+	Q_FAM_PRESENT,
+	Q_FAM_SIZE
 };
 
-typedef struct ubo ubo;
-#endif
+
+#endif // !RENDERER_H
