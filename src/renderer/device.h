@@ -1,7 +1,7 @@
 #ifndef YK_RENDERER_DEVICE_H
 #define YK_RENDERER_DEVICE_H
 
-#include <ella.h>
+#include <renderer/ella.h>
 #include <renderer/common.h>
 #include <renderer/context.h>
 

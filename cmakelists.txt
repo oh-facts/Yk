@@ -15,12 +15,13 @@ include_directories(
     src
     src/renderer
     include
+    vendor
     ${Vulkan_INCLUDE_DIRS}
 )
 
 set(yk_src "src/yk.c" "src/win32_window.c"  "src/yk_file_reader.c"
            "src/renderer/context.c" "src/renderer/device.c" "src/renderer/swapchain.c" 
-           "src/renderer/pipeline.c" "src/renderer/renderer.c")
+           "src/renderer/pipeline.c" "src/renderer/renderer.c" "src/renderer/shader.c" "src/renderer/model.c")
 
 add_library(${PROJECT_NAME} ${yk_src})
 target_link_libraries(${PROJECT_NAME}  ${Vulkan_LIBRARIES})

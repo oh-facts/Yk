@@ -18,6 +18,8 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
 
+
+
 //Note(facts 0513 12/24): I don't know why I arrived at 3 with this. I'll get back to it later
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(

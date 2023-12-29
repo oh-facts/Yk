@@ -1,32 +1,16 @@
 #include <renderer/pipeline.h>
+#include <shader.h>
+
+//ToDo(facts): pipeline should receive shader info
 
 void mn_raster_pipeline_innit(mn_device* device, mn_swapchain* swapchain, mn_pipeline* pipeline, 
     VkDescriptorSetLayout * desc_layout, VkVertexInputBindingDescription* binding_desc, VkVertexInputAttributeDescription* attrib_desc)
 {
-
-    size_t vert_len = 0;
-    size_t frag_len = 0;
-    const char* vert_shader_code = yk_read_binary_file("res/vert.spv", &vert_len);
-    const char* frag_shader_code = yk_read_binary_file("res/frag.spv", &frag_len);
-
-    VkShaderModuleCreateInfo vk_vert_shader_module_create_info = { 0 };
-    vk_vert_shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    vk_vert_shader_module_create_info.codeSize = vert_len;
-    vk_vert_shader_module_create_info.pCode = (u32*)vert_shader_code;
-
     VkShaderModule vk_vert_shader_module = { 0 };
-    VkResultAssert(vkCreateShaderModule(device->handle, &vk_vert_shader_module_create_info, 0, &vk_vert_shader_module), "Vert Shader Module Creation");
-
-    VkShaderModuleCreateInfo vk_frag_shader_module_create_info = { 0 };
-    vk_frag_shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    vk_frag_shader_module_create_info.codeSize = frag_len;
-    vk_frag_shader_module_create_info.pCode = (u32*)frag_shader_code;
-
     VkShaderModule vk_frag_shader_module = { 0 };
-    VkResultAssert(vkCreateShaderModule(device->handle, &vk_frag_shader_module_create_info, 0, &vk_frag_shader_module), "Frag Shader Module Creation");
 
-    free((char*)vert_shader_code);
-    free((char*)frag_shader_code);
+    mn_create_shader("res/vert.spv", device->handle, &vk_vert_shader_module);
+    mn_create_shader("res/frag.spv", device->handle, &vk_frag_shader_module);
 
     VkPipelineShaderStageCreateInfo vk_vert_shader_stage_info = { 0 };
     vk_vert_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;

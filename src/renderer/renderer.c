@@ -1,12 +1,10 @@
 #include <renderer/renderer.h>
+#include <renderer/model.h>
 
 void mn_create_desc_pool(yk_renderer* renderer);
 void mn_create_desc_layout(mn_device* device, VkDescriptorSetLayout* layout);
 void mn_create_desc_sets(yk_renderer* renderer);
 
-
-void create_buffer(yk_renderer* ren, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory);    
-void copyBuffer(yk_renderer* renderer, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
 void yk_create_cmd_pool(yk_renderer* renderer);
 
@@ -18,122 +16,7 @@ void yk_renderer_wait(yk_renderer* renderer);
 
 #include <yk_math.h>
 
-struct ubo
-{
-    m4 model;
-    m4 view;
-    m4 proj;
-};
 
-struct vertex
-{
-    v2 pos;
-    v3 color;
-};
-
-typedef struct vertex vertex;
-typedef struct ubo ubo;
-
-const vertex vertices[] = {
-    {{-0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}},
-    {{0.5f, -0.5f}, {163 / 255.f, 163 / 255.f, 163 / 255.f}},
-    {{0.5f, 0.5f}, {1.f, 1.f, 1.f}},
-    {{-0.5f, 0.5f}, {128 / 255.f, 0.f, 128 / 255.f}}
-};
-
-const u16 indices[] = {
-    0, 1, 2, 2, 3, 0
-};
-
-u32 findMemoryType(yk_renderer* renderer, u32 typeFilter, VkMemoryPropertyFlags properties) {
-    VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(renderer->device.phys_device, &memProperties);
-
-    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-            return i;
-        }
-    }
-
-    Assert(false, "Failed to find suitable memory type!");
-    return 69420;
-}
-
-void yk_create_vert_buffer(yk_renderer* renderer)
-{//we
-
-    VkDeviceSize bufferSize = sizeof(vertices[0]) * 4;
-
-    VkBuffer staging_buffer = { 0 };
-    VkDeviceMemory staging_buffer_memory = { 0 };
-
-    create_buffer(renderer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
-
-    void* data;
-    vkMapMemory(renderer->device.handle, staging_buffer_memory, 0, bufferSize, 0, &data);
-    memcpy(data, vertices, (size_t)bufferSize);
-
-    create_buffer(renderer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &renderer->vert_buffer, &renderer->vert_buffer_memory);
-
-    copyBuffer(renderer, staging_buffer, renderer->vert_buffer, bufferSize);
-
-    vkDestroyBuffer(renderer->device.handle, staging_buffer, 0);
-    vkFreeMemory(renderer->device.handle, staging_buffer_memory, 0);
-}
-
-void yk_create_index_buffer(yk_renderer* renderer)
-{
-    VkDeviceSize bufferSize = sizeof(indices[0]) * 6;
-
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    create_buffer(renderer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, &stagingBufferMemory);
-
-    void* data;
-    vkMapMemory(renderer->device.handle, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, indices, (size_t)bufferSize);
-    vkUnmapMemory(renderer->device.handle, stagingBufferMemory);
-
-    create_buffer(renderer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &renderer->index_buffer, &renderer->index_buffer_memory);
-
-    copyBuffer(renderer, stagingBuffer, renderer->index_buffer, bufferSize);
-
-    vkDestroyBuffer(renderer->device.handle, stagingBuffer, 0);
-    vkFreeMemory(renderer->device.handle, stagingBufferMemory, 0);
-}
-
-void createUniformBuffers(yk_renderer* renderer)
-{
-    VkDeviceSize bufferSize = sizeof(ubo);
-
-
-    for (size_t i = 0; i < 2; i++) {
-        create_buffer(renderer, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            &renderer->uniformBuffers[i], &renderer->uniformBuffersMemory[i]);
-
-        vkMapMemory(renderer->device.handle, renderer->uniformBuffersMemory[i], 0, bufferSize, 0, &renderer->uniformBuffersMapped[i]);
-    }
-}
-
-clock_t start_time;
-
-
-void updateUniformBuffer(yk_renderer* renderer, uint32_t currentImage)
-{
-    clock_t current_time = clock();
-    f32 time = (f32)(current_time - start_time) / CLOCKS_PER_SEC;
-
-    ubo ubo = { 0 };
-
-    ubo.model = yk_m4_rotate(yk_m4_identity(), time * DEG_TO_RAD * 90.f, (v3) { 0, 0, 1 });
-    ubo.view = yk_m4_look_at((v3) { 2, 2, 2 }, (v3) { 0, 0, 0 }, (v3) { 0, 0, 1 });
-    ubo.proj = yk_m4_perspective(DEG_TO_RAD * 45., renderer->swapchain.extent.width / (f32)renderer->swapchain.extent.height, 0.1f, 10.0f);
-
-
-    ubo.proj.e[1][1] *= -1;
-
-    memcpy(renderer->uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
-}
 
 
 void yk_create_cmd_buffer(yk_renderer* renderer)
@@ -215,7 +98,19 @@ b8 yk_recreate_swapchain(yk_renderer* renderer)
 
 void yk_renderer_innit(yk_renderer* self, window_data * win_data)
 {
-    start_time = clock();
+
+    const vertex vertices[] = {
+        {{-0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}},
+        {{0.5f, -0.5f}, {163 / 255.f, 163 / 255.f, 163 / 255.f}},
+        {{0.5f, 0.5f}, {1.f, 1.f, 1.f}},
+        {{-0.5f, 0.5f}, {128 / 255.f, 0.f, 128 / 255.f}}
+    };
+
+    const u16 indices[] = {
+        0, 1, 2, 2, 3, 0
+    };
+
+
     self->win_data = win_data;
     mn_context_innit(&self->context);
 
@@ -236,8 +131,8 @@ void yk_renderer_innit(yk_renderer* self, window_data * win_data)
     mn_raster_pipeline_innit(&self->device, &self->swapchain, &self->pipeline, &self->descriptorSetLayout, &binding_desc, attrib_desc );
 
     yk_create_cmd_pool(self);
-    yk_create_vert_buffer(self);
-    yk_create_index_buffer(self);
+
+    yk_model_init(self, vertices, indices, &self->model);
 
     createUniformBuffers(self);
 
@@ -334,11 +229,11 @@ void yk_renderer_draw(yk_renderer* self)
     vkCmdSetViewport(self->cmd_buffers[self->current_frame], 0, 1, &self->swapchain.viewport);
     vkCmdSetScissor(self->cmd_buffers[self->current_frame], 0, 1, &self->swapchain.scissor);
 
-    VkBuffer vertex_buffers[] = { self->vert_buffer };
+
     VkDeviceSize offsets[] = { 0 };
 
-    vkCmdBindVertexBuffers(self->cmd_buffers[self->current_frame], 0, 1, vertex_buffers, offsets);
-    vkCmdBindIndexBuffer(self->cmd_buffers[self->current_frame], self->index_buffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindVertexBuffers(self->cmd_buffers[self->current_frame], 0, 1, &self->model.vert_buffer, offsets);
+    vkCmdBindIndexBuffer(self->cmd_buffers[self->current_frame], &self->model.index_buffer, 0, VK_INDEX_TYPE_UINT16);
 
     vkCmdBindDescriptorSets(self->cmd_buffers[self->current_frame], VK_PIPELINE_BIND_POINT_GRAPHICS,
     self->pipeline.pipeline_layout, 0, 1, &self->descriptorSets[self->current_frame], 0, 0);
@@ -426,67 +321,6 @@ void yk_renderer_draw(yk_renderer* self)
     self->current_frame = (self->current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
-void copyBuffer(yk_renderer* renderer, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
-{
-    VkCommandBufferAllocateInfo allocInfo = { 0 };
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = renderer->cmd_pool;
-    allocInfo.commandBufferCount = 1;
-
-    VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(renderer->device.handle, &allocInfo, &commandBuffer);
-
-    VkCommandBufferBeginInfo beginInfo = { 0 };
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-    VkBufferCopy copyRegion = { 0 };
-    copyRegion.srcOffset = 0; // Optional
-    copyRegion.dstOffset = 0; // Optional
-    copyRegion.size = size;
-    vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-
-    vkEndCommandBuffer(commandBuffer);
-
-    VkSubmitInfo submitInfo = { 0 };
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
-
-    vkQueueSubmit(renderer->device.gfx_q, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(renderer->device.gfx_q);
-
-    vkFreeCommandBuffers(renderer->device.handle, renderer->cmd_pool, 1, &commandBuffer);
-
-}
-
-
-void create_buffer(yk_renderer* ren, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory)
-{
-    VkBufferCreateInfo bufferInfo = { 0 };
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = size;
-    bufferInfo.usage = usage;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    VkResultAssert(vkCreateBuffer(ren->device.handle, &bufferInfo, 0, buffer), "Created buffer")
-
-        VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(ren->device.handle, *buffer, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo = { 0 };
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = findMemoryType(ren, memRequirements.memoryTypeBits, properties);
-
-    VkResultAssert(vkAllocateMemory(ren->device.handle, &allocInfo, 0, bufferMemory), "Buffer memory allocation");
-
-    vkBindBufferMemory(ren->device.handle, *buffer, *bufferMemory, 0);
-
-}
 
 
 void mn_create_desc_pool(yk_renderer* renderer)

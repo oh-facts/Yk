@@ -5,6 +5,7 @@
 #include "device.h"
 #include "swapchain.h"
 #include "pipeline.h"
+
 /*
 	renderer. Internally, the  renderer is called ella.
 	Arbitrary easy to write name. It is to avoid having
@@ -16,6 +17,7 @@
 
 typedef struct yk_renderer yk_renderer;
 typedef struct window_data window_data;
+#include "model.h"
 struct yk_renderer
 {
 	struct mn_context context;
@@ -29,11 +31,7 @@ struct yk_renderer
 	VkDescriptorSet descriptorSets[2];
 
 	// 
-	VkBuffer vert_buffer;
-	VkDeviceMemory vert_buffer_memory;
-
-	VkBuffer index_buffer;
-	VkDeviceMemory index_buffer_memory;
+	model model;
 
 	VkBuffer uniformBuffers[2];
 	VkDeviceMemory uniformBuffersMemory[2];
