@@ -130,13 +130,15 @@ void yk_create_device(YkRenderer* renderer);
 void yk_create_swapchain(YkRenderer* renderer);
 void createDescriptorSetLayout(YkRenderer* renderer);
 void yk_create_gfx_pipeline(YkRenderer* renderer);
-void yk_create_cmd_pool(YkRenderer* renderer);
+
+void yk_cmd_innit(YkRenderer* renderer);
+
 void yk_create_vert_buffer(YkRenderer* renderer);
 void yk_create_index_buffer(YkRenderer* renderer);
 void createUniformBuffers(YkRenderer* renderer);
 void createDescriptorPool(YkRenderer* renderer);
 void createDescriptorSets(YkRenderer* renderer);
-void yk_create_cmd_buffer(YkRenderer* renderer);
+
 void yk_create_sync_objs(YkRenderer* renderer);
 b8 yk_recreate_swapchain(YkRenderer* renderer);
 void copyBuffer(YkRenderer* renderer,VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
@@ -158,13 +160,12 @@ void yk_innit_renderer(YkRenderer* renderer, YkWindow* window)
     yk_create_swapchain(renderer);
     createDescriptorSetLayout(renderer);
     yk_create_gfx_pipeline(renderer);
-    yk_create_cmd_pool(renderer);
+    yk_cmd_innit(renderer);
     yk_create_vert_buffer(renderer);
     yk_create_index_buffer(renderer);
     createUniformBuffers(renderer);
     createDescriptorPool(renderer);
     createDescriptorSets(renderer);
-    yk_create_cmd_buffer(renderer);
     yk_create_sync_objs(renderer);
 
 }
@@ -173,12 +174,14 @@ void yk_free_renderer(YkRenderer* renderer)
 {   
     for (i32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
-        vkDestroySemaphore(renderer->device, renderer->image_available_semawhores[i], 0);
-        vkDestroySemaphore(renderer->device, renderer->render_finished_semawhores[i], 0);
-        vkDestroyFence(renderer->device, renderer->in_flight_fences[i],0);
+        vkDestroySemaphore(renderer->device, renderer->frame_data[i].image_available_semawhore, 0);
+        vkDestroySemaphore(renderer->device, renderer->frame_data[i].render_finished_semawhore, 0);
+        vkDestroyFence(renderer->device, renderer->frame_data[i].in_flight_fence,0);
+
+        vkDestroyCommandPool(renderer->device, renderer->frame_data[i].cmd_pool, 0);
     }
 
-    vkDestroyCommandPool(renderer->device, renderer->cmd_pool, 0);
+    
 
     vkDestroyPipeline(renderer->device, renderer->gfx_pipeline, 0);
     vkDestroyPipelineLayout(renderer->device, renderer->pipeline_layout, 0);
@@ -808,20 +811,29 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
     renderer->viewport = vk_viewport;
 }
 
-void yk_create_cmd_pool(YkRenderer* renderer)
+
+void yk_cmd_innit(YkRenderer* renderer)
 {
-    VkCommandPoolCreateInfo vk_cmd_pool_create_info = { 0 };
-    vk_cmd_pool_create_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    vk_cmd_pool_create_info.pNext = 0;
-    vk_cmd_pool_create_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    vk_cmd_pool_create_info.queueFamilyIndex = Q_FAM_GFX;
+    VkCommandPoolCreateInfo cmd_pool_info = { 0 };
+    cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    cmd_pool_info.pNext = 0;
+    cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    cmd_pool_info.queueFamilyIndex = Q_FAM_GFX;
 
-    VkCommandPool vk_cmd_pool;
-    VkResultAssert(vkCreateCommandPool(renderer->device, &vk_cmd_pool_create_info, 0, &vk_cmd_pool), "Command pool creation");
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        VkResultAssert(vkCreateCommandPool(renderer->device, &cmd_pool_info, 0, &renderer->frame_data[i].cmd_pool), "Command pool creation");
+    
+        VkCommandBufferAllocateInfo vk_cmd_buffer_alloc_info = { 0 };
+        vk_cmd_buffer_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        vk_cmd_buffer_alloc_info.pNext = 0;
+        vk_cmd_buffer_alloc_info.commandPool = renderer->frame_data[i].cmd_pool;
+        vk_cmd_buffer_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        vk_cmd_buffer_alloc_info.commandBufferCount = MAX_FRAMES_IN_FLIGHT;
 
-    renderer->cmd_pool = vk_cmd_pool;
 
-   
+        VkResultAssert(vkAllocateCommandBuffers(renderer->device, &vk_cmd_buffer_alloc_info, &renderer->frame_data[i].cmd_buffers), "Command Buffer allocation");
+    }   
 }
 
 const vertex vertices[] = {
@@ -952,20 +964,6 @@ void createDescriptorSets(YkRenderer* renderer)
     }
 }
 
-void yk_create_cmd_buffer(YkRenderer* renderer)
-{
-    VkCommandBufferAllocateInfo vk_cmd_buffer_alloc_info = { 0 };
-    vk_cmd_buffer_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    vk_cmd_buffer_alloc_info.pNext = 0;
-    vk_cmd_buffer_alloc_info.commandPool = renderer->cmd_pool;
-    vk_cmd_buffer_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    vk_cmd_buffer_alloc_info.commandBufferCount = MAX_FRAMES_IN_FLIGHT;
-
-
-    VkResultAssert(vkAllocateCommandBuffers(renderer->device, &vk_cmd_buffer_alloc_info, renderer->cmd_buffers), "Command Buffer allocation");
-
-}
-
 void yk_create_sync_objs(YkRenderer* renderer)
 {
     //https://vulkan-tutorial.com/en/Drawing_a_triangle/Drawing/Rendering_and_presentation
@@ -986,9 +984,9 @@ void yk_create_sync_objs(YkRenderer* renderer)
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
-        VkResultAssert(vkCreateSemaphore(renderer->device, &vk_semawhore_create_info, 0, &renderer->image_available_semawhores[i]), "Image ready semaphore");
-        VkResultAssert(vkCreateSemaphore(renderer->device, &vk_semawhore_create_info, 0, &renderer->render_finished_semawhores[i]), "Render finished semaphore");
-        VkResultAssert(vkCreateFence(renderer->device, &vk_fence_create_info, 0, &renderer->in_flight_fences[i]), "flight fence");
+        VkResultAssert(vkCreateSemaphore(renderer->device, &vk_semawhore_create_info, 0, &renderer->frame_data[i].image_available_semawhore), "Image ready semaphore");
+        VkResultAssert(vkCreateSemaphore(renderer->device, &vk_semawhore_create_info, 0, &renderer->frame_data[i].render_finished_semawhore), "Render finished semaphore");
+        VkResultAssert(vkCreateFence(renderer->device, &vk_fence_create_info, 0, &renderer->frame_data[i].in_flight_fence), "flight fence");
     }
 
 }
@@ -1015,18 +1013,18 @@ void updateUniformBuffer(YkRenderer* renderer, uint32_t currentImage)
 
 void vk_draw_frame(YkRenderer* renderer)
 {
-
+    yk_frame_data* current_frame = &renderer->frame_data[renderer->current_frame];
 
     PFN_vkCmdBeginRenderingKHR vkCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(renderer->device, "vkCmdBeginRenderingKHR");
     PFN_vkCmdEndRenderingKHR vkCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)vkGetDeviceProcAddr(renderer->device, "vkCmdEndRenderingKHR");
 
 
-    VkResultAssert(vkWaitForFences(renderer->device, 1, &renderer->in_flight_fences[renderer->current_frame], VK_TRUE, UINT64_MAX), "Wait for fences")
+    VkResultAssert(vkWaitForFences(renderer->device, 1, &current_frame->in_flight_fence, VK_TRUE, UINT64_MAX), "Wait for fences")
 
     uint32_t imageIndex = -1;
 
     if (vkAcquireNextImageKHR(renderer->device, renderer->swapchain, UINT64_MAX,
-        renderer->image_available_semawhores[renderer->current_frame],
+        current_frame->image_available_semawhore,
         VK_NULL_HANDLE, &imageIndex) == VK_ERROR_OUT_OF_DATE_KHR)
     {
         if (yk_recreate_swapchain(renderer) == false)
@@ -1036,11 +1034,11 @@ void vk_draw_frame(YkRenderer* renderer)
     }
 
     updateUniformBuffer(renderer,renderer->current_frame);
-    VkResultAssert(vkResetFences(renderer->device, 1, &renderer->in_flight_fences[renderer->current_frame]), "Reset fences");
+    VkResultAssert(vkResetFences(renderer->device, 1, &current_frame->in_flight_fence), "Reset fences");
 
     
    
-    VkResultAssert(vkResetCommandBuffer(renderer->cmd_buffers[renderer->current_frame], 0), "Cmd buffer reset");
+    VkResultAssert(vkResetCommandBuffer(current_frame->cmd_buffers, 0), "Cmd buffer reset");
 
     //command buffer record
 
@@ -1090,30 +1088,30 @@ void vk_draw_frame(YkRenderer* renderer)
     //for secondary buffers
     vk_cmd_buffer_begin_info.pInheritanceInfo = 0;
 
-    VkResultAssert(vkBeginCommandBuffer(renderer->cmd_buffers[renderer->current_frame], &vk_cmd_buffer_begin_info), "Command buffer begin");
+    VkResultAssert(vkBeginCommandBuffer(current_frame->cmd_buffers, &vk_cmd_buffer_begin_info), "Command buffer begin");
 
     // Begin rendering
-    vkCmdBeginRenderingKHR(renderer->cmd_buffers[renderer->current_frame], &vk_rendering_info);
+    vkCmdBeginRenderingKHR(current_frame->cmd_buffers, &vk_rendering_info);
 
-    vkCmdBindPipeline(renderer->cmd_buffers[renderer->current_frame], VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->gfx_pipeline);
+    vkCmdBindPipeline(current_frame->cmd_buffers, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->gfx_pipeline);
 
 
-    vkCmdSetViewport(renderer->cmd_buffers[renderer->current_frame], 0, 1, &renderer->viewport);
-    vkCmdSetScissor(renderer->cmd_buffers[renderer->current_frame], 0, 1, &renderer->scissor);
+    vkCmdSetViewport(current_frame->cmd_buffers, 0, 1, &renderer->viewport);
+    vkCmdSetScissor(current_frame->cmd_buffers, 0, 1, &renderer->scissor);
 
     VkBuffer vertex_buffers[] = { renderer->vert_buffer };
     VkDeviceSize offsets[] = { 0 };
 
-    vkCmdBindVertexBuffers(renderer->cmd_buffers[renderer->current_frame], 0, 1, vertex_buffers, offsets );
-    vkCmdBindIndexBuffer(renderer->cmd_buffers[renderer->current_frame], renderer->index_buffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindVertexBuffers(current_frame->cmd_buffers, 0, 1, vertex_buffers, offsets );
+    vkCmdBindIndexBuffer(current_frame->cmd_buffers, renderer->index_buffer, 0, VK_INDEX_TYPE_UINT16);
 
-    vkCmdBindDescriptorSets(renderer->cmd_buffers[renderer->current_frame], VK_PIPELINE_BIND_POINT_GRAPHICS,
-        renderer->pipeline_layout, 0, 1, &renderer->descriptorSets[renderer->current_frame], 0, 0);
-    vkCmdDrawIndexed(renderer->cmd_buffers[renderer->current_frame], 6, 1, 0, 0, 0);
+    vkCmdBindDescriptorSets(current_frame->cmd_buffers, VK_PIPELINE_BIND_POINT_GRAPHICS,
+    renderer->pipeline_layout, 0, 1, &renderer->descriptorSets[renderer->current_frame], 0, 0);
+    vkCmdDrawIndexed(current_frame->cmd_buffers, 6, 1, 0, 0, 0);
 
 
     // End rendering
-    vkCmdEndRenderingKHR(renderer->cmd_buffers[renderer->current_frame]);
+    vkCmdEndRenderingKHR(current_frame->cmd_buffers);
 
     VkImageMemoryBarrier barrier = { 0 };
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -1134,7 +1132,7 @@ void vk_draw_frame(YkRenderer* renderer)
     barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 
     vkCmdPipelineBarrier(
-        renderer->cmd_buffers[renderer->current_frame],
+        current_frame->cmd_buffers,
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
         0,
@@ -1143,7 +1141,7 @@ void vk_draw_frame(YkRenderer* renderer)
         1, &barrier
     );
 
-    VkResultAssert(vkEndCommandBuffer(renderer->cmd_buffers[renderer->current_frame]), "Command buffer end");
+    VkResultAssert(vkEndCommandBuffer(current_frame->cmd_buffers), "Command buffer end");
 
     //command buffer recording over
 
@@ -1151,20 +1149,20 @@ void vk_draw_frame(YkRenderer* renderer)
     vk_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     vk_submit_info.pNext = 0;
 
-    VkSemaphore vk_wait_semawhores[] = { renderer->image_available_semawhores[renderer->current_frame] };
+    VkSemaphore vk_wait_semawhores[] = { current_frame->image_available_semawhore };
     VkPipelineStageFlags vk_wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
     vk_submit_info.waitSemaphoreCount = 1;
     vk_submit_info.pWaitSemaphores = vk_wait_semawhores;
     vk_submit_info.pWaitDstStageMask = vk_wait_stages;
 
     vk_submit_info.commandBufferCount = 1;
-    vk_submit_info.pCommandBuffers = &renderer->cmd_buffers[renderer->current_frame];
+    vk_submit_info.pCommandBuffers = &renderer->frame_data[renderer->current_frame].cmd_buffers;
 
-    VkSemaphore vk_signal_semawhores[] = { renderer->render_finished_semawhores[renderer->current_frame] };
+    VkSemaphore vk_signal_semawhores[] = { current_frame->render_finished_semawhore};
     vk_submit_info.signalSemaphoreCount = 1;
     vk_submit_info.pSignalSemaphores = vk_signal_semawhores;
 
-    VkResultAssert(vkQueueSubmit(renderer->gfx_q, 1, &vk_submit_info, renderer->in_flight_fences[renderer->current_frame]), "Draw command buffer submitted");
+    VkResultAssert(vkQueueSubmit(renderer->gfx_q, 1, &vk_submit_info, current_frame->in_flight_fence), "Draw command buffer submitted");
 
     VkPresentInfoKHR vk_present_info = { 0 };
     vk_present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -1280,7 +1278,7 @@ void copyBuffer(YkRenderer* renderer, VkBuffer srcBuffer, VkBuffer dstBuffer, Vk
     VkCommandBufferAllocateInfo allocInfo = {0};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = renderer->cmd_pool;
+    allocInfo.commandPool = renderer->frame_data[renderer->current_frame].cmd_pool;
     allocInfo.commandBufferCount = 1;
 
     VkCommandBuffer commandBuffer;
@@ -1308,6 +1306,6 @@ void copyBuffer(YkRenderer* renderer, VkBuffer srcBuffer, VkBuffer dstBuffer, Vk
     vkQueueSubmit(renderer->gfx_q, 1, &submitInfo, VK_NULL_HANDLE);
     vkQueueWaitIdle(renderer->gfx_q);
 
-    vkFreeCommandBuffers(renderer->device, renderer->cmd_pool, 1, &commandBuffer);
+    vkFreeCommandBuffers(renderer->device, renderer->frame_data[renderer->current_frame].cmd_pool, 1, &commandBuffer);
 
 }

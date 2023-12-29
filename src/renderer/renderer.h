@@ -8,9 +8,9 @@
 #include <yk_math.h>
 #include <yk_math.h>
 
-#define VkDEBUG 1
+#define VkDEBUG 0
 
-#define VK_USE_VALIDATION_LAYERS 1
+#define VK_USE_VALIDATION_LAYERS 0
 #define VK_EXT_PRINT_DEBUG 0
 #define VK_PRINT_SUCCESS 0
 #define LOG_DEVICE_DETAILS 0
@@ -18,6 +18,7 @@
 
 typedef struct vertex vertex;
 
+//Note(facts 2148 12/28): So number of images is for stuff like double/triple buffering
 //Note(facts 0513 12/24): I don't know why I arrived at 3 with this. I'll get back to it later
 #define max_images 3
 
@@ -29,6 +30,20 @@ typedef struct YkRenderer YkRenderer;
 * Most of this is internal state and unrequired by other structs. Still, I don't know enough about vulkan to want to abstract this away.
 * So this will be a megastruct until then.
 */
+
+//https://github.com/KhronosGroup/Vulkan-Samples/blob/main/samples/api/hpp_hello_triangle/hpp_hello_triangle.h
+typedef struct yk_frame_data
+{
+	VkFence in_flight_fence;
+
+	VkCommandPool cmd_pool;
+	VkCommandBuffer cmd_buffers;
+
+	VkSemaphore image_available_semawhore;
+	VkSemaphore render_finished_semawhore;
+	
+} yk_frame_data;
+
 struct YkRenderer
 {
 	VkInstance vk_instance;
@@ -56,12 +71,8 @@ struct YkRenderer
 	VkDescriptorPool descriptorPool;
 	VkDescriptorSet descriptorSets[MAX_FRAMES_IN_FLIGHT];
 
-	VkCommandPool cmd_pool;
-	VkCommandBuffer cmd_buffers[MAX_FRAMES_IN_FLIGHT];
+	yk_frame_data frame_data[MAX_FRAMES_IN_FLIGHT];
 
-	VkSemaphore image_available_semawhores[MAX_FRAMES_IN_FLIGHT];
-	VkSemaphore render_finished_semawhores[MAX_FRAMES_IN_FLIGHT];
-	VkFence in_flight_fences[MAX_FRAMES_IN_FLIGHT];
 
 	uint32_t current_frame;
 
@@ -80,6 +91,8 @@ struct YkRenderer
 	VkDebugUtilsMessengerEXT debug_messenger;
 #endif
 };
+
+
 
 enum Q_FAM
 {
