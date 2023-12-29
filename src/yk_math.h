@@ -125,6 +125,19 @@ inline m4 yk_m4_identity()
 
 	return out;
 }
+
+inline m4 yk_m4_translate(const m4 mat, const v3 vec)
+{
+	m4 out = mat;
+
+	out.e[3][0] += vec.x;
+	out.e[3][1] += vec.y;
+	out.e[3][2] += vec.z;
+	//out.e[3][3] = out.e[0][3] * vec.x + mat.e[1][3] * vec.y + mat.e[2][3] * vec.z;
+
+	return out;
+}
+
 inline m4 yk_m4_rotate(const m4 mat, const f32 angle, const v3 axis)
 {
 	f32 c = cosf(angle);
@@ -136,7 +149,7 @@ inline m4 yk_m4_rotate(const m4 mat, const f32 angle, const v3 axis)
 	f32 y = _axis.y;
 	f32 z = _axis.z;
 
-	m4 out = { 0 };
+	m4 out = mat;
 
 	out.e[0][0] = t * x * x + c;
 	out.e[0][1] = t * x * y - s * z;
@@ -150,11 +163,12 @@ inline m4 yk_m4_rotate(const m4 mat, const f32 angle, const v3 axis)
 	out.e[2][1] = t * y * z + s * x;
 	out.e[2][2] = t * z * z + c;
 
-	// Fill the remaining elements of the matrix
-	out.e[3][3] = 1.0;
+	//out.e[3][3] = 1.0;
 
 	return out;
 }
+
+
 
 
 inline m4 yk_m4_look_at(const v3 eye, const v3 target, const v3 up)

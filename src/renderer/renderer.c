@@ -139,7 +139,7 @@ void yk_create_index_buffer(YkRenderer* renderer, const u16 indices[], VkDeviceS
 void createDescriptorPool(YkRenderer* renderer);
 
 void createUniformBuffers(YkRenderer* renderer, VkDeviceSize bufferSize, ubuffer ubo[]);
-void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentImage);
+void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentImage, int flag);
 void createDescriptorSets(YkRenderer* renderer, ubuffer* ubo);
 
 void yk_create_sync_objs(YkRenderer* renderer);
@@ -734,7 +734,7 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
     vk_rasterizer.rasterizerDiscardEnable = VK_FALSE;
     vk_rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     vk_rasterizer.lineWidth = 1.0f;
-    vk_rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    vk_rasterizer.cullMode = VK_CULL_MODE_NONE;
     vk_rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
     //Note(facts 12/23 2:20): come back to this later
@@ -917,17 +917,22 @@ void createUniformBuffers(YkRenderer* renderer, VkDeviceSize bufferSize, ubuffer
     }
 }
 
-void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentImage)
+void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentImage, int flag)
 {
     clock_t current_time = clock();
     f32 time = (f32)(current_time - start_time) / CLOCKS_PER_SEC;
 
     mvp_matrix mvp_mat = { 0 };
 
-    mvp_mat.model = yk_m4_rotate(yk_m4_identity(), time * DEG_TO_RAD * 90.f, (v3) { 0, 0, 1 });
-    mvp_mat.view = yk_m4_look_at((v3) { 2, 2, 2 }, (v3) { 0, 0, 0 }, (v3) { 0, 0, 1 });
+    mvp_mat.model = yk_m4_identity();
+
+    mvp_mat.model = yk_m4_translate(mvp_mat.model, (v3) { 0.8 * flag, 0., -4. });
+
+    mvp_mat.model = yk_m4_rotate(mvp_mat.model, time, (v3) { 0, 1, 0 });
+    mvp_mat.view = yk_m4_look_at((v3) { 0, 0, 0 }, (v3) { 0, 0, -1. }, (v3) { 0, 1, 0 });
     mvp_mat.proj = yk_m4_perspective(DEG_TO_RAD * 45., renderer->extent.width / (f32)renderer->extent.height, 0.1f, 10.0f);
 
+    // +z is back. +y is up , +x is right
 
     mvp_mat.proj.e[1][1] *= -1;
 
@@ -1070,7 +1075,15 @@ void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_object)
         }
     }
 
-    updateUniformBuffer(renderer, render_object->ubo ,renderer->current_frame);
+    if (render_object->id == 0)
+    {
+        updateUniformBuffer(renderer, render_object->ubo, renderer->current_frame, 1);
+    }
+    else
+    {
+        updateUniformBuffer(renderer, render_object->ubo, renderer->current_frame,-1);
+    }
+    
     VkResultAssert(vkResetFences(renderer->device, 1, &current_frame->in_flight_fence), "Reset fences");
 
 

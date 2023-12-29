@@ -50,6 +50,8 @@ typedef struct render_object
 	//uniform buffers are being updated. We are writing to it in update ubo remember? Thats why we use as many as in Max frames in flight
 	//to avoid race
 	ubuffer ubo[MAX_FRAMES_IN_FLIGHT];
+	//debug purpose
+	int id;
 	//VkDescriptorSet descriptorSet[MAX_FRAMES_IN_FLIGHT];
 }render_object;
 
