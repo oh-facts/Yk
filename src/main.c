@@ -81,20 +81,32 @@ int main(int argc, char *argv[])
     YkWindow win = { 0 };
     yk_innit_window(&win);
 
-    YkRenderer ren = { 0 };
-    yk_innit_renderer(&ren, &win);
+    const vertex vertices[] = {
+        {{-0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}},   // Light purple
+        {{0.5f, -0.5f}, {163 / 255.f, 163 / 255.f, 163 / 255.f}},    // Light green
+        {{0.5f, 0.5f}, {1.f, 1.f, 1.f}},     // Light blue
+        {{-0.5f, 0.5f}, {128 / 255.f, 0.f, 128 / 255.f}}     // Light yellow
+    };
 
-    v4 a = yk_v4_add((v4) { 1, 2, 3, 4 }, (v4) { 4, 3, 2, 1 });
-   
+    const u16 indices[] = {
+        0, 1, 2, 2, 3, 0
+    };
+
+    YkRenderer ren = { 0 };
+    yk_renderer_innit(&ren, &win);
+    
+    render_object ro = { 0 };
+    yk_renderer_innit_model(&ren, vertices, indices, &ro);
   
     while (win.is_running)
     {
         yk_window_poll();
-        vk_draw_frame(&ren);
+        yk_renderer_draw_model(&ren, &ro);
     }
 
     yk_renderer_wait(&ren);
 
+    yk_destroy_model(&ren, &ro);
     yk_free_renderer(&ren);
 
     yk_free_window(&win);

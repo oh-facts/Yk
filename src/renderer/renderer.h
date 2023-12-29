@@ -7,22 +7,8 @@
 #include <vulkan/vk_enum_string_helper.h>
 #include <yk_math.h>
 #include <yk_math.h>
+#include <renderer/mn_types.h>
 
-#define VkDEBUG 0
-
-#define VK_USE_VALIDATION_LAYERS 0
-#define VK_EXT_PRINT_DEBUG 0
-#define VK_PRINT_SUCCESS 0
-#define LOG_DEVICE_DETAILS 0
-
-
-typedef struct vertex vertex;
-
-//Note(facts 2148 12/28): So number of images is for stuff like double/triple buffering
-//Note(facts 0513 12/24): I don't know why I arrived at 3 with this. I'll get back to it later
-#define max_images 3
-
-#define MAX_FRAMES_IN_FLIGHT 2
 
 typedef struct YkRenderer YkRenderer;
 
@@ -76,16 +62,6 @@ struct YkRenderer
 
 	uint32_t current_frame;
 
-	VkBuffer vert_buffer;
-	VkDeviceMemory vert_buffer_memory;
-
-	VkBuffer index_buffer;
-	VkDeviceMemory index_buffer_memory;
-
-	VkBuffer uniformBuffers[MAX_FRAMES_IN_FLIGHT];
-	VkDeviceMemory uniformBuffersMemory[MAX_FRAMES_IN_FLIGHT];
-	void* uniformBuffersMapped[MAX_FRAMES_IN_FLIGHT];
-
 
 #if VK_USE_VALIDATION_LAYERS
 	VkDebugUtilsMessengerEXT debug_messenger;
@@ -101,31 +77,20 @@ enum Q_FAM
 	Q_FAM_PRESENT
 };
 
-void yk_innit_renderer(YkRenderer* renderer, struct YkWindow* window);
 
 void yk_free_renderer(YkRenderer* renderer);
 
-void vk_draw_frame(YkRenderer* renderer);
-
 void yk_renderer_wait(YkRenderer* renderer);
 
+void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window);
+void yk_renderer_innit_model(YkRenderer* renderer, const vertex vertices[], const u16 indices[], render_object* render_object);
+void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_object);
 
-struct vertex
-{
-	v2 pos;
-	v3 color;
-};
-
+void yk_destroy_model(YkRenderer* renderer, render_object* render_object);
 
 VkVertexInputBindingDescription vk_get_binding_desc();
 void get_attrib_desc(VkVertexInputAttributeDescription out[]);
 
-struct ubo
-{
-	m4 model;
-	m4 view;
-	m4 proj;
-};
 
-typedef struct ubo ubo;
+typedef struct mvp_matrix mvp_matrix;
 #endif

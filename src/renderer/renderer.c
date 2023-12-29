@@ -133,25 +133,28 @@ void yk_create_gfx_pipeline(YkRenderer* renderer);
 
 void yk_cmd_innit(YkRenderer* renderer);
 
-void yk_create_vert_buffer(YkRenderer* renderer);
-void yk_create_index_buffer(YkRenderer* renderer);
-void createUniformBuffers(YkRenderer* renderer);
+void yk_create_vert_buffer(YkRenderer* renderer, const vertex vertices[], VkDeviceSize bufferSize, buffer* vert_buffer);
+void yk_create_index_buffer(YkRenderer* renderer, const u16 indices[], VkDeviceSize bufferSize, buffer* index_buffer);
+
 void createDescriptorPool(YkRenderer* renderer);
-void createDescriptorSets(YkRenderer* renderer);
+
+void createUniformBuffers(YkRenderer* renderer, VkDeviceSize bufferSize, ubuffer ubo[]);
+void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentImage);
+void createDescriptorSets(YkRenderer* renderer, ubuffer* ubo);
 
 void yk_create_sync_objs(YkRenderer* renderer);
 b8 yk_recreate_swapchain(YkRenderer* renderer);
 void copyBuffer(YkRenderer* renderer,VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
-void updateUniformBuffer(YkRenderer* renderer, uint32_t currentImage);
 
 void create_buffer(YkRenderer* ren, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory);
 
-
+/*
 void yk_innit_renderer(YkRenderer* renderer, YkWindow* window)
 {
     start_time = clock();
     renderer->window_handle = window;
 
+    
     yk_innit_vulkan(renderer);
     yk_create_surface(renderer);
     yk_pick_physdevice(renderer);
@@ -167,9 +170,9 @@ void yk_innit_renderer(YkRenderer* renderer, YkWindow* window)
     createDescriptorPool(renderer);
     createDescriptorSets(renderer);
     yk_create_sync_objs(renderer);
-
+  
 }
-
+*/
 void yk_free_renderer(YkRenderer* renderer)
 {   
     for (i32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
@@ -195,19 +198,12 @@ void yk_free_renderer(YkRenderer* renderer)
 
     vkDestroySwapchainKHR(renderer->device, renderer->swapchain, 0);
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        vkDestroyBuffer(renderer->device, renderer->uniformBuffers[i], 0);
-        vkFreeMemory(renderer->device, renderer->uniformBuffersMemory[i], 0);
-    }
+   
 
     vkDestroyDescriptorPool(renderer->device, renderer->descriptorPool, 0);
     vkDestroyDescriptorSetLayout(renderer->device, renderer->descriptorSetLayout, 0);
 
-    vkDestroyBuffer(renderer->device, renderer->index_buffer, 0);
-    vkFreeMemory(renderer->device, renderer->index_buffer_memory, 0);
-
-    vkDestroyBuffer(renderer->device, renderer->vert_buffer, 0);
-    vkFreeMemory(renderer->device, renderer->vert_buffer_memory, 0);
+   
 
     vkDestroyDevice(renderer->device, 0);
     vkDestroySurfaceKHR(renderer->vk_instance, renderer->surface, 0);
@@ -218,6 +214,20 @@ void yk_free_renderer(YkRenderer* renderer)
 #endif
 
     vkDestroyInstance(renderer->vk_instance, 0);
+}
+
+void yk_destroy_model(YkRenderer* renderer, render_object* render_object)
+{
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        vkDestroyBuffer(renderer->device, render_object->ubo[i].buffer.handle, 0);
+        vkFreeMemory(renderer->device, render_object->ubo[i].buffer.memory, 0);
+    }
+
+    vkDestroyBuffer(renderer->device, render_object->index_buffer.handle, 0);
+    vkFreeMemory(renderer->device, render_object->index_buffer.memory, 0);
+
+    vkDestroyBuffer(renderer->device, render_object->vert_buffer.handle, 0);
+    vkFreeMemory(renderer->device, render_object->vert_buffer.memory, 0);
 }
 
 void  yk_innit_vulkan(YkRenderer* renderer)
@@ -836,16 +846,6 @@ void yk_cmd_innit(YkRenderer* renderer)
     }   
 }
 
-const vertex vertices[] = {
-    {{-0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}},   // Light purple
-    {{0.5f, -0.5f}, {163/255.f, 163 / 255.f, 163 / 255.f}},    // Light green
-    {{0.5f, 0.5f}, {1.f, 1.f, 1.f}},     // Light blue
-    {{-0.5f, 0.5f}, {128 / 255.f, 0.f, 128 / 255.f}}     // Light yellow
-};
-
-const u16 indices[] = {
-    0, 1, 2, 2, 3, 0
-};
 
 u32 findMemoryType(YkRenderer* renderer ,u32 typeFilter, VkMemoryPropertyFlags properties) {
     VkPhysicalDeviceMemoryProperties memProperties;
@@ -861,10 +861,10 @@ u32 findMemoryType(YkRenderer* renderer ,u32 typeFilter, VkMemoryPropertyFlags p
     return 69420;
 }
 
-void yk_create_vert_buffer(YkRenderer* renderer)
+void yk_create_vert_buffer(YkRenderer* renderer, const vertex vertices[], VkDeviceSize bufferSize, buffer *vert_buffer)
 {//we
 
-    VkDeviceSize bufferSize = sizeof(vertices[0]) * 4;
+//    VkDeviceSize bufferSize = sizeof(vertices[0]) * 4;
 
     VkBuffer staging_buffer = { 0 };
     VkDeviceMemory staging_buffer_memory = { 0 };
@@ -875,17 +875,17 @@ void yk_create_vert_buffer(YkRenderer* renderer)
     vkMapMemory(renderer->device,staging_buffer_memory, 0, bufferSize, 0, &data);
     memcpy(data, vertices, (size_t)bufferSize);
 
-    create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &renderer->vert_buffer, &renderer->vert_buffer_memory);
+    create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vert_buffer->handle, &vert_buffer->memory);
 
-    copyBuffer(renderer,staging_buffer, renderer->vert_buffer, bufferSize);
+    copyBuffer(renderer,staging_buffer, vert_buffer->handle, bufferSize);
 
     vkDestroyBuffer(renderer->device, staging_buffer, 0);
     vkFreeMemory(renderer->device, staging_buffer_memory,0);
 }
 
-void yk_create_index_buffer(YkRenderer* renderer)
+void yk_create_index_buffer(YkRenderer* renderer, const u16 indices[], VkDeviceSize bufferSize, buffer* index_buffer)
 {
-    VkDeviceSize bufferSize = sizeof(indices[0]) * 6;
+ //   VkDeviceSize bufferSize = sizeof(indices[0]) * 6;
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -896,26 +896,44 @@ void yk_create_index_buffer(YkRenderer* renderer)
     memcpy(data, indices, (size_t)bufferSize);
     vkUnmapMemory(renderer->device, stagingBufferMemory);
 
-    create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &renderer->index_buffer, &renderer->index_buffer_memory);
+    create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &index_buffer->handle, &index_buffer->memory);
 
-    copyBuffer(renderer,stagingBuffer, renderer->index_buffer, bufferSize);
+    copyBuffer(renderer,stagingBuffer,index_buffer->handle, bufferSize);
 
     vkDestroyBuffer(renderer->device, stagingBuffer, 0);
     vkFreeMemory(renderer->device, stagingBufferMemory, 0);
 }
 
-void createUniformBuffers(YkRenderer* renderer)
+void createUniformBuffers(YkRenderer* renderer, VkDeviceSize bufferSize, ubuffer ubo[])
 {
-    VkDeviceSize bufferSize = sizeof(ubo);
+    //VkDeviceSize bufferSize = sizeof(mvp_matrix);
 
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-            &renderer->uniformBuffers[i], &renderer->uniformBuffersMemory[i]);
+            &ubo[i].buffer.handle, &ubo[i].buffer.memory);
 
-        vkMapMemory(renderer->device, renderer->uniformBuffersMemory[i], 0, bufferSize, 0, &renderer->uniformBuffersMapped[i]);
+        vkMapMemory(renderer->device, ubo[i].buffer.memory, 0, bufferSize, 0, &ubo[i].mapped);
     }
 }
+
+void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentImage)
+{
+    clock_t current_time = clock();
+    f32 time = (f32)(current_time - start_time) / CLOCKS_PER_SEC;
+
+    mvp_matrix mvp_mat = { 0 };
+
+    mvp_mat.model = yk_m4_rotate(yk_m4_identity(), time * DEG_TO_RAD * 90.f, (v3) { 0, 0, 1 });
+    mvp_mat.view = yk_m4_look_at((v3) { 2, 2, 2 }, (v3) { 0, 0, 0 }, (v3) { 0, 0, 1 });
+    mvp_mat.proj = yk_m4_perspective(DEG_TO_RAD * 45., renderer->extent.width / (f32)renderer->extent.height, 0.1f, 10.0f);
+
+
+    mvp_mat.proj.e[1][1] *= -1;
+
+    memcpy(ubo[currentImage].mapped, &mvp_mat, sizeof(mvp_mat));
+}
+
 
 void createDescriptorPool(YkRenderer* renderer)
 {
@@ -934,7 +952,7 @@ void createDescriptorPool(YkRenderer* renderer)
 
 }
 
-void createDescriptorSets(YkRenderer* renderer)
+void createDescriptorSets(YkRenderer* renderer, ubuffer* ubo)
 {
     VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT] = {renderer->descriptorSetLayout,renderer->descriptorSetLayout };
     VkDescriptorSetAllocateInfo allocInfo = {0};
@@ -947,9 +965,9 @@ void createDescriptorSets(YkRenderer* renderer)
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         VkDescriptorBufferInfo bufferInfo = { 0 };
-        bufferInfo.buffer = renderer->uniformBuffers[i];
+        bufferInfo.buffer = ubo->buffer.handle;
         bufferInfo.offset = 0;
-        bufferInfo.range = sizeof(ubo);
+        bufferInfo.range = sizeof(mvp_matrix);
 
         VkWriteDescriptorSet descriptorWrite = {0};
         descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -991,26 +1009,212 @@ void yk_create_sync_objs(YkRenderer* renderer)
 
 }
 
-
-
-void updateUniformBuffer(YkRenderer* renderer, uint32_t currentImage)
+void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
 {
-    clock_t current_time = clock();
-    f32 time = (f32)(current_time - start_time) / CLOCKS_PER_SEC;
+    start_time = clock();
+    renderer->window_handle = window;
 
-    ubo ubo = {0};
+    //---pure boiler plate ---//
+    yk_innit_vulkan(renderer);
+    yk_create_surface(renderer);
+    yk_pick_physdevice(renderer);
+    yk_find_queues(renderer);
+    yk_create_device(renderer);
+    yk_create_swapchain(renderer);
+    //---pure boiler plate ---//
 
-    ubo.model = yk_m4_rotate(yk_m4_identity(), time * DEG_TO_RAD * 90.f, (v3) { 0, 0, 1 });
-    ubo.view = yk_m4_look_at((v3) { 2, 2, 2 }, (v3) { 0, 0, 0 }, (v3) { 0, 0, 1 });
-    ubo.proj = yk_m4_perspective(DEG_TO_RAD * 45., renderer->extent.width / (f32)renderer->extent.height, 0.1f, 10.0f);
+    /* per objectish */
+    createDescriptorSetLayout(renderer);
+    yk_create_gfx_pipeline(renderer);
+    yk_cmd_innit(renderer);
+    /* per objectish */
 
+    //---can be optimized per object. But boilerplate for now --//
+    yk_create_sync_objs(renderer);
+    //---can be optimized per object. But boilerplate for now --//
 
-    ubo.proj.e[1][1] *=  -1;
-
-    memcpy(renderer->uniformBuffersMapped[currentImage], &ubo, sizeof(ubo));
 }
 
 
+void yk_renderer_innit_model(YkRenderer* renderer, const vertex vertices[], const u16 indices[], render_object* render_object)
+{
+ 
+    yk_create_vert_buffer(renderer, vertices, sizeof(vertices[0]) * 4, &render_object->vert_buffer);
+    yk_create_index_buffer(renderer, indices, sizeof(indices[0]) * 6, &render_object->index_buffer);
+    createDescriptorPool(renderer);
+
+    createUniformBuffers(renderer, sizeof(mvp_matrix), render_object->ubo);
+    
+    createDescriptorSets(renderer, render_object->ubo);
+}
+
+void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_object)
+{
+    yk_frame_data* current_frame = &renderer->frame_data[renderer->current_frame];
+
+    PFN_vkCmdBeginRenderingKHR vkCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(renderer->device, "vkCmdBeginRenderingKHR");
+    PFN_vkCmdEndRenderingKHR vkCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)vkGetDeviceProcAddr(renderer->device, "vkCmdEndRenderingKHR");
+
+
+    VkResultAssert(vkWaitForFences(renderer->device, 1, &current_frame->in_flight_fence, VK_TRUE, UINT64_MAX), "Wait for fences")
+
+        uint32_t imageIndex = -1;
+
+    if (vkAcquireNextImageKHR(renderer->device, renderer->swapchain, UINT64_MAX,
+        current_frame->image_available_semawhore,
+        VK_NULL_HANDLE, &imageIndex) == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        if (yk_recreate_swapchain(renderer) == false)
+        {
+            return;
+        }
+    }
+
+    updateUniformBuffer(renderer, render_object->ubo ,renderer->current_frame);
+    VkResultAssert(vkResetFences(renderer->device, 1, &current_frame->in_flight_fence), "Reset fences");
+
+
+
+    VkResultAssert(vkResetCommandBuffer(current_frame->cmd_buffers, 0), "Cmd buffer reset");
+
+    //command buffer record
+
+
+    VkRenderingAttachmentInfoKHR vk_color_attachment = { 0 };
+    vk_color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+    vk_color_attachment.imageView = renderer->swapchain_image_view_list[imageIndex];
+    vk_color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    vk_color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    vk_color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    vk_color_attachment.clearValue.color = (VkClearColorValue){ 0.0f, 0.0f, 0.0f, 1.0f };
+
+    VkRenderingInfoKHR vk_rendering_info = { 0 };
+    vk_rendering_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
+    vk_rendering_info.pNext = 0;
+    vk_rendering_info.flags = 0;
+    vk_rendering_info.renderArea = renderer->scissor;
+    vk_rendering_info.layerCount = 1;
+    vk_rendering_info.viewMask = 0;
+    vk_rendering_info.colorAttachmentCount = 1;
+    vk_rendering_info.pColorAttachments = &vk_color_attachment;
+    vk_rendering_info.pDepthAttachment = VK_NULL_HANDLE; //&vk_depth_attachment;
+    vk_rendering_info.pStencilAttachment = VK_NULL_HANDLE; //&vk_stencil_attachment;
+
+    VkCommandBufferBeginInfo vk_cmd_buffer_begin_info = { 0 };
+    vk_cmd_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    vk_cmd_buffer_begin_info.pNext = 0;
+    //0 is fine. flags are mean for specific cases
+    vk_cmd_buffer_begin_info.flags = 0;
+    //for secondary buffers
+    vk_cmd_buffer_begin_info.pInheritanceInfo = 0;
+
+    VkResultAssert(vkBeginCommandBuffer(current_frame->cmd_buffers, &vk_cmd_buffer_begin_info), "Command buffer begin");
+
+    // Begin rendering
+    vkCmdBeginRenderingKHR(current_frame->cmd_buffers, &vk_rendering_info);
+
+    vkCmdBindPipeline(current_frame->cmd_buffers, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->gfx_pipeline);
+
+
+    vkCmdSetViewport(current_frame->cmd_buffers, 0, 1, &renderer->viewport);
+    vkCmdSetScissor(current_frame->cmd_buffers, 0, 1, &renderer->scissor);
+
+    VkBuffer vertex_buffers[] = { render_object->vert_buffer.handle };
+
+    //if you pass mutiple buffers
+    VkDeviceSize offsets[] = { 0 };
+
+    vkCmdBindVertexBuffers(current_frame->cmd_buffers, 0, 1, vertex_buffers, offsets);
+    vkCmdBindIndexBuffer(current_frame->cmd_buffers, render_object->index_buffer.handle, 0, VK_INDEX_TYPE_UINT16);
+
+    vkCmdBindDescriptorSets(current_frame->cmd_buffers, VK_PIPELINE_BIND_POINT_GRAPHICS,
+    renderer->pipeline_layout, 0, 1, &renderer->descriptorSets[renderer->current_frame], 0, 0);
+    vkCmdDrawIndexed(current_frame->cmd_buffers, 6, 1, 0, 0, 0);
+
+
+    // End rendering
+    vkCmdEndRenderingKHR(current_frame->cmd_buffers);
+
+    VkImageMemoryBarrier barrier = { 0 };
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+    Assert(imageIndex < max_images, "Too many images.")
+
+    barrier.image = renderer->swapchain_image_list[imageIndex];
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = 1;
+    barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+
+    vkCmdPipelineBarrier(
+        current_frame->cmd_buffers,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+        0,
+        0, 0,
+        0, 0,
+        1, &barrier
+    );
+
+    VkResultAssert(vkEndCommandBuffer(current_frame->cmd_buffers), "Command buffer end");
+
+    //command buffer recording over
+
+    VkSubmitInfo vk_submit_info = { 0 };
+    vk_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    vk_submit_info.pNext = 0;
+
+    VkSemaphore vk_wait_semawhores[] = { current_frame->image_available_semawhore };
+    VkPipelineStageFlags vk_wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    vk_submit_info.waitSemaphoreCount = 1;
+    vk_submit_info.pWaitSemaphores = vk_wait_semawhores;
+    vk_submit_info.pWaitDstStageMask = vk_wait_stages;
+
+    vk_submit_info.commandBufferCount = 1;
+    vk_submit_info.pCommandBuffers = &renderer->frame_data[renderer->current_frame].cmd_buffers;
+
+    VkSemaphore vk_signal_semawhores[] = { current_frame->render_finished_semawhore };
+    vk_submit_info.signalSemaphoreCount = 1;
+    vk_submit_info.pSignalSemaphores = vk_signal_semawhores;
+
+    VkResultAssert(vkQueueSubmit(renderer->gfx_q, 1, &vk_submit_info, current_frame->in_flight_fence), "Draw command buffer submitted");
+
+    VkPresentInfoKHR vk_present_info = { 0 };
+    vk_present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    vk_present_info.waitSemaphoreCount = 1;
+    vk_present_info.pWaitSemaphores = vk_signal_semawhores;
+
+    VkSwapchainKHR vk_swapchains[] = { renderer->swapchain };
+    vk_present_info.swapchainCount = 1;
+    vk_present_info.pSwapchains = vk_swapchains;
+    vk_present_info.pImageIndices = &imageIndex;
+
+    vk_present_info.pResults = 0;
+
+    //present q same as graphics for now
+    VkResult qpresent_result = vkQueuePresentKHR(renderer->gfx_q, &vk_present_info);
+
+    if (qpresent_result == VK_ERROR_OUT_OF_DATE_KHR || qpresent_result == VK_SUBOPTIMAL_KHR)
+    {
+        if (yk_recreate_swapchain(renderer) == false)
+        {
+            return;
+        }
+    }
+
+    renderer->current_frame = (renderer->current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
+    // printf("we");
+}
+
+/*
 void vk_draw_frame(YkRenderer* renderer)
 {
     yk_frame_data* current_frame = &renderer->frame_data[renderer->current_frame];
@@ -1099,11 +1303,11 @@ void vk_draw_frame(YkRenderer* renderer)
     vkCmdSetViewport(current_frame->cmd_buffers, 0, 1, &renderer->viewport);
     vkCmdSetScissor(current_frame->cmd_buffers, 0, 1, &renderer->scissor);
 
-    VkBuffer vertex_buffers[] = { renderer->vert_buffer };
+    VkBuffer vertex_buffers[] = { renderer->vert_buffer.handle };
     VkDeviceSize offsets[] = { 0 };
 
     vkCmdBindVertexBuffers(current_frame->cmd_buffers, 0, 1, vertex_buffers, offsets );
-    vkCmdBindIndexBuffer(current_frame->cmd_buffers, renderer->index_buffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindIndexBuffer(current_frame->cmd_buffers, renderer->index_buffer.handle, 0, VK_INDEX_TYPE_UINT16);
 
     vkCmdBindDescriptorSets(current_frame->cmd_buffers, VK_PIPELINE_BIND_POINT_GRAPHICS,
     renderer->pipeline_layout, 0, 1, &renderer->descriptorSets[renderer->current_frame], 0, 0);
@@ -1191,7 +1395,7 @@ void vk_draw_frame(YkRenderer* renderer)
     renderer->current_frame = (renderer->current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
     // printf("we");
 }
-
+*/
 void yk_renderer_wait(YkRenderer* renderer)
 {
     vkDeviceWaitIdle(renderer->device);
