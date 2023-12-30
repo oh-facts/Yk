@@ -10,7 +10,7 @@
 #endif
 
 
-clock_t start_time;
+//clock_t start_time;
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -483,13 +483,14 @@ void yk_create_swapchain(YkRenderer* renderer)
     VkExtent2D vk_extent = { 0 };
     if (vk_surface_caps.currentExtent.width == -1 || vk_surface_caps.currentExtent.height == -1)
     {
-        vk_extent.width = renderer->window_handle->size_x;
-        vk_extent.height = renderer->window_handle->size_y;
+        vk_extent.width = renderer->window_handle->win_data.size_x;
+        vk_extent.height = renderer->window_handle->win_data.size_y;
     }
     else
     {
         vk_extent = vk_surface_caps.currentExtent;
     }
+
 
     //cursed fuckery
     renderer->extent = vk_extent;
@@ -581,7 +582,8 @@ void yk_create_swapchain(YkRenderer* renderer)
     vk_swapchain_create_info.oldSwapchain = 0; //ToDo(facts): Get back to later
     vk_swapchain_create_info.clipped = VK_TRUE; //Note(facts): Read about later
 
-    VkResultAssert(vkCreateSwapchainKHR(renderer->device, &vk_swapchain_create_info, 0, &renderer->swapchain), "Created Swapchain");
+    vkCreateSwapchainKHR(renderer->device, &vk_swapchain_create_info, 0, &renderer->swapchain);
+ //   VkResultAssert(, "Created Swapchain");
 
     #define max_images 3
 
@@ -920,7 +922,7 @@ void createUniformBuffers(YkRenderer* renderer, VkDeviceSize bufferSize, ubuffer
 void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentImage, int flag)
 {
     clock_t current_time = clock();
-    f32 time = (f32)(current_time - start_time) / CLOCKS_PER_SEC;
+   // f32 time = (f32)(current_time - start_time) / CLOCKS_PER_SEC;
 
     mvp_matrix mvp_mat = { 0 };
 
@@ -928,7 +930,7 @@ void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentIm
 
     mvp_mat.model = yk_m4_translate(mvp_mat.model, (v3) { 0.8 * flag, 0., -4. });
 
-    mvp_mat.model = yk_m4_rotate(mvp_mat.model, time, (v3) { 0, 1, 0 });
+   // mvp_mat.model = yk_m4_rotate(mvp_mat.model, t, (v3) { 0, 1, 0 });
     mvp_mat.view = yk_m4_look_at((v3) { 0, 0, 0 }, (v3) { 0, 0, -1. }, (v3) { 0, 1, 0 });
     mvp_mat.proj = yk_m4_perspective(DEG_TO_RAD * 45., renderer->extent.width / (f32)renderer->extent.height, 0.1f, 10.0f);
 
@@ -1016,9 +1018,9 @@ void yk_create_sync_objs(YkRenderer* renderer)
 
 void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
 {
-    start_time = clock();
+    //start_time = clock();
     renderer->window_handle = window;
-
+    renderer->current_frame = 0;
     //---pure boiler plate ---//
     yk_innit_vulkan(renderer);
     yk_create_surface(renderer);
@@ -1423,17 +1425,12 @@ void yk_renderer_wait(YkRenderer* renderer)
 
 b8 yk_recreate_swapchain(YkRenderer* renderer)
 {
-    if (!renderer->window_handle->is_running)
+    if (!renderer->window_handle->win_data.is_running)
     {
         return false;
     }
 
-    vkDeviceWaitIdle(renderer->device);
-
-    while (renderer->window_handle->is_minimized)
-    {
-        yk_window_poll();
-    }
+    VkResultAssert(vkDeviceWaitIdle(renderer->device), "L");
    
     for (i32 i = 0; i < max_images; i++)
     {

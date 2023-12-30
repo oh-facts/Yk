@@ -1,5 +1,4 @@
 
-#include <yk.h>
 #include <app.h>
 
 //ToDo(facts): Better Debug profiles.
@@ -70,14 +69,14 @@ int copy_file(const char* sourcePath, const char* destinationPath) {
     size_t bytesRead;
 
     // Open the source file for reading
-    sourceFile = fopen(sourcePath, "rb");
+    fopen_s(&sourceFile, sourcePath, "rb");
     if (sourceFile == NULL) {
         perror("Error opening source file");
         return 1; // Return an error code
     }
 
     // Open the destination file for writing
-    destinationFile = fopen(destinationPath, "wb");
+    fopen_s( &destinationFile, destinationPath, "wb");
     if (destinationFile == NULL) {
         perror("Error opening destination file");
         fclose(sourceFile);
@@ -97,8 +96,12 @@ int copy_file(const char* sourcePath, const char* destinationPath) {
 }
 
 HMODULE hModule;
-typedef void (*UpdateFunc)();
+typedef void (*UpdateFunc)(struct state* state);
+typedef struct state* (*StartFunc)();
+typedef int (*IsRunningFunc)(struct state* state);
 UpdateFunc Update;
+StartFunc Start;
+IsRunningFunc IsRunning;
 
 void reload_dll()
 {
@@ -111,7 +114,10 @@ void reload_dll()
     }
 
     Update = (UpdateFunc)GetProcAddress(hModule, "update");
-    if (Update == NULL) {
+    Start = (StartFunc)GetProcAddress(hModule, "start");
+    IsRunning = (IsRunningFunc)GetProcAddress(hModule, "is_running");
+
+    if (!Update || !Start || !IsRunning) {
         printf("Failed to find the function\n");
         FreeLibrary(hModule);
         exit(1);
@@ -173,9 +179,10 @@ int main(int argc, char *argv[])
     double elapsed;
     time(&start);
 
-    while (true )//win.is_running)
+    struct state* state = Start();
+    while (IsRunning(state))//win.is_running)
     {
-        Update();
+        Update(state);
 
         //ToDo(facts): Do this every time a key is pressed
         time(&now);
@@ -201,5 +208,6 @@ int main(int argc, char *argv[])
  //   yk_free_window(&win);
 
     FreeLibrary(hModule);
+    remove("temp.dll");
     return 0;
 }

@@ -221,4 +221,9 @@ inline m4 yk_m4_perspective(const f32 fov_degrees, const f32 aspect_ratio, const
 
 }
 
+ inline int yk_clamp(int value, int min, int max) {
+	return value < min ? min : (value > max ? max : value);
+}
+
+
 #endif // !YK_MATH

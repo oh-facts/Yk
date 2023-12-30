@@ -8,18 +8,26 @@
 
 typedef struct YkWindow YkWindow;
 
-struct YkWindow
+
+typedef struct win_data
 {
-	HWND win_handle;
-	HINSTANCE hinstance;
 	b8 is_minimized;
 	b8 is_running;
 	i32 size_x;
 	i32 size_y;
+}win_data;
+
+typedef win_data(*resize_callback)(void);
+
+struct YkWindow
+{
+	HWND win_handle;
+	HINSTANCE hinstance;
+	win_data win_data;
 };
 
-void yk_innit_window(YkWindow* window);
-void yk_window_poll();
+YkWindow yk_innit_window();
+void yk_window_poll(YkWindow* window);
 void yk_free_window(YkWindow* window);
 
 
