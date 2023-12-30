@@ -173,9 +173,7 @@ void yk_innit_renderer(YkRenderer* renderer, YkWindow* window)
   
 }
 */
-
-#define YK_EXPORTS
-YK_API void yk_free_renderer(YkRenderer* renderer)
+void yk_free_renderer(YkRenderer* renderer)
 {   
     for (i32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {

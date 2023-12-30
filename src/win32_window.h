@@ -19,9 +19,9 @@ struct YkWindow
 	i32 size_y;
 };
 
-__declspec(dllexport) void yk_innit_window(YkWindow* window);
-__declspec(dllexport) void yk_window_poll();
-__declspec(dllexport) void yk_free_window(YkWindow* window);
+void yk_innit_window(YkWindow* window);
+void yk_window_poll();
+void yk_free_window(YkWindow* window);
 
 
 
