@@ -14,6 +14,7 @@ struct state
 
 YK_API void start(struct state* state);
 YK_API void update(struct state* state);
+YK_API void freeApp(struct state* state);
 
 YK_API int is_running(struct state* state);
 

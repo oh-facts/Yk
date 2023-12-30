@@ -19,7 +19,7 @@ include_directories(
 
 
 
-set(yk_src "src/yk.c" "src/renderer/renderer.c"  "src/yk_file_reader.c" "src/app.c")
+set(yk_src "src/yk.c" "src/renderer/renderer.c" "src/app.c")
 
 set(yk_platform_layer  "src/win32_window.c")
 

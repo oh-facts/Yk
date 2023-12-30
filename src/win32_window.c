@@ -8,6 +8,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
     switch (msg)
     {
+    case WM_KEYDOWN:
+    {
+        YkWindow* win = (YkWindow*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+        switch (wParam) {
+        case VK_ESCAPE:
+        {
+            win->test = 1;
+            printf("w");
+        }break;
+        }
+    }break;
+
     case WM_CREATE:
     {
         YkWindow* win = (YkWindow*)((CREATESTRUCT*)lParam)->lpCreateParams;
@@ -55,6 +67,7 @@ void yk_innit_window(YkWindow* window)
     window->hinstance = GetModuleHandle(0);
     window->win_data.size_x = WIN_SIZE_X;
     window->win_data.size_y = WIN_SIZE_Y;
+    window->test = 0;
 
     WNDCLASS wc = { 0 };
     wc.style = CS_HREDRAW | CS_VREDRAW;

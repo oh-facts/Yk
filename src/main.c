@@ -48,7 +48,13 @@
 //ToDo(facts): Clean up platform layer. Remember. It should be easy to be able to statically build without all that hot reloading. Hot
 //             reloading is purely a debug thing. Final build needs to be as fast as possible so all indirections / debug features must
 //             be removed.
-//
+//Note(facts): I have been listening to Erika. Fuck it, I'm rolling my own physics engine. I am great at physics and programming so it
+//             wont be too hard to roll a very efficient one in C. I dislike C++ too much to port my code. Also, my physics needs wont
+//             be that much if I go the voxel route. Obviously, I will still use 3rd party libraries like cimgui and STB header family.
+//             I am not a pyscopath, I just hate C++ so so much. Once constexpr comes to C, C will be feature complete. I rolled out 
+//             this dll hot code reload all by myself and figured out vulkan from the spec. I can easily read relevant physics engine
+//             books and repositories (like jolt) to make my own. Remember, the only reason why I am rolling my own is because one 
+//             doesnt already exist in C. If Jolt had a C api, I wouldn't do this.
 //
 
 
@@ -69,47 +75,17 @@ typedef struct YkMemory YkMemory;
     LPVOID base_address = 0;
 #endif
 
-int copy_file(const char* sourcePath, const char* destinationPath) {
-    FILE* sourceFile, * destinationFile;
-    char buffer[4096];
-    size_t bytesRead;
-
-    // Open the source file for reading
-    fopen_s(&sourceFile, sourcePath, "rb");
-    if (sourceFile == NULL) {
-        perror("Error opening source file");
-        return 1; // Return an error code
-    }
-
-    // Open the destination file for writing
-    fopen_s( &destinationFile, destinationPath, "wb");
-    if (destinationFile == NULL) {
-        perror("Error opening destination file");
-        fclose(sourceFile);
-        return 1; // Return an error code
-    }
-
-    // Copy data from the source file to the destination file
-    while ((bytesRead = fread(buffer, 1, sizeof(buffer), sourceFile)) > 0) {
-        fwrite(buffer, 1, bytesRead, destinationFile);
-    }
-
-    // Close the files
-    fclose(sourceFile);
-    fclose(destinationFile);
-
-    return 0; // Return 0 for success
-}
-
 HMODULE hModule;
 typedef void (*UpdateFunc)(struct state* state);
 typedef void (*StartFunc)(struct state* state);
 typedef int (*IsRunningFunc)(struct state* state);
 typedef void (*UpdateRefFunc)(struct state* state);
+typedef void (*FreeApp)(struct state* state);
 UpdateFunc Update;
 StartFunc Start;
 IsRunningFunc IsRunning;
 UpdateRefFunc update_ref;
+FreeApp free_app;
 
 void reload_dll()
 {
@@ -125,8 +101,9 @@ void reload_dll()
     Start = (StartFunc)GetProcAddress(hModule, "start");
     IsRunning = (IsRunningFunc)GetProcAddress(hModule, "is_running");
     update_ref = (UpdateRefFunc)GetProcAddress(hModule, "update_references");
+    free_app = (FreeApp)GetProcAddress(hModule, "freeApp");
 
-    if (!Update || !Start || !IsRunning) {
+    if (!Update || !Start || !IsRunning || !free_app || !update_ref) {
         printf("Failed to find the function\n");
         FreeLibrary(hModule);
         exit(1);
@@ -136,7 +113,7 @@ void reload_dll()
 int main(int argc, char *argv[])
 {
 
-
+    //ToDo(facts): Actually make use of this lmao
     YkMemory engine_memory = {0};
     engine_memory.perm_storage_size = Megabytes(64);
     engine_memory.temp_storage_size = Megabytes(64);
@@ -145,43 +122,6 @@ int main(int argc, char *argv[])
 
     engine_memory.perm_storage = VirtualAlloc(base_address, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     engine_memory.temp_storage = (u8*)engine_memory.perm_storage + engine_memory.perm_storage_size;
-    /*
-    YkWindow win = { 0 };
-    yk_innit_window(&win);
-
-    const vertex vertices[] = {
-        {{-0.5f, -0.5f},{163 / 255.f, 163 / 255.f, 163 / 255.f} },   
-        {{0.5f, -0.5f}, {0.0f, 0.0f, 0.0f} },    
-        {{0.5f, 0.5f}, {1.f, 1.f, 1.f}},     
-        {{-0.5f, 0.5f}, {128 / 255.f, 0.f, 128 / 255.f}}      
-    };
-
-    const vertex vertices2[] = {
-       {{-0.5f, -0.5f}, {1.0f, 33/255.0f, 140/255.0f}},    
-       {{0.5f, -0.5f}, {1.f, 216 / 255.f, 0}},    
-       {{0.5f, 0.5f}, {33/255.f, 177/255.f, 1.f}},      
-       {{-0.5f, 0.5f}, {1.0f, 33 / 255.0f, 140 / 255.0f}}      
-    };
-
-    const u16 indices[] = {
-        0, 1, 2, 2, 3, 0
-    };
-
-    YkRenderer ren = { 0 };
-    yk_renderer_innit(&ren, &win);
-    
-    render_object ro = { 0 };
-    ro.id = 0;
-    yk_renderer_innit_model(&ren, vertices, indices, &ro);
-
-    
-    render_object ro2 = { 0 };
-    ro2.id = 1;
-    yk_renderer_innit_model(&ren, vertices2, indices, &ro2);
-  
-    render_object ros[] = { ro,ro2 };
-    */
-
     reload_dll();
 
     time_t start, now;
@@ -190,41 +130,39 @@ int main(int argc, char *argv[])
     struct state state = { 0 };
     struct state state2 = { 0 };
     state.ren.clock = clock();
- //   memset(state, 0, sizeof(struct state));
+ 
     yk_innit_window(&state.window);
     Start(&state);
     
-   // struct state* state2 = malloc(sizeof(struct state));
 
-    while (IsRunning(&state))//win.is_running)
+    while (IsRunning(&state))
     {
         yk_window_poll();
-        Update(&state);
 
-        //ToDo(facts): Do this every time a key is pressed
-        time(&now);
-        elapsed = difftime(now, start);
-        if (elapsed >= 3.0) {
-           // state2 = state;
-            FreeLibrary(hModule);
-            reload_dll();
-           // state = state2;
-            Start(&state);
-           // update_ref(state);
-            time(&start);
+        if (!state.window.win_data.is_minimized)
+        {
+            Update(&state);
+
+            //ToDo(facts): Do this every time a key is pressed
+            time(&now);
+            elapsed = difftime(now, start);
+            if (state.window.test == 1) {
+                state.window.test = 0;
+                free_app(&state);
+
+                FreeLibrary(hModule);
+                reload_dll();
+
+                Start(&state);
+                //update_ref(&state);
+
+                time(&start);
+            }
         }
 
-       // yk_window_poll();
-      //  yk_renderer_draw_model(&ren, ros, 2);
     }
 
-   // yk_renderer_wait(&ren);
-
-   // yk_destroy_model(&ren, &ro);
-  //  yk_destroy_model(&ren, &ro2);
- //   yk_free_renderer(&ren);
-
- //   yk_free_window(&win);
+    yk_free_window(&state.window);
 
     FreeLibrary(hModule);
     remove("temp.dll");
