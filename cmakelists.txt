@@ -19,7 +19,11 @@ include_directories(
 
 set(yk_src "src/yk.c" "src/renderer/renderer.c" "src/win32_window.c"  "src/yk_file_reader.c")
 
-add_library(${PROJECT_NAME} ${yk_src})
+if(BUILD_SHARED_LIBS)
+    add_compile_definitions(YK_EXPORTS)
+endif()
+
+add_library(${PROJECT_NAME} SHARED ${yk_src})
 target_link_libraries(${PROJECT_NAME}  ${Vulkan_LIBRARIES})
 
 add_executable(yk_test "src/main.c")
