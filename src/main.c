@@ -1,7 +1,6 @@
 
 #include <yk.h>
-
-
+#include <app.h>
 
 //ToDo(facts): Better Debug profiles.
 // 12/23 1758
@@ -65,6 +64,60 @@ typedef struct YkMemory YkMemory;
     LPVOID base_address = 0;
 #endif
 
+int copy_file(const char* sourcePath, const char* destinationPath) {
+    FILE* sourceFile, * destinationFile;
+    char buffer[4096];
+    size_t bytesRead;
+
+    // Open the source file for reading
+    sourceFile = fopen(sourcePath, "rb");
+    if (sourceFile == NULL) {
+        perror("Error opening source file");
+        return 1; // Return an error code
+    }
+
+    // Open the destination file for writing
+    destinationFile = fopen(destinationPath, "wb");
+    if (destinationFile == NULL) {
+        perror("Error opening destination file");
+        fclose(sourceFile);
+        return 1; // Return an error code
+    }
+
+    // Copy data from the source file to the destination file
+    while ((bytesRead = fread(buffer, 1, sizeof(buffer), sourceFile)) > 0) {
+        fwrite(buffer, 1, bytesRead, destinationFile);
+    }
+
+    // Close the files
+    fclose(sourceFile);
+    fclose(destinationFile);
+
+    return 0; // Return 0 for success
+}
+
+HMODULE hModule;
+typedef void (*UpdateFunc)();
+UpdateFunc Update;
+
+void reload_dll()
+{
+    copy_file("yk.dll", "temp.dll");
+
+    hModule = LoadLibraryA("temp.dll");
+    if (hModule == NULL) {
+        printf("Failed to load the DLL\n");
+        exit(1);
+    }
+
+    Update = (UpdateFunc)GetProcAddress(hModule, "update");
+    if (Update == NULL) {
+        printf("Failed to find the function\n");
+        FreeLibrary(hModule);
+        exit(1);
+    }
+}
+
 int main(int argc, char *argv[])
 {
 
@@ -77,7 +130,7 @@ int main(int argc, char *argv[])
 
     engine_memory.perm_storage = VirtualAlloc(base_address, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     engine_memory.temp_storage = (u8*)engine_memory.perm_storage + engine_memory.perm_storage_size;
-
+    /*
     YkWindow win = { 0 };
     yk_innit_window(&win);
 
@@ -112,20 +165,41 @@ int main(int argc, char *argv[])
     yk_renderer_innit_model(&ren, vertices2, indices, &ro2);
   
     render_object ros[] = { ro,ro2 };
-  
-    while (win.is_running)
+    */
+
+    reload_dll();
+
+    time_t start, now;
+    double elapsed;
+    time(&start);
+
+    while (true )//win.is_running)
     {
-        yk_window_poll();
-        yk_renderer_draw_model(&ren, ros, 2);
+        Update();
+
+        //ToDo(facts): Do this every time a key is pressed
+        time(&now);
+        elapsed = difftime(now, start);
+        if (elapsed >= 3.0) {
+            
+            FreeLibrary(hModule);
+            reload_dll();
+
+            time(&start);
+        }
+
+       // yk_window_poll();
+      //  yk_renderer_draw_model(&ren, ros, 2);
     }
 
-    yk_renderer_wait(&ren);
+   // yk_renderer_wait(&ren);
 
-    yk_destroy_model(&ren, &ro);
-    yk_destroy_model(&ren, &ro2);
-    yk_free_renderer(&ren);
+   // yk_destroy_model(&ren, &ro);
+  //  yk_destroy_model(&ren, &ro2);
+ //   yk_free_renderer(&ren);
 
-    yk_free_window(&win);
+ //   yk_free_window(&win);
 
+    FreeLibrary(hModule);
     return 0;
 }
