@@ -5,9 +5,9 @@
 #include <Windows.h>
 
 
-
 typedef struct YkWindow YkWindow;
 
+extern YkWindow window;
 
 typedef struct win_data
 {
@@ -26,7 +26,7 @@ struct YkWindow
 	win_data win_data;
 };
 
-YkWindow yk_innit_window();
+void yk_innit_window(YkWindow* window);
 void yk_window_poll(YkWindow* window);
 void yk_free_window(YkWindow* window);
 

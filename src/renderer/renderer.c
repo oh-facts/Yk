@@ -9,7 +9,7 @@
 #include <vulkan/vulkan_android.h>
 #endif
 
-
+#define CLAMP(value, min, max) ((value) < (min) ? (min) : ((value) > (max) ? (max) : (value)))
 //clock_t start_time;
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
@@ -481,14 +481,27 @@ void yk_create_swapchain(YkRenderer* renderer)
         imageCount = vk_surface_caps.maxImageCount;
 
     VkExtent2D vk_extent = { 0 };
-    if (vk_surface_caps.currentExtent.width == -1 || vk_surface_caps.currentExtent.height == -1)
+
+    if (vk_surface_caps.currentExtent.width != UINT32_MAX)
     {
-        vk_extent.width = renderer->window_handle->win_data.size_x;
-        vk_extent.height = renderer->window_handle->win_data.size_y;
+        vk_extent = vk_surface_caps.currentExtent;
     }
     else
     {
-        vk_extent = vk_surface_caps.currentExtent;
+        RECT clientRect;
+        GetClientRect(renderer->window_handle->win_handle, &clientRect);
+        VkExtent2D actualExtent = {
+            .width = (uint32_t)(clientRect.right - clientRect.left),
+            .height = (uint32_t)(clientRect.bottom - clientRect.top)
+        };
+
+        actualExtent.width = (actualExtent.width == 0) ? 1 : actualExtent.width;
+        actualExtent.height = (actualExtent.height == 0) ? 1 : actualExtent.height;
+
+        actualExtent.width = CLAMP(actualExtent.width, vk_surface_caps.minImageExtent.width, vk_surface_caps.maxImageExtent.width);
+        actualExtent.height = CLAMP(actualExtent.height, vk_surface_caps.minImageExtent.height, vk_surface_caps.maxImageExtent.height);
+
+        vk_extent = actualExtent;
     }
 
 

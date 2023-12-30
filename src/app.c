@@ -18,7 +18,7 @@ struct state* start()
     {
         exit(-5);
     }
-    self->window = yk_innit_window();
+    yk_innit_window(&self->window);
 
     const vertex vertices[] = {
         {{-0.5f, -0.5f},{163 / 255.f, 163 / 255.f, 163 / 255.f} },

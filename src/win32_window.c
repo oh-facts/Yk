@@ -3,50 +3,54 @@
 #define WIN_SIZE_X 800
 #define WIN_SIZE_Y 600
 
-LRESULT CALLBACK WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    YkWindow* window = (YkWindow*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
-
-    switch (uMsg)
+    
+    switch (msg)
     {
     case WM_CREATE:
-        window = (YkWindow*)((CREATESTRUCT*)lParam)->lpCreateParams;
-        SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)window);
-        window->win_data.is_running = true;
-        window->win_data.is_minimized = false;
+        {
+        YkWindow* win = (YkWindow*)((CREATESTRUCT*)lParam)->lpCreateParams;
+        SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)win);
+        }
+      
         break;
-
-    case WM_DESTROY:
-        window->win_data.is_running = false;
-        free(window);
-        break;
-
     case WM_SIZE:
-        window->win_data.size_x = LOWORD(lParam);
-        window->win_data.size_y = HIWORD(lParam);
-        window->win_data.is_minimized = wParam == SIZE_MINIMIZED;
-        break;
-
-    case WM_SYSCOMMAND:
-        if ((wParam & 0xFFF0) == SC_MINIMIZE)
+    {
+        YkWindow* win = (YkWindow*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+        win->win_data.size_x = LOWORD(lParam);
+        win->win_data.size_y = HIWORD(lParam);
+        if (wParam == SIZE_MINIMIZED)
         {
-            window->win_data.is_minimized = true;
+            if (win)
+                win->win_data.is_minimized = true;
         }
-        else if ((wParam & 0xFFF0) == SC_RESTORE)
+        else if (wParam == SIZE_RESTORED || wParam == SIZE_MAXIMIZED )
         {
-            window->win_data.is_minimized = false;
+            if (win)
+                win->win_data.is_minimized = false;
         }
-        break;
+    } break;
+    case WM_DESTROY:
+    {
+        YkWindow* win = (YkWindow*)GetWindowLongPtrW(hwnd, GWLP_USERDATA);
+        if(win)
+        win->win_data.is_running = false;
+        PostQuitMessage(0);
     }
-
-    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+      
+        break;
+    default:
+        return DefWindowProc(hwnd, msg, wParam, lParam);
+    }
+    return 0;
 }
 
-YkWindow yk_innit_window()
+void yk_innit_window(YkWindow* window)
 {
-    YkWindow* window = malloc(sizeof(YkWindow));
     window->win_data.is_running = true;
     window->win_data.is_minimized = false;
+    window->hinstance = GetModuleHandle(0);
     window->win_data.size_x = WIN_SIZE_X;
     window->win_data.size_y = WIN_SIZE_Y;
 
@@ -55,7 +59,7 @@ YkWindow yk_innit_window()
     wc.lpfnWndProc = WndProc;
     wc.cbClsExtra = 0;
     wc.cbWndExtra = 0;
-    wc.hInstance = GetModuleHandle(0);
+    wc.hInstance = window->hinstance;
     wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
     wc.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
@@ -75,26 +79,19 @@ YkWindow yk_innit_window()
         exit(-1);
     }
 
-    SetWindowLongPtr(window->win_handle, GWLP_USERDATA, (LONG_PTR)window);
-
     ShowWindow(window->win_handle, SW_SHOWNORMAL);
     UpdateWindow(window->win_handle);
-
-    return *window;
 }
+
 void yk_free_window(YkWindow* window)
 {
     DestroyWindow(window->win_handle);
 }
 
-void yk_window_poll(YkWindow* window)
+void yk_window_poll()
 {
-    if (window == 0)
-    {
-        printf("rerere");
-    }
     MSG message;
-    while (PeekMessageA(&message, 0, 0, 0, PM_REMOVE))
+    while (PeekMessageA(&message, NULL, 0, 0, PM_REMOVE))
     {
         TranslateMessage(&message);
         DispatchMessageA(&message);
