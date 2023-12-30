@@ -8,7 +8,7 @@
 #include <yk_math.h>
 #include <yk_math.h>
 #include <renderer/mn_types.h>
-
+#include <yk_api.h>
 
 typedef struct YkRenderer YkRenderer;
 
@@ -77,15 +77,15 @@ enum Q_FAM
 };
 
 
-void yk_free_renderer(YkRenderer* renderer);
+YK_API void yk_free_renderer(YkRenderer* renderer);
 
-void yk_renderer_wait(YkRenderer* renderer);
+YK_API void yk_renderer_wait(YkRenderer* renderer);
 
-void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window);
-void yk_renderer_innit_model(YkRenderer* renderer, const vertex vertices[], const u16 indices[], render_object* render_object);
-void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_objects, int num);
+YK_API void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window);
+YK_API void yk_renderer_innit_model(YkRenderer* renderer, const vertex vertices[], const u16 indices[], render_object* render_object);
+YK_API void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_objects, int num);
 
-void yk_destroy_model(YkRenderer* renderer, render_object* render_object);
+YK_API void yk_destroy_model(YkRenderer* renderer, render_object* render_object);
 
 VkVertexInputBindingDescription vk_get_binding_desc();
 void get_attrib_desc(VkVertexInputAttributeDescription out[]);

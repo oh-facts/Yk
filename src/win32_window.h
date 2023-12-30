@@ -3,7 +3,7 @@
 
 #include<yk.h>
 #include <Windows.h>
-
+#include "yk_api.h"
 
 
 typedef struct YkWindow YkWindow;
@@ -19,9 +19,9 @@ struct YkWindow
 	i32 size_y;
 };
 
-void yk_innit_window(YkWindow* window);
-void yk_window_poll();
-void yk_free_window(YkWindow* window);
+YK_API void yk_innit_window(YkWindow* window);
+YK_API void yk_window_poll();
+YK_API void yk_free_window(YkWindow* window);
 
 
 
