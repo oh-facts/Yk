@@ -54,7 +54,8 @@ char* yk_read_text_file(const char* filepath)
 
 char* yk_read_binary_file(const char* filename, size_t* fileSize) 
 {
-    FILE* file = fopen(filename, "rb");
+    FILE* file;
+    fopen_s(&file, filename, "rb");
 
     if (!file) {
         perror("Failed to open file");

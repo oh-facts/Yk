@@ -43,7 +43,7 @@
 // This is me from the future. I am a git hopper. I travel between parallel git commits.
 // The abstraction you made was dogshit. So I am back. I spent 4 days fucking about. I have aged in real life.
 // 
-// 
+// 12/30 0027: Work on hot reloading. It is pain to rapidly iterate otherwise.
 //
 
 struct YkMemory
