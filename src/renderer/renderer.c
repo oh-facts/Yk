@@ -10,7 +10,6 @@
 #endif
 
 #define CLAMP(value, min, max) ((value) < (min) ? (min) : ((value) > (max) ? (max) : (value)))
-//clock_t start_time;
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -123,11 +122,11 @@ void _check_vk_result(VkResult result, const char* msg) {
 #endif
 
 void yk_innit_vulkan(YkRenderer* renderer);
-void yk_create_surface(YkRenderer* renderer);
+void yk_create_surface(YkRenderer* renderer, YkWindow* win);
 void yk_pick_physdevice(YkRenderer* renderer);
 void yk_find_queues(YkRenderer* renderer);
 void yk_create_device(YkRenderer* renderer);
-void yk_create_swapchain(YkRenderer* renderer);
+void yk_create_swapchain(YkRenderer* renderer, YkWindow* win);
 void createDescriptorSetLayout(YkRenderer* renderer);
 void yk_create_gfx_pipeline(YkRenderer* renderer);
 
@@ -143,7 +142,7 @@ void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentIm
 void createDescriptorSets(YkRenderer* renderer, ubuffer* ubo, render_object* ro);
 
 void yk_create_sync_objs(YkRenderer* renderer);
-b8 yk_recreate_swapchain(YkRenderer* renderer);
+b8 yk_recreate_swapchain(YkRenderer* renderer,YkWindow* win);
 void copyBuffer(YkRenderer* renderer,VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
 void create_buffer(YkRenderer* ren, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory);
@@ -314,7 +313,7 @@ void  yk_innit_vulkan(YkRenderer* renderer)
 
 }
 
-void yk_create_surface(YkRenderer* renderer)
+void yk_create_surface(YkRenderer* renderer, YkWindow* win)
 {
     //Needs to be done first because queues need to be able to present and for that I need a surface
     //34.2.3
@@ -324,8 +323,8 @@ void yk_create_surface(YkRenderer* renderer)
     vk_win32_surface_create_info_khr.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     vk_win32_surface_create_info_khr.pNext = 0;
     vk_win32_surface_create_info_khr.flags = 0;
-    vk_win32_surface_create_info_khr.hinstance = renderer->window_handle->hinstance;
-    vk_win32_surface_create_info_khr.hwnd = renderer->window_handle->win_handle;
+    vk_win32_surface_create_info_khr.hinstance = win->hinstance;
+    vk_win32_surface_create_info_khr.hwnd = win->win_handle;
 
     VkResultAssert(vkCreateWin32SurfaceKHR(renderer->vk_instance, &vk_win32_surface_create_info_khr, 0, &renderer->surface), "Win 32 Surface Creation");
 
@@ -468,7 +467,7 @@ void yk_create_device(YkRenderer* renderer)
 
 }
 
-void yk_create_swapchain(YkRenderer* renderer)
+void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
 {
   //https://harrylovescode.gitbooks.io/vulkan-api/content/chap06/chap06.html
 
@@ -481,16 +480,27 @@ void yk_create_swapchain(YkRenderer* renderer)
         imageCount = vk_surface_caps.maxImageCount;
 
     VkExtent2D vk_extent = { 0 };
-    if (vk_surface_caps.currentExtent.width == -1 || vk_surface_caps.currentExtent.height == -1)
-    {
-        vk_extent.width = renderer->window_handle->win_data.size_x;
-        vk_extent.height = renderer->window_handle->win_data.size_y;
-    }
-    else
-    {
+    if (vk_surface_caps.currentExtent.width != UINT32_MAX) {
         vk_extent = vk_surface_caps.currentExtent;
     }
+    else {
+        RECT clientRect;
+        GetClientRect(win->win_handle, &clientRect);
 
+        VkExtent2D actualExtent = {
+            .width = (uint32_t)(clientRect.right - clientRect.left),
+            .height = (uint32_t)(clientRect.bottom - clientRect.top)
+        };
+
+        // Ensure the width and height are never zero
+        actualExtent.width = (actualExtent.width == 0) ? 1 : actualExtent.width;
+        actualExtent.height = (actualExtent.height == 0) ? 1 : actualExtent.height;
+
+        actualExtent.width = CLAMP(actualExtent.width, vk_surface_caps.minImageExtent.width, vk_surface_caps.maxImageExtent.width);
+        actualExtent.height = CLAMP(actualExtent.height, vk_surface_caps.minImageExtent.height, vk_surface_caps.maxImageExtent.height);
+
+        vk_extent = actualExtent;
+    }
 
 
     //cursed fuckery
@@ -923,7 +933,7 @@ void createUniformBuffers(YkRenderer* renderer, VkDeviceSize bufferSize, ubuffer
 void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentImage, int flag)
 {
     clock_t current_time = clock();
-   // f32 time = (f32)(current_time - start_time) / CLOCKS_PER_SEC;
+    f32 time = (f32)(current_time - renderer->clock) / CLOCKS_PER_SEC;
 
     mvp_matrix mvp_mat = { 0 };
 
@@ -931,7 +941,7 @@ void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentIm
 
     mvp_mat.model = yk_m4_translate(mvp_mat.model, (v3) { 0.8 * flag, 0., -4. });
 
-   // mvp_mat.model = yk_m4_rotate(mvp_mat.model, t, (v3) { 0, 1, 0 });
+    mvp_mat.model = yk_m4_rotate(mvp_mat.model,time, (v3) { 0, 1, 0 });
     mvp_mat.view = yk_m4_look_at((v3) { 0, 0, 0 }, (v3) { 0, 0, -1. }, (v3) { 0, 1, 0 });
     mvp_mat.proj = yk_m4_perspective(DEG_TO_RAD * 45., renderer->extent.width / (f32)renderer->extent.height, 0.1f, 10.0f);
 
@@ -1019,16 +1029,14 @@ void yk_create_sync_objs(YkRenderer* renderer)
 
 void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
 {
-    //start_time = clock();
-    renderer->window_handle = window;
     renderer->current_frame = 0;
     //---pure boiler plate ---//
     yk_innit_vulkan(renderer);
-    yk_create_surface(renderer);
+    yk_create_surface(renderer, window);
     yk_pick_physdevice(renderer);
     yk_find_queues(renderer);
     yk_create_device(renderer);
-    yk_create_swapchain(renderer);
+    yk_create_swapchain(renderer, window);
     //---pure boiler plate ---//
 
     /* per objectish */
@@ -1056,7 +1064,7 @@ void yk_renderer_innit_model(YkRenderer* renderer, const vertex vertices[], cons
     createDescriptorSets(renderer, render_object->ubo, render_object);
 }
 
-void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_objects, int num_obj)
+void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_objects, int num_obj, YkWindow* win)
 {
     yk_frame_data* current_frame = &renderer->frame_data[renderer->current_frame];
 
@@ -1072,7 +1080,7 @@ void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_objects,
         current_frame->image_available_semawhore,
         VK_NULL_HANDLE, &imageIndex) == VK_ERROR_OUT_OF_DATE_KHR)
     {
-        if (yk_recreate_swapchain(renderer) == false)
+        if (yk_recreate_swapchain(renderer, win) == false)
         {
             return;
         }
@@ -1225,9 +1233,10 @@ void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_objects,
     //present q same as graphics for now
     VkResult qpresent_result = vkQueuePresentKHR(renderer->gfx_q, &vk_present_info);
 
-    if (qpresent_result == VK_ERROR_OUT_OF_DATE_KHR || qpresent_result == VK_SUBOPTIMAL_KHR)
+    if (qpresent_result == VK_ERROR_OUT_OF_DATE_KHR || qpresent_result == VK_SUBOPTIMAL_KHR || win->win_data.is_resized)
     {
-        if (yk_recreate_swapchain(renderer) == false)
+        win->win_data.is_resized = false;
+        if (yk_recreate_swapchain(renderer, win) == false)
         {
             return;
         }
@@ -1424,14 +1433,14 @@ void yk_renderer_wait(YkRenderer* renderer)
     vkDeviceWaitIdle(renderer->device);
 }
 
-b8 yk_recreate_swapchain(YkRenderer* renderer)
-{
-    if (!renderer->window_handle->win_data.is_running)
+b8 yk_recreate_swapchain(YkRenderer* renderer, YkWindow* win)
+{ 
+    if (!win->win_data.is_running)
     {
         return false;
     }
 
-    VkResultAssert(vkDeviceWaitIdle(renderer->device), "L");
+    vkDeviceWaitIdle(renderer->device);
    
     for (i32 i = 0; i < max_images; i++)
     {
@@ -1441,7 +1450,7 @@ b8 yk_recreate_swapchain(YkRenderer* renderer)
     vkDestroySwapchainKHR(renderer->device, renderer->swapchain, 0);
 
  
-    yk_create_swapchain(renderer);
+    yk_create_swapchain(renderer, win);
 
     return true;
 }

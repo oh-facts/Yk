@@ -2,23 +2,14 @@
 #include <math.h>
 #include <yk.h>
 
-struct state
-{
-	YkWindow window;
-    YkRenderer ren;
-    render_object ro[2];
-};
 
-
-struct state* start()
+void start(struct state* self)
 {
-    struct state* self = malloc(sizeof(struct state) * 2);
-    memset(self, 0, sizeof(struct state));
     if (!self)
     {
         exit(-5);
     }
-    yk_innit_window(&self->window);
+   
 
     const vertex vertices[] = {
         {{-0.5f, -0.5f},{163 / 255.f, 163 / 255.f, 163 / 255.f} },
@@ -48,13 +39,13 @@ struct state* start()
     yk_renderer_innit_model(&self->ren, vertices2, indices, &self->ro[1]);
 
 
-    return self;
 }
 
 void update(struct state* state)
 {
-    yk_window_poll();
-    yk_renderer_draw_model(&state->ren, state->ro, 2);
+   
+  if(!state->window.win_data.is_minimized)
+    yk_renderer_draw_model(&state->ren, state->ro, 2, &state->window);
 
 //	v3 a = { 1,3 };
 //	printf("%f %f\n", a.x, a.y);
@@ -63,4 +54,11 @@ void update(struct state* state)
 int is_running(struct state* self)
 {
     return self->window.win_data.is_running;
+}
+
+void update_references(struct state* self)
+{
+   yk_recreate_swapchain(&self->ren, &self->window);
+   // printf("%p", self->window.hinstance);
+    //yk_renderer_innit(&self->ren, &self->window);
 }

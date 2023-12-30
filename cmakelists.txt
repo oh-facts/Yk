@@ -19,13 +19,13 @@ include_directories(
 
 
 
-set(yk_src "src/yk.c" "src/renderer/renderer.c" "src/win32_window.c"  "src/yk_file_reader.c" "src/app.c")
+set(yk_src "src/yk.c" "src/renderer/renderer.c"  "src/yk_file_reader.c" "src/app.c")
 
 if(YK_BUILD_SHARED)
     add_library(${PROJECT_NAME} SHARED ${yk_src}) 
     target_compile_definitions(${PROJECT_NAME} PRIVATE YK_EXPORTS)
 else()
-    add_library(${PROJECT_NAME} STATIC ${yk_src} "src/app.c")
+    add_library(${PROJECT_NAME} STATIC ${yk_src} "src/app.c" "src/win32_window.c")
 endif()
 
 target_link_libraries(${PROJECT_NAME}  ${Vulkan_LIBRARIES})

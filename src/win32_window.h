@@ -3,14 +3,13 @@
 
 #include<yk.h>
 #include <Windows.h>
-
+#include <yk_api.h>
 
 typedef struct YkWindow YkWindow;
 
-extern YkWindow window;
-
 typedef struct win_data
 {
+	b8 is_resized;
 	b8 is_minimized;
 	b8 is_running;
 	i32 size_x;
@@ -25,9 +24,6 @@ struct YkWindow
 	HINSTANCE hinstance;
 	win_data win_data;
 };
-
-void yk_innit_window(YkWindow* window);
-void yk_window_poll();
 void yk_free_window(YkWindow* window);
 
 

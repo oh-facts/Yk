@@ -9,7 +9,7 @@
 #include <yk_math.h>
 #include <renderer/mn_types.h>
 #include <yk_api.h>
-
+#include <time.h>
 typedef struct YkRenderer YkRenderer;
 
 /*
@@ -35,7 +35,6 @@ struct YkRenderer
 	VkInstance vk_instance;
 	//ToDo(facts 12/24 0341): Does renderer receive a window handle? Or does the renderer own the window? I want to be able to support multiple windows
 	//for whatever reason. I will get back to this later. For now, a window handle should be fine.
-	struct YkWindow* window_handle;
 	VkSurfaceKHR surface;
 	VkPhysicalDevice phys_device;
 	VkDevice device;
@@ -58,6 +57,7 @@ struct YkRenderer
 
 	yk_frame_data frame_data[MAX_FRAMES_IN_FLIGHT];
 
+	clock_t clock;
 
 	uint32_t current_frame;
 
@@ -83,13 +83,14 @@ void yk_renderer_wait(YkRenderer* renderer);
 
 void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window);
 void yk_renderer_innit_model(YkRenderer* renderer, const vertex vertices[], const u16 indices[], render_object* render_object);
-void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_objects, int num);
+void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_objects, int num, struct YkWindow* win);
 
 void yk_destroy_model(YkRenderer* renderer, render_object* render_object);
 
 VkVertexInputBindingDescription vk_get_binding_desc();
 void get_attrib_desc(VkVertexInputAttributeDescription out[]);
 
+b8 yk_recreate_swapchain(YkRenderer* renderer, struct YkWindow* win);
 
 typedef struct mvp_matrix mvp_matrix;
 #endif
