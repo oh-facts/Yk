@@ -2,7 +2,7 @@
 #define YK_API_H
 
 #ifndef YK_BUILD_SHARED
-    #define YK_BUILD_SHARED 1
+    #define YK_BUILD_SHARED 0
 #endif
 
 #if defined _WIN32

@@ -1,6 +1,6 @@
 
 #include <yk.h>
-#include <app.h>
+
 
 
 //ToDo(facts): Better Debug profiles.
@@ -45,74 +45,31 @@
 // 
 // 12/30 0027: Work on hot reloading. It is pain to rapidly iterate otherwise.
 //
+
 struct YkMemory
 {
     int is_initialized;
     u64 perm_storage_size;
-    void* perm_storage;
+    void *perm_storage;
     u64 temp_storage_size;
-    void* temp_storage;
+    void *temp_storage;
 };
 
 typedef struct YkMemory YkMemory;
 
+
+
 #if DEBUG
-LPVOID base_address = (LPVOID)Terabytes(2);
+    LPVOID base_address = (LPVOID)Terabytes(2);
 #else
-LPVOID base_address = 0;
+    LPVOID base_address = 0;
 #endif
 
-HMODULE coreModule = NULL;
-FILETIME lastWriteTime;
+int main(int argc, char *argv[])
+{
 
-Update update_func = NULL;
-void loadDLL() {
-    if (coreModule) {
-        FreeLibrary(coreModule);
-        coreModule = NULL;
-    }
 
-    HANDLE hFile = CreateFile("yk.dll", GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile == INVALID_HANDLE_VALUE) {
-        printf("Error opening DLL file\n");
-        return;
-    }
-
-    HANDLE hMapping = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
-    if (hMapping == NULL) {
-        printf("Error creating file mapping\n");
-        CloseHandle(hFile);
-        return;
-    }
-
-    coreModule = (HMODULE)MapViewOfFile(hMapping, FILE_MAP_READ, 0, 0, 0);
-    if (coreModule == NULL) {
-        printf("Error mapping view of file\n");
-        CloseHandle(hMapping);
-        CloseHandle(hFile);
-        return;
-    }
-
-    WIN32_FIND_DATAA findFileData;
-    HANDLE fileHandle = FindFirstFile("yk.dll", &findFileData);
-    if (fileHandle != INVALID_HANDLE_VALUE) {
-        GetFileTime(fileHandle, NULL, NULL, &lastWriteTime);
-        FindClose(fileHandle);
-    }
-
-    update_func = (Update)GetProcAddress(coreModule, "update");
-    if (!update_func) {
-        printf("Error loading update function from DLL\n");
-        UnmapViewOfFile(coreModule);
-        coreModule = NULL;
-    }
-
-    CloseHandle(hMapping);
-    CloseHandle(hFile);
-}
-
-int main(int argc, char* argv[]) {
-    YkMemory engine_memory = { 0 };
+    YkMemory engine_memory = {0};
     engine_memory.perm_storage_size = Megabytes(64);
     engine_memory.temp_storage_size = Megabytes(64);
 
@@ -125,17 +82,17 @@ int main(int argc, char* argv[]) {
     yk_innit_window(&win);
 
     const vertex vertices[] = {
-        {{-0.5f, -0.5f},{163 / 255.f, 163 / 255.f, 163 / 255.f} },
-        {{0.5f, -0.5f}, {0.0f, 0.0f, 0.0f} },
-        {{0.5f, 0.5f}, {1.f, 1.f, 1.f}},
-        {{-0.5f, 0.5f}, {128 / 255.f, 0.f, 128 / 255.f}}
+        {{-0.5f, -0.5f},{163 / 255.f, 163 / 255.f, 163 / 255.f} },   
+        {{0.5f, -0.5f}, {0.0f, 0.0f, 0.0f} },    
+        {{0.5f, 0.5f}, {1.f, 1.f, 1.f}},     
+        {{-0.5f, 0.5f}, {128 / 255.f, 0.f, 128 / 255.f}}      
     };
 
     const vertex vertices2[] = {
-       {{-0.5f, -0.5f}, {1.0f, 33 / 255.0f, 140 / 255.0f}},
-       {{0.5f, -0.5f}, {1.f, 216 / 255.f, 0}},
-       {{0.5f, 0.5f}, {33 / 255.f, 177 / 255.f, 1.f}},
-       {{-0.f, 0.5f}, {1.0f, 33 / 255.0f, 140 / 255.0f}}
+       {{-0.5f, -0.5f}, {1.0f, 33/255.0f, 140/255.0f}},    
+       {{0.5f, -0.5f}, {1.f, 216 / 255.f, 0}},    
+       {{0.5f, 0.5f}, {33/255.f, 177/255.f, 1.f}},      
+       {{-0.5f, 0.5f}, {1.0f, 33 / 255.0f, 140 / 255.0f}}      
     };
 
     const u16 indices[] = {
@@ -144,45 +101,30 @@ int main(int argc, char* argv[]) {
 
     YkRenderer ren = { 0 };
     yk_renderer_innit(&ren, &win);
-
+    
     render_object ro = { 0 };
     ro.id = 0;
     yk_renderer_innit_model(&ren, vertices, indices, &ro);
 
+    
     render_object ro2 = { 0 };
     ro2.id = 1;
     yk_renderer_innit_model(&ren, vertices2, indices, &ro2);
-
+  
     render_object ros[] = { ro,ro2 };
-
-    loadDLL();
-
-    while (win.is_running) {
-        if (update_func) {
-            update_func(&ren, &win, ros);
-        }
-
-        WIN32_FIND_DATAA findFileData;
-        HANDLE fileHandle = FindFirstFile("yk.dll", &findFileData);
-        const DWORDLONG FILETIME_THRESHOLD = 10000000;
-
-        if (CompareFileTime(&findFileData.ftLastWriteTime, &lastWriteTime) > 0 &&
-            CompareFileTime(&findFileData.ftLastWriteTime, &lastWriteTime) > FILETIME_THRESHOLD) {
-            printf("Reloading DLL...\n");
-            loadDLL();
-        }
-
-        // Your existing code...
-    }
-
-    if (coreModule) {
-        FreeLibrary(coreModule);
+  
+    while (win.is_running)
+    {
+        yk_window_poll();
+        yk_renderer_draw_model(&ren, ros, 2);
     }
 
     yk_renderer_wait(&ren);
+
     yk_destroy_model(&ren, &ro);
     yk_destroy_model(&ren, &ro2);
     yk_free_renderer(&ren);
+
     yk_free_window(&win);
 
     return 0;
