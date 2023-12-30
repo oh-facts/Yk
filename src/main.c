@@ -82,10 +82,17 @@ int main(int argc, char *argv[])
     yk_innit_window(&win);
 
     const vertex vertices[] = {
-        {{-0.5f, -0.5f}, {0.0f, 0.0f, 0.0f}},   // Light purple
-        {{0.5f, -0.5f}, {163 / 255.f, 163 / 255.f, 163 / 255.f}},    // Light green
-        {{0.5f, 0.5f}, {1.f, 1.f, 1.f}},     // Light blue
-        {{-0.5f, 0.5f}, {128 / 255.f, 0.f, 128 / 255.f}}     // Light yellow
+        {{-0.5f, -0.5f},{163 / 255.f, 163 / 255.f, 163 / 255.f} },   
+        {{0.5f, -0.5f}, {0.0f, 0.0f, 0.0f} },    
+        {{0.5f, 0.5f}, {1.f, 1.f, 1.f}},     
+        {{-0.5f, 0.5f}, {128 / 255.f, 0.f, 128 / 255.f}}      
+    };
+
+    const vertex vertices2[] = {
+       {{-0.5f, -0.5f}, {1.0f, 33/255.0f, 140/255.0f}},    
+       {{0.5f, -0.5f}, {1.f, 216 / 255.f, 0}},    
+       {{0.5f, 0.5f}, {33/255.f, 177/255.f, 1.f}},      
+       {{-0.5f, 0.5f}, {1.0f, 33 / 255.0f, 140 / 255.0f}}      
     };
 
     const u16 indices[] = {
@@ -102,7 +109,7 @@ int main(int argc, char *argv[])
     
     render_object ro2 = { 0 };
     ro2.id = 1;
-    yk_renderer_innit_model(&ren, vertices, indices, &ro2);
+    yk_renderer_innit_model(&ren, vertices2, indices, &ro2);
   
     render_object ros[] = { ro,ro2 };
   
