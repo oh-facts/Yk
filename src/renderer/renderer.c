@@ -140,7 +140,7 @@ void createDescriptorPool(YkRenderer* renderer);
 
 void createUniformBuffers(YkRenderer* renderer, VkDeviceSize bufferSize, ubuffer ubo[]);
 void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentImage, int flag);
-void createDescriptorSets(YkRenderer* renderer, ubuffer* ubo);
+void createDescriptorSets(YkRenderer* renderer, ubuffer* ubo, render_object* ro);
 
 void yk_create_sync_objs(YkRenderer* renderer);
 b8 yk_recreate_swapchain(YkRenderer* renderer);
@@ -944,20 +944,20 @@ void createDescriptorPool(YkRenderer* renderer)
 {
     VkDescriptorPoolSize poolSize = {0};
     poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSize.descriptorCount = MAX_FRAMES_IN_FLIGHT;
+    poolSize.descriptorCount = 4;
 
     VkDescriptorPoolCreateInfo poolInfo = {0};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = 1;
     poolInfo.pPoolSizes = &poolSize;
 
-    poolInfo.maxSets = MAX_FRAMES_IN_FLIGHT;
+    poolInfo.maxSets = 4;
 
     VkResultAssert(vkCreateDescriptorPool(renderer->device, &poolInfo, 0 , &renderer->descriptorPool), "descripter pool")
 
 }
 
-void createDescriptorSets(YkRenderer* renderer, ubuffer* ubo)
+void createDescriptorSets(YkRenderer* renderer, ubuffer* ubo, render_object* ro)
 {
     VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT] = {renderer->descriptorSetLayout,renderer->descriptorSetLayout };
     VkDescriptorSetAllocateInfo allocInfo = {0};
@@ -966,7 +966,7 @@ void createDescriptorSets(YkRenderer* renderer, ubuffer* ubo)
     allocInfo.descriptorSetCount = MAX_FRAMES_IN_FLIGHT;
     allocInfo.pSetLayouts = layouts;
 
-    VkResultAssert(vkAllocateDescriptorSets(renderer->device, &allocInfo, &renderer->descriptorSets[0]), "descriptor sets")
+    VkResultAssert(vkAllocateDescriptorSets(renderer->device, &allocInfo, &ro->descriptorSet[0]), "descriptor sets")
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         VkDescriptorBufferInfo bufferInfo = { 0 };
@@ -976,7 +976,7 @@ void createDescriptorSets(YkRenderer* renderer, ubuffer* ubo)
 
         VkWriteDescriptorSet descriptorWrite = {0};
         descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet = renderer->descriptorSets[i];
+        descriptorWrite.dstSet = ro->descriptorSet[i];
         descriptorWrite.dstBinding = 0;
         descriptorWrite.dstArrayElement = 0;
         descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -1033,7 +1033,7 @@ void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
     yk_create_gfx_pipeline(renderer);
     yk_cmd_innit(renderer);
     /* per objectish */
-
+    createDescriptorPool(renderer);
     //---can be optimized per object. But boilerplate for now --//
     yk_create_sync_objs(renderer);
     //---can be optimized per object. But boilerplate for now --//
@@ -1046,14 +1046,14 @@ void yk_renderer_innit_model(YkRenderer* renderer, const vertex vertices[], cons
  
     yk_create_vert_buffer(renderer, vertices, sizeof(vertices[0]) * 4, &render_object->vert_buffer);
     yk_create_index_buffer(renderer, indices, sizeof(indices[0]) * 6, &render_object->index_buffer);
-    createDescriptorPool(renderer);
+    
 
     createUniformBuffers(renderer, sizeof(mvp_matrix), render_object->ubo);
     
-    createDescriptorSets(renderer, render_object->ubo);
+    createDescriptorSets(renderer, render_object->ubo, render_object);
 }
 
-void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_object)
+void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_objects, int num_obj)
 {
     yk_frame_data* current_frame = &renderer->frame_data[renderer->current_frame];
 
@@ -1075,15 +1075,7 @@ void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_object)
         }
     }
 
-    if (render_object->id == 0)
-    {
-        updateUniformBuffer(renderer, render_object->ubo, renderer->current_frame, 1);
-    }
-    else
-    {
-        updateUniformBuffer(renderer, render_object->ubo, renderer->current_frame,-1);
-    }
-    
+   
     VkResultAssert(vkResetFences(renderer->device, 1, &current_frame->in_flight_fence), "Reset fences");
 
 
@@ -1132,18 +1124,33 @@ void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_object)
     vkCmdSetViewport(current_frame->cmd_buffers, 0, 1, &renderer->viewport);
     vkCmdSetScissor(current_frame->cmd_buffers, 0, 1, &renderer->scissor);
 
-    VkBuffer vertex_buffers[] = { render_object->vert_buffer.handle };
+    for (int i = 0; i < num_obj; i++)
+    {
 
-    //if you pass mutiple buffers
-    VkDeviceSize offsets[] = { 0 };
+        VkBuffer vertex_buffers[] = {render_objects[i].vert_buffer.handle};
 
-    vkCmdBindVertexBuffers(current_frame->cmd_buffers, 0, 1, vertex_buffers, offsets);
-    vkCmdBindIndexBuffer(current_frame->cmd_buffers, render_object->index_buffer.handle, 0, VK_INDEX_TYPE_UINT16);
+        //if you pass mutiple buffers
+        VkDeviceSize offsets[] = { 0 };
 
-    vkCmdBindDescriptorSets(current_frame->cmd_buffers, VK_PIPELINE_BIND_POINT_GRAPHICS,
-    renderer->pipeline_layout, 0, 1, &renderer->descriptorSets[renderer->current_frame], 0, 0);
-    vkCmdDrawIndexed(current_frame->cmd_buffers, 6, 1, 0, 0, 0);
+        vkCmdBindVertexBuffers(current_frame->cmd_buffers, 0, 1, vertex_buffers, offsets);
+        vkCmdBindIndexBuffer(current_frame->cmd_buffers, render_objects[i].index_buffer.handle, 0, VK_INDEX_TYPE_UINT16);
 
+        if (i % 2 == 0)
+        {
+            updateUniformBuffer(renderer, render_objects[i].ubo, renderer->current_frame, -1);
+        }
+        else
+        {
+            updateUniformBuffer(renderer, render_objects[i].ubo, renderer->current_frame, 1);
+        }
+              
+
+        vkCmdBindDescriptorSets(current_frame->cmd_buffers, VK_PIPELINE_BIND_POINT_GRAPHICS,
+        renderer->pipeline_layout, 0, 1, &render_objects[i].descriptorSet[renderer->current_frame], 0, 0);
+        
+        vkCmdDrawIndexed(current_frame->cmd_buffers, 6, 1, 0, 0, 0);
+
+    }
 
     // End rendering
     vkCmdEndRenderingKHR(current_frame->cmd_buffers);

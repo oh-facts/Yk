@@ -55,7 +55,6 @@ struct YkRenderer
 	VkPipeline gfx_pipeline;
 
 	VkDescriptorPool descriptorPool;
-	VkDescriptorSet descriptorSets[MAX_FRAMES_IN_FLIGHT];
 
 	yk_frame_data frame_data[MAX_FRAMES_IN_FLIGHT];
 
@@ -84,7 +83,7 @@ void yk_renderer_wait(YkRenderer* renderer);
 
 void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window);
 void yk_renderer_innit_model(YkRenderer* renderer, const vertex vertices[], const u16 indices[], render_object* render_object);
-void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_object);
+void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_objects, int num);
 
 void yk_destroy_model(YkRenderer* renderer, render_object* render_object);
 

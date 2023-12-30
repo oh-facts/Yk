@@ -52,7 +52,7 @@ typedef struct render_object
 	ubuffer ubo[MAX_FRAMES_IN_FLIGHT];
 	//debug purpose
 	int id;
-	//VkDescriptorSet descriptorSet[MAX_FRAMES_IN_FLIGHT];
+	VkDescriptorSet descriptorSet[MAX_FRAMES_IN_FLIGHT];
 }render_object;
 
 

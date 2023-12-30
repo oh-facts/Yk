@@ -96,26 +96,26 @@ int main(int argc, char *argv[])
     yk_renderer_innit(&ren, &win);
     
     render_object ro = { 0 };
-    ro.id = 1;
+    ro.id = 0;
     yk_renderer_innit_model(&ren, vertices, indices, &ro);
 
-    /*
+    
     render_object ro2 = { 0 };
     ro2.id = 1;
     yk_renderer_innit_model(&ren, vertices, indices, &ro2);
   
-    */
+    render_object ros[] = { ro,ro2 };
   
     while (win.is_running)
     {
         yk_window_poll();
-        yk_renderer_draw_model(&ren, &ro);
+        yk_renderer_draw_model(&ren, ros, 2);
     }
 
     yk_renderer_wait(&ren);
 
     yk_destroy_model(&ren, &ro);
-  //  yk_destroy_model(&ren, &ro2);
+    yk_destroy_model(&ren, &ro2);
     yk_free_renderer(&ren);
 
     yk_free_window(&win);
