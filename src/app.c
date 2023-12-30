@@ -43,9 +43,7 @@ void start(struct state* self)
 
 void update(struct state* state)
 {
-   
-  if(!state->window.win_data.is_minimized)
-    yk_renderer_draw_model(&state->ren, state->ro, 2, &state->window);
+   yk_renderer_draw_model(&state->ren, state->ro, 2, &state->window);
 
 //	v3 a = { 1,3 };
 //	printf("%f %f\n", a.x, a.y);
@@ -58,7 +56,7 @@ int is_running(struct state* self)
 
 void update_references(struct state* self)
 {
-   yk_recreate_swapchain(&self->ren, &self->window);
+   //yk_recreate_swapchain(&self->ren, &self->window);
    // printf("%p", self->window.hinstance);
     //yk_renderer_innit(&self->ren, &self->window);
 }

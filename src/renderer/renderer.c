@@ -939,7 +939,7 @@ void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentIm
 
     mvp_mat.model = yk_m4_identity();
 
-    mvp_mat.model = yk_m4_translate(mvp_mat.model, (v3) { 0.8 * flag, 0., -4. });
+    mvp_mat.model = yk_m4_translate(mvp_mat.model, (v3) { 0.8 * flag, 0., -5. });
 
     mvp_mat.model = yk_m4_rotate(mvp_mat.model,time, (v3) { 0, 1, 0 });
     mvp_mat.view = yk_m4_look_at((v3) { 0, 0, 0 }, (v3) { 0, 0, -1. }, (v3) { 0, 1, 0 });
