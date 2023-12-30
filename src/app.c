@@ -53,7 +53,7 @@ struct state* start()
 
 void update(struct state* state)
 {
-    yk_window_poll(&state->window);
+    yk_window_poll();
     yk_renderer_draw_model(&state->ren, state->ro, 2);
 
 //	v3 a = { 1,3 };

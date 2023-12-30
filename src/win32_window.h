@@ -27,7 +27,7 @@ struct YkWindow
 };
 
 void yk_innit_window(YkWindow* window);
-void yk_window_poll(YkWindow* window);
+void yk_window_poll();
 void yk_free_window(YkWindow* window);
 
 
