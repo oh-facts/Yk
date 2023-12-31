@@ -1,15 +1,10 @@
-#include <app.h>
+#include <yk_debug_app.h>
 #include <math.h>
 #include <yk.h>
 
 
-void start(struct state* self)
+YK_API void _debug_app_start(struct YkDebugAppState* self)
 {
-    if (!self)
-    {
-        exit(-5);
-    }
-   
 
     const vertex vertices[] = {
         {{-0.5f, -0.5f},{163 / 255.f, 163 / 255.f, 163 / 255.f} },
@@ -41,7 +36,7 @@ void start(struct state* self)
 
 }
 
-void update(struct state* state)
+YK_API void _debug_app_update(struct YkDebugAppState* state)
 {
     yk_renderer_draw_model(&state->ren, state->ro, 2, &state->window);
 
@@ -49,19 +44,19 @@ void update(struct state* state)
 //	printf("%f %f\n", a.x, a.y);
 }
 
-int is_running(struct state* self)
+YK_API int _debug_app_is_running(struct YkDebugAppState* self)
 {
     return self->window.win_data.is_running;
 }
 
-void update_references(struct state* self)
+YK_API void _debug_app_update_references(struct YkDebugAppState* self)
 {
    yk_recreate_swapchain(&self->ren, &self->window);
    // printf("%p", self->window.hinstance);
     //yk_renderer_innit(&self->ren, &self->window);
 }
 
-YK_API void freeApp(struct state* state)
+YK_API void _debug_app_shutdown(struct YkDebugAppState* state)
 {
     yk_renderer_wait(&state->ren);
     yk_destroy_model(&state->ren, &state->ro[0]);

@@ -9,6 +9,7 @@ typedef struct YkWindow YkWindow;
 
 typedef struct win_data
 {
+	//ToDo(facts) 12/31 0548: Make these flags a bitmask 
 	b8 is_resized;
 	b8 is_minimized;
 	b8 is_running;
@@ -18,6 +19,7 @@ typedef struct win_data
 
 struct YkWindow
 {
+	//test is a debug key press I use, until I get input properly implemented
 	int test;
 	HWND win_handle;
 	HINSTANCE hinstance;

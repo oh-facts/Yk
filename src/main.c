@@ -1,6 +1,3 @@
-
-#include <app.h>
-#include <win32_window.h>
 //ToDo(facts):  Better Debug profiles.
 // 12/23 1758
 // ToDo(facts): Fix flickering triangle (sync problem I think)
@@ -56,7 +53,26 @@
 //             books and repositories (like jolt) to make my own. Remember, the only reason why I am rolling my own is because one 
 //             doesnt already exist in C. If Jolt had a C api, I wouldn't do this.
 //
+// Next day:
+// Note(facts): I found a C api for jolt. It is up to date with 4.02 atm. Which is almost latest version. It gets updated with new releases.
+//              I can stick to C forever.
+//              Wait I misread. 
+//              Hi,
+//              Joltc is updated with latest 4.0.2 stable release of jolt physics, thus lot of bindings are missing into joltc, I add stuff when needed.
+//
+//              Feel free to contribute.
+// 
+//              Updated with latest 4.0.2 stable release? But lots bindings are missing? So is it updated or not?
+//              Fucks sake. FUCK FUCK FUCK. I can't make my own physics engine c'mon be serious. AHHHH
+//              I will port to C++. More specificlly, make my code "C++ compliant". AHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH. 
+//              I will use no templates. No namespaces. No operator overloading, not C++ stl. My only instances of C++ code will be when I am 
+//              using the physics engine to make porting back and forth easy, because once I have a team of devs. They will be porting this back to C
+//              and working on physics.
+//
 
+
+#include <yk_debug_app.h>
+#include <win32_window.h>
 
 struct YkMemory
 {
@@ -75,40 +91,7 @@ typedef struct YkMemory YkMemory;
     LPVOID base_address = 0;
 #endif
 
-HMODULE hModule;
-typedef void (*UpdateFunc)(struct state* state);
-typedef void (*StartFunc)(struct state* state);
-typedef int (*IsRunningFunc)(struct state* state);
-typedef void (*UpdateRefFunc)(struct state* state);
-typedef void (*FreeApp)(struct state* state);
-UpdateFunc Update;
-StartFunc Start;
-IsRunningFunc IsRunning;
-UpdateRefFunc update_ref;
-FreeApp free_app;
 
-void reload_dll()
-{
-    copy_file("yk.dll", "temp.dll");
-
-    hModule = LoadLibraryA("temp.dll");
-    if (hModule == NULL) {
-        printf("Failed to load the DLL\n");
-        exit(1);
-    }
-
-    Update = (UpdateFunc)GetProcAddress(hModule, "update");
-    Start = (StartFunc)GetProcAddress(hModule, "start");
-    IsRunning = (IsRunningFunc)GetProcAddress(hModule, "is_running");
-    update_ref = (UpdateRefFunc)GetProcAddress(hModule, "update_references");
-    free_app = (FreeApp)GetProcAddress(hModule, "freeApp");
-
-    if (!Update || !Start || !IsRunning || !free_app || !update_ref) {
-        printf("Failed to find the function\n");
-        FreeLibrary(hModule);
-        exit(1);
-    }
-}
 
 int main(int argc, char *argv[])
 {
@@ -122,38 +105,41 @@ int main(int argc, char *argv[])
 
     engine_memory.perm_storage = VirtualAlloc(base_address, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     engine_memory.temp_storage = (u8*)engine_memory.perm_storage + engine_memory.perm_storage_size;
-    reload_dll();
+   
 
     time_t start, now;
     double elapsed;
     time(&start);
-    struct state state = { 0 };
-    struct state state2 = { 0 };
+    struct YkDebugAppState state = { 0 };
+    reload_dll(&state);
+
     state.ren.clock = clock();
- 
+
+
     yk_innit_window(&state.window);
-    Start(&state);
+    state.start(&state);
     
 
-    while (IsRunning(&state))
+    while (state.is_running(&state))
     {
         yk_window_poll();
 
         if (!state.window.win_data.is_minimized)
         {
-            Update(&state);
+            state.update(&state);
 
             //ToDo(facts): Do this every time a key is pressed
             time(&now);
             elapsed = difftime(now, start);
+
             if (state.window.test == 1) {
                 state.window.test = 0;
-                free_app(&state);
+                state.shutdown(&state);
 
-                FreeLibrary(hModule);
-                reload_dll();
+                FreeLibrary(state.hModule);
+                reload_dll(&state);
 
-                Start(&state);
+                state.start(&state);
                 //update_ref(&state);
 
                 time(&start);
@@ -164,7 +150,7 @@ int main(int argc, char *argv[])
 
     yk_free_window(&state.window);
 
-    FreeLibrary(hModule);
+    FreeLibrary(state.hModule);
     remove("temp.dll");
     return 0;
 }
