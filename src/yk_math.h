@@ -54,7 +54,7 @@ inline f32 yk_v3_length(const v3 a)
 
 inline v3 yk_v3_normalize(const v3 a)
 {
-	v3 out = { 0 };
+	v3 out = { };
 
 	f32 l = yk_v3_length(a);
 	out.x = a.x / l;
@@ -73,7 +73,7 @@ inline f32 yk_v3_dot(const v3 a, const v3 b)
 
 inline v3 yk_v3_cross(const v3 a, const v3 b)
 {
-	v3 out = { 0 };
+	v3 out = { };
 	
 	out.x = a.y * b.z - a.z * b.y;
 	out.y = a.z * b.x - a.x * b.z;
@@ -84,7 +84,7 @@ inline v3 yk_v3_cross(const v3 a, const v3 b)
 
 inline v3 yk_v3_sub(const v3 a, const v3 b)
 {
-	v3 out = { 0 };
+	v3 out = { };
 	out.x = a.x - b.x;
 	out.y = a.y - b.y;
 	out.z = a.z - b.z;
@@ -93,7 +93,7 @@ inline v3 yk_v3_sub(const v3 a, const v3 b)
 
 inline v4 yk_v4_add(v4 a, v4 b)
 {
-	v4 out = { 0 };
+	v4 out = { };
 	out.x = a.x + b.x;
 	out.y = a.y + b.y;
 	out.z = a.z + b.z;
@@ -104,7 +104,7 @@ inline v4 yk_v4_add(v4 a, v4 b)
 
 inline v4 yk_v4_sub(v4 a, v4 b)
 {
-	v4 out = { 0 };
+	v4 out = { };
 	out.x = a.x - b.x;
 	out.y = a.y - b.y;
 	out.z = a.z - b.z;
@@ -179,7 +179,7 @@ inline m4 yk_m4_look_at(const v3 eye, const v3 target, const v3 up)
 
 	v3 yAxis = yk_v3_cross(xAxis, zAxis);
 
-	m4 out = { 0 };
+	m4 out = { };
 
 	out.e[0][0] = xAxis.x;
 	out.e[0][1] = yAxis.x;
@@ -207,7 +207,7 @@ inline m4 yk_m4_look_at(const v3 eye, const v3 target, const v3 up)
 
 inline m4 yk_m4_perspective(const f32 fov_degrees, const f32 aspect_ratio, const f32 near_, const f32 far_) //near_ far_ -> fuck you microsoft! (John Malkovitch voice)
 {
-	m4 out = { 0 };
+	m4 out = { };
 	f32 f = 1 / tan(fov_degrees / 2);
 
 	out.e[0][0] = f / aspect_ratio;

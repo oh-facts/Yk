@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
 {
 
     //ToDo(facts): Actually make use of this lmao
-    YkMemory engine_memory = {0};
+    YkMemory engine_memory = { };
     engine_memory.perm_storage_size = Megabytes(64);
     engine_memory.temp_storage_size = Megabytes(64);
 
@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
     time_t start, now;
     double elapsed;
     time(&start);
-    struct YkDebugAppState state = { 0 };
+    struct YkDebugAppState state = { };
     reload_dll(&state);
 
     state.ren.clock = clock();

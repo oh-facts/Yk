@@ -7,7 +7,7 @@
 
 #if defined _WIN32
     #if YK_BUILD_SHARED
-        #define YK_API __declspec(dllexport)
+        #define YK_API  extern "C" __declspec(dllexport)
     #else
         #define YK_API
     #endif

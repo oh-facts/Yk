@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_STANDARD 20)
 
 #project name
 project(yk)
@@ -19,9 +20,9 @@ include_directories(
 
 
 
-set(yk_src "src/yk.c" "src/renderer/renderer.c" "src/yk_debug_app.c")
+set(yk_src "src/yk.cpp" "src/renderer/renderer.cpp" "src/yk_debug_app.cpp")
 
-set(yk_platform_layer  "src/win32_window.c")
+set(yk_platform_layer  "src/win32_window.cpp")
 
 add_library(platform STATIC ${yk_platform_layer} )
 
@@ -35,10 +36,10 @@ endif()
 target_link_libraries(${PROJECT_NAME}  ${Vulkan_LIBRARIES} platform)
 
 if(YK_BUILD_SHARED)
-    add_executable(yk_test "src/main.c")
+    add_executable(yk_test "src/main.cpp")
     target_compile_definitions(yk_test PRIVATE YK_EXPORTS)
 else()
-    add_executable(yk_test "src/main.c")
+    add_executable(yk_test "src/main.cpp")
 endif()
 target_link_libraries(yk_test yk platform)
 

@@ -69,7 +69,7 @@ void yk_innit_window(YkWindow* window)
     window->win_data.size_y = WIN_SIZE_Y;
     window->test = 0;
 
-    WNDCLASS wc = { 0 };
+    WNDCLASS wc = { };
     wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WndProc;
     wc.cbClsExtra = 0;

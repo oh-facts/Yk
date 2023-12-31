@@ -55,7 +55,7 @@ char* yk_read_text_file(const char* filepath)
         return NULL;
     }
 
-    char* string = malloc(sizeof(char) * (length + 1));
+    char* string = (char*)malloc(sizeof(char) * (length + 1));
     if (string == NULL)
     {
         fprintf(stderr, "Error: File reader malloc failed for file %s\n", filepath);

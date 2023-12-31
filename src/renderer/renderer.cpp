@@ -43,7 +43,7 @@ void check_device_extension_support(VkPhysicalDevice device)
 
     uint32_t extensionCount = 0;
     vkEnumerateDeviceExtensionProperties(device, NULL, &extensionCount, NULL);
-    VkExtensionProperties* availableExtensions = malloc(sizeof(VkExtensionProperties) * extensionCount);
+    VkExtensionProperties* availableExtensions = (VkExtensionProperties*)malloc(sizeof(VkExtensionProperties) * extensionCount);
     vkEnumerateDeviceExtensionProperties(device, NULL, &extensionCount, availableExtensions);
 
     printf("Vulkan Device Available Extentions ");
@@ -233,7 +233,7 @@ void  yk_innit_vulkan(YkRenderer* renderer)
 {
     log_extention(check_instance_extension_support())
 
-    VkApplicationInfo vk_app_info = { 0 };
+    VkApplicationInfo vk_app_info = {};
     vk_app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     vk_app_info.pNext = 0;
     vk_app_info.pApplicationName = "yekate";
@@ -242,7 +242,7 @@ void  yk_innit_vulkan(YkRenderer* renderer)
     vk_app_info.engineVersion = 0;
     vk_app_info.apiVersion = VK_API_VERSION_1_3;
 
-    VkInstanceCreateInfo vk_create_info = { 0 };
+    VkInstanceCreateInfo vk_create_info = { };
     vk_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     vk_create_info.pNext = 0;
     vk_create_info.flags = 0;
@@ -254,7 +254,7 @@ void  yk_innit_vulkan(YkRenderer* renderer)
 
 #define VALIDATION_LAYERS_NUM 1
 
-    const char* validation_layers[VALIDATION_LAYERS_NUM] = { 0 };
+    const char* validation_layers[VALIDATION_LAYERS_NUM] = { };
     validation_layers[0] = "VK_LAYER_KHRONOS_validation";
 
     //validation layer support check
@@ -274,7 +274,7 @@ void  yk_innit_vulkan(YkRenderer* renderer)
 #define num_extensions 2
 #endif
 
-    const char* enabled_extensions[num_extensions] = { 0 };
+    const char* enabled_extensions[num_extensions] = { };
     enabled_extensions[0] = VK_KHR_SURFACE_EXTENSION_NAME;
 
 #if defined(_WIN32)
@@ -299,7 +299,7 @@ void  yk_innit_vulkan(YkRenderer* renderer)
         //Debug messenger
 #if VK_USE_VALIDATION_LAYERS
 
-    VkDebugUtilsMessengerCreateInfoEXT vk_debug_messenger_create_info = { 0 };
+    VkDebugUtilsMessengerCreateInfoEXT vk_debug_messenger_create_info = { };
     vk_debug_messenger_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     vk_debug_messenger_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
     vk_debug_messenger_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
@@ -319,7 +319,7 @@ void yk_create_surface(YkRenderer* renderer, YkWindow* win)
     //34.2.3
     //Win 32 surface platform
 
-    VkWin32SurfaceCreateInfoKHR vk_win32_surface_create_info_khr = { 0 };
+    VkWin32SurfaceCreateInfoKHR vk_win32_surface_create_info_khr = {  };
     vk_win32_surface_create_info_khr.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     vk_win32_surface_create_info_khr.pNext = 0;
     vk_win32_surface_create_info_khr.flags = 0;
@@ -335,7 +335,7 @@ void yk_pick_physdevice(YkRenderer* renderer)
 {
     // 5.1 starts here
     //Physical Device
-    VkPhysicalDevice vk_phys_device = { 0 };
+    VkPhysicalDevice vk_phys_device = { };
 
     
     #define max_devices 3
@@ -345,7 +345,7 @@ void yk_pick_physdevice(YkRenderer* renderer)
 
     Assert(devices <= max_devices, "More than 3 graphics cards? Wth?")
 
-    VkPhysicalDevice device_list[max_devices] = { 0 };
+    VkPhysicalDevice device_list[max_devices] = { };
 
     VkResultAssert(vkEnumeratePhysicalDevices(renderer->vk_instance, &devices, device_list), "physical device detection")
     vk_phys_device = device_list[0];
@@ -356,7 +356,7 @@ void yk_pick_physdevice(YkRenderer* renderer)
 
     for (i32 i = 0; i < devices; i++)
     {
-        VkPhysicalDeviceProperties vk_phys_device_props = { 0 };
+        VkPhysicalDeviceProperties vk_phys_device_props = { };
         vkGetPhysicalDeviceProperties(device_list[i], &vk_phys_device_props);
 
         if (vk_phys_device_props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
@@ -431,7 +431,7 @@ void yk_create_device(YkRenderer* renderer)
     // Note(facts): The graphic , compute and present queue families are all index 0. And this is common behaviour. For now I am leaving this
     // like this. Later, I will make sure that incase they are different families, each gets its own queue
 
-    VkDeviceQueueCreateInfo vk_device_q_create_info = { 0 };
+    VkDeviceQueueCreateInfo vk_device_q_create_info = { };
     vk_device_q_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     vk_device_q_create_info.pNext = 0;
     vk_device_q_create_info.flags = 0;
@@ -440,13 +440,13 @@ void yk_create_device(YkRenderer* renderer)
     vk_device_q_create_info.queueCount = 1;
     vk_device_q_create_info.pQueuePriorities = &queue_priority;
 
-    VkPhysicalDeviceDynamicRenderingFeaturesKHR vk_dynamic_rendering_feature = { 0 };
+    VkPhysicalDeviceDynamicRenderingFeaturesKHR vk_dynamic_rendering_feature = { };
     vk_dynamic_rendering_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
     vk_dynamic_rendering_feature.dynamicRendering = VK_TRUE;
 
     const char* device_extention_names[2] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME };
 
-    VkDeviceCreateInfo vk_device_create_info = { 0 };
+    VkDeviceCreateInfo vk_device_create_info = { };
     vk_device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     vk_device_create_info.pNext = &vk_dynamic_rendering_feature;
     vk_device_create_info.flags = 0;
@@ -471,7 +471,7 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
 {
   //https://harrylovescode.gitbooks.io/vulkan-api/content/chap06/chap06.html
 
-    VkSurfaceCapabilitiesKHR vk_surface_caps = { 0 };
+    VkSurfaceCapabilitiesKHR vk_surface_caps = { };
     VkResultAssert(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(renderer->phys_device, renderer->surface, &vk_surface_caps), "Surface Capabilities poll");
 
     Assert(vk_surface_caps.maxImageCount >= 1, "Max images supported than 1");
@@ -479,7 +479,7 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
     if (imageCount > vk_surface_caps.maxImageCount)
         imageCount = vk_surface_caps.maxImageCount;
 
-    VkExtent2D vk_extent = { 0 };
+    VkExtent2D vk_extent = { };
     if (vk_surface_caps.currentExtent.width != UINT32_MAX) {
         vk_extent = vk_surface_caps.currentExtent;
     }
@@ -506,7 +506,7 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
     //cursed fuckery
     renderer->extent = vk_extent;
 
-    VkViewport vk_viewport = { 0 };
+    VkViewport vk_viewport = { };
     vk_viewport.x = 0.0f;
     vk_viewport.y = 0.0f;
     vk_viewport.width = (f32)renderer->extent.width;
@@ -514,8 +514,8 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
     vk_viewport.minDepth = 0.0f;
     vk_viewport.maxDepth = 1.0f;
 
-    VkRect2D vk_scissor = { 0 };
-    vk_scissor.offset = (VkOffset2D){ 0,0 };
+    VkRect2D vk_scissor = { };
+    vk_scissor.offset = VkOffset2D{ 0,0 };
     vk_scissor.extent = renderer->extent;
 
     renderer->scissor = vk_scissor;
@@ -530,11 +530,11 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
     Assert(vk_format_count > 0, "Format count less than 1")
     Assert(vk_format_count <= max_format_count, "Too many formats")
 
-    VkSurfaceFormatKHR vk_surface_format_list[max_format_count] = { 0 };
+    VkSurfaceFormatKHR vk_surface_format_list[max_format_count] = { };
     VkResultAssert(vkGetPhysicalDeviceSurfaceFormatsKHR(renderer->phys_device, renderer->surface, &vk_format_count, vk_surface_format_list), "Surface formats obtain")
 
     //ToDo(facts, 12/22): Stop being a smartass at 5:58am. Go to sleep
-    VkSurfaceFormatKHR surface_format = { 0 };
+    VkSurfaceFormatKHR surface_format = { };
     for (i32 i = vk_format_count - 1; i >= 0; i--)
     {
         surface_format = vk_surface_format_list[i];
@@ -550,7 +550,7 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
     Assert(vk_present_mode_count > 0, "Less than 1 present modes found")
     Assert(vk_present_mode_count <= max_present_mode, "Too many present modes")
 
-    VkPresentModeKHR vk_present_mode_list[max_present_mode] = { 0 };
+    VkPresentModeKHR vk_present_mode_list[max_present_mode] = { };
 
     VkResultAssert(vkGetPhysicalDeviceSurfacePresentModesKHR(renderer->phys_device, renderer->surface, &vk_present_mode_count, vk_present_mode_list), "Device Present Modes")
 
@@ -572,8 +572,8 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
     //34.10
     //Swapchain helps to display rendering results to surface
 
-    u32 vk_qfam_indices[1] = { 0 };
-    VkSwapchainCreateInfoKHR vk_swapchain_create_info = { 0 };
+    u32 vk_qfam_indices[1] = { };
+    VkSwapchainCreateInfoKHR vk_swapchain_create_info = { };
     vk_swapchain_create_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     vk_swapchain_create_info.pNext = 0;
     vk_swapchain_create_info.flags = 0;
@@ -609,7 +609,7 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
 
     for (i32 i = 0; i < vk_image_num; i++)
     {
-        VkImageViewCreateInfo vk_image_view_create_info = { 0 };
+        VkImageViewCreateInfo vk_image_view_create_info = { };
         vk_image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         vk_image_view_create_info.pNext = 0;
         vk_image_view_create_info.image = renderer->swapchain_image_list[i];
@@ -639,13 +639,13 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
 
 void createDescriptorSetLayout(YkRenderer* renderer)
 {
-    VkDescriptorSetLayoutBinding uboLayoutBinding = { 0 };
+    VkDescriptorSetLayoutBinding uboLayoutBinding = { };
     uboLayoutBinding.binding = 0;
     uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     uboLayoutBinding.descriptorCount = 1;
     uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-    VkDescriptorSetLayoutCreateInfo layoutInfo = {0};
+    VkDescriptorSetLayoutCreateInfo layoutInfo = { };
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
     layoutInfo.bindingCount = 1;
     layoutInfo.pBindings = &uboLayoutBinding;
@@ -660,32 +660,32 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
     const char* vert_shader_code = yk_read_binary_file("res/vert.spv", &vert_len);
     const char* frag_shader_code = yk_read_binary_file("res/frag.spv", &frag_len);
 
-    VkShaderModuleCreateInfo vk_vert_shader_module_create_info = { 0 };
+    VkShaderModuleCreateInfo vk_vert_shader_module_create_info = { };
     vk_vert_shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     vk_vert_shader_module_create_info.codeSize = vert_len;
     vk_vert_shader_module_create_info.pCode = (u32*)vert_shader_code;
 
-    VkShaderModule vk_vert_shader_module = { 0 };
+    VkShaderModule vk_vert_shader_module = { };
     VkResultAssert(vkCreateShaderModule(renderer->device, &vk_vert_shader_module_create_info, 0, &vk_vert_shader_module), "Vert Shader Module Creation");
 
-    VkShaderModuleCreateInfo vk_frag_shader_module_create_info = { 0 };
+    VkShaderModuleCreateInfo vk_frag_shader_module_create_info = { };
     vk_frag_shader_module_create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     vk_frag_shader_module_create_info.codeSize = frag_len;
     vk_frag_shader_module_create_info.pCode = (u32*)frag_shader_code;
 
-    VkShaderModule vk_frag_shader_module = { 0 };
+    VkShaderModule vk_frag_shader_module = { };
     VkResultAssert(vkCreateShaderModule(renderer->device, &vk_frag_shader_module_create_info, 0, &vk_frag_shader_module), "Frag Shader Module Creation");
 
     free((char*)vert_shader_code);
     free((char*)frag_shader_code);
 
-    VkPipelineShaderStageCreateInfo vk_vert_shader_stage_info = { 0 };
+    VkPipelineShaderStageCreateInfo vk_vert_shader_stage_info = { };
     vk_vert_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vk_vert_shader_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
     vk_vert_shader_stage_info.module = vk_vert_shader_module;
     vk_vert_shader_stage_info.pName = "main";
 
-    VkPipelineShaderStageCreateInfo vk_frag_shader_stage_info = { 0 };
+    VkPipelineShaderStageCreateInfo vk_frag_shader_stage_info = { };
     vk_frag_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vk_frag_shader_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
     vk_frag_shader_stage_info.module = vk_frag_shader_module;
@@ -698,7 +698,7 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
 
     VkDynamicState vk_dynamic_states[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 
-    VkPipelineDynamicStateCreateInfo vk_dyn_state_create_info = { 0 };
+    VkPipelineDynamicStateCreateInfo vk_dyn_state_create_info = { };
     vk_dyn_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     vk_dyn_state_create_info.dynamicStateCount = 2;
     vk_dyn_state_create_info.pDynamicStates = vk_dynamic_states;
@@ -706,23 +706,23 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
     
 
     VkVertexInputBindingDescription binding_desc = vk_get_binding_desc();
-    VkVertexInputAttributeDescription attrib_desc[2] = { 0 };
+    VkVertexInputAttributeDescription attrib_desc[2] = { };
     get_attrib_desc(attrib_desc);
 
 
-    VkPipelineVertexInputStateCreateInfo vk_vertex_input_info = { 0 };
+    VkPipelineVertexInputStateCreateInfo vk_vertex_input_info = { };
     vk_vertex_input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vk_vertex_input_info.vertexBindingDescriptionCount = 1;
     vk_vertex_input_info.pVertexBindingDescriptions = &binding_desc;
     vk_vertex_input_info.vertexAttributeDescriptionCount = 2;
     vk_vertex_input_info.pVertexAttributeDescriptions = attrib_desc;
 
-    VkPipelineInputAssemblyStateCreateInfo vk_input_asm = { 0 };
+    VkPipelineInputAssemblyStateCreateInfo vk_input_asm = { };
     vk_input_asm.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     vk_input_asm.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     vk_input_asm.primitiveRestartEnable = VK_FALSE;
 
-    VkViewport vk_viewport = { 0 };
+    VkViewport vk_viewport = { };
     vk_viewport.x = 0.0f;
     vk_viewport.y = 0.0f;
     vk_viewport.width = (f32)renderer->extent.width;
@@ -730,18 +730,18 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
     vk_viewport.minDepth = 0.0f;
     vk_viewport.maxDepth = 1.0f;
 
-    VkRect2D vk_scissor = { 0 };
-    vk_scissor.offset = (VkOffset2D){ 0,0 };
+    VkRect2D vk_scissor = { };
+    vk_scissor.offset = VkOffset2D{ 0,0 };
     vk_scissor.extent = renderer->extent;
 
-    VkPipelineViewportStateCreateInfo vk_viewport_state = { 0 };
+    VkPipelineViewportStateCreateInfo vk_viewport_state = { };
     vk_viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     vk_viewport_state.viewportCount = 1;
     vk_viewport_state.pViewports = &vk_viewport;
     vk_viewport_state.scissorCount = 1;
     vk_viewport_state.pScissors = &vk_scissor;
 
-    VkPipelineRasterizationStateCreateInfo vk_rasterizer = { 0 };
+    VkPipelineRasterizationStateCreateInfo vk_rasterizer = { };
     vk_rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     vk_rasterizer.depthClampEnable = VK_FALSE;
     vk_rasterizer.rasterizerDiscardEnable = VK_FALSE;
@@ -756,7 +756,7 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
     vk_rasterizer.depthBiasClamp = 0.0f;
     vk_rasterizer.depthBiasSlopeFactor = 0.0f;
 
-    VkPipelineMultisampleStateCreateInfo vk_multisampling = { 0 };
+    VkPipelineMultisampleStateCreateInfo vk_multisampling = { };
     vk_multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     vk_multisampling.sampleShadingEnable = VK_FALSE;
     vk_multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
@@ -765,7 +765,7 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
     vk_multisampling.alphaToCoverageEnable = VK_FALSE;
     vk_multisampling.alphaToOneEnable = VK_FALSE;
 
-    VkPipelineColorBlendAttachmentState vk_color_blend_attatchment = { 0 };
+    VkPipelineColorBlendAttachmentState vk_color_blend_attatchment = { };
     vk_color_blend_attatchment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     vk_color_blend_attatchment.blendEnable = VK_FALSE;
     vk_color_blend_attatchment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
@@ -784,7 +784,7 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
 
     //ToDo(facts): I have no fucking idea what this means
     //I just want a triangle
-    VkPipelineColorBlendStateCreateInfo vk_color_blending = { 0 };
+    VkPipelineColorBlendStateCreateInfo vk_color_blending = { };
     vk_color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     vk_color_blending.logicOpEnable = VK_FALSE;
     vk_color_blending.logicOp = VK_LOGIC_OP_COPY;
@@ -795,20 +795,20 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
     vk_color_blending.blendConstants[2] = 0.0f;
     vk_color_blending.blendConstants[3] = 0.0f;
 
-    VkPipelineLayoutCreateInfo vk_pipeline_layout_info = { 0 };
+    VkPipelineLayoutCreateInfo vk_pipeline_layout_info = { };
     vk_pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     vk_pipeline_layout_info.setLayoutCount = 1;
     vk_pipeline_layout_info.pSetLayouts = &renderer->descriptorSetLayout;
     vk_pipeline_layout_info.pushConstantRangeCount = 0;
     vk_pipeline_layout_info.pPushConstantRanges = 0;
 
-    VkPipelineLayout vk_pipeline_layout = { 0 };
+    VkPipelineLayout vk_pipeline_layout = { };
 
     VkResultAssert(vkCreatePipelineLayout(renderer->device, &vk_pipeline_layout_info, 0, &vk_pipeline_layout), "Pipeline layout creation");
 
     //graphics pipeline.
     //we want to do dynamic rendering
-    VkGraphicsPipelineCreateInfo vk_graphics_pipeline_create_info = { 0 };
+    VkGraphicsPipelineCreateInfo vk_graphics_pipeline_create_info = { };
     vk_graphics_pipeline_create_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     vk_graphics_pipeline_create_info.stageCount = 2;
     vk_graphics_pipeline_create_info.pStages = vk_shader_stages;
@@ -837,7 +837,7 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
 
 void yk_cmd_innit(YkRenderer* renderer)
 {
-    VkCommandPoolCreateInfo cmd_pool_info = { 0 };
+    VkCommandPoolCreateInfo cmd_pool_info = { };
     cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     cmd_pool_info.pNext = 0;
     cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
@@ -847,7 +847,7 @@ void yk_cmd_innit(YkRenderer* renderer)
     {
         VkResultAssert(vkCreateCommandPool(renderer->device, &cmd_pool_info, 0, &renderer->frame_data[i].cmd_pool), "Command pool creation");
     
-        VkCommandBufferAllocateInfo vk_cmd_buffer_alloc_info = { 0 };
+        VkCommandBufferAllocateInfo vk_cmd_buffer_alloc_info = { };
         vk_cmd_buffer_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         vk_cmd_buffer_alloc_info.pNext = 0;
         vk_cmd_buffer_alloc_info.commandPool = renderer->frame_data[i].cmd_pool;
@@ -879,8 +879,8 @@ void yk_create_vert_buffer(YkRenderer* renderer, const vertex vertices[], VkDevi
 
 //    VkDeviceSize bufferSize = sizeof(vertices[0]) * 4;
 
-    VkBuffer staging_buffer = { 0 };
-    VkDeviceMemory staging_buffer_memory = { 0 };
+    VkBuffer staging_buffer = { };
+    VkDeviceMemory staging_buffer_memory = { };
         
     create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
 
@@ -936,14 +936,14 @@ void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentIm
     clock_t current_time = clock();
     f32 time = (f32)(current_time - renderer->clock) / CLOCKS_PER_SEC;
 
-    mvp_matrix mvp_mat = { 0 };
+    mvp_matrix mvp_mat = { };
 
     mvp_mat.model = yk_m4_identity();
 
-    mvp_mat.model = yk_m4_translate(mvp_mat.model, (v3) { 0.8 * flag, 0., -8. });
+    mvp_mat.model = yk_m4_translate(mvp_mat.model,  v3{ 0.8f * flag, 0., -8. });
 
-    mvp_mat.model = yk_m4_rotate(mvp_mat.model,time * 3.f, (v3) { 0, 1, 0 });
-    mvp_mat.view = yk_m4_look_at((v3) { 0, 0, 1 }, (v3) { 0, 0, -1. }, (v3) { 0, 1, 0 });
+    mvp_mat.model = yk_m4_rotate(mvp_mat.model,time * 30.f, v3 { 0, 1, 0 });
+    mvp_mat.view = yk_m4_look_at(v3 { 0, 0, 1 }, v3 { 0, 0, -1. }, v3 { 0, 1, 0 });
     mvp_mat.proj = yk_m4_perspective(DEG_TO_RAD * 45., renderer->extent.width / (f32)renderer->extent.height, 0.1f, 10.0f);
 
     // +z is back. +y is up , +x is right
@@ -956,11 +956,11 @@ void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentIm
 
 void createDescriptorPool(YkRenderer* renderer)
 {
-    VkDescriptorPoolSize poolSize = {0};
+    VkDescriptorPoolSize poolSize = { };
     poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     poolSize.descriptorCount = 4;
 
-    VkDescriptorPoolCreateInfo poolInfo = {0};
+    VkDescriptorPoolCreateInfo poolInfo = { };
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = 1;
     poolInfo.pPoolSizes = &poolSize;
@@ -974,7 +974,7 @@ void createDescriptorPool(YkRenderer* renderer)
 void createDescriptorSets(YkRenderer* renderer, ubuffer* ubo, render_object* ro)
 {
     VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT] = {renderer->descriptorSetLayout,renderer->descriptorSetLayout };
-    VkDescriptorSetAllocateInfo allocInfo = {0};
+    VkDescriptorSetAllocateInfo allocInfo = { };
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = renderer->descriptorPool;
     allocInfo.descriptorSetCount = MAX_FRAMES_IN_FLIGHT;
@@ -983,12 +983,12 @@ void createDescriptorSets(YkRenderer* renderer, ubuffer* ubo, render_object* ro)
     VkResultAssert(vkAllocateDescriptorSets(renderer->device, &allocInfo, &ro->descriptorSet[0]), "descriptor sets")
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        VkDescriptorBufferInfo bufferInfo = { 0 };
+        VkDescriptorBufferInfo bufferInfo = { };
         bufferInfo.buffer = ubo->buffer.handle;
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(mvp_matrix);
 
-        VkWriteDescriptorSet descriptorWrite = {0};
+        VkWriteDescriptorSet descriptorWrite = { };
         descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrite.dstSet = ro->descriptorSet[i];
         descriptorWrite.dstBinding = 0;
@@ -1010,12 +1010,12 @@ void yk_create_sync_objs(YkRenderer* renderer)
     //if semaphores aren't extended with semaphore types, they will be binary
 
 
-    VkSemaphoreCreateInfo vk_semawhore_create_info = { 0 };
+    VkSemaphoreCreateInfo vk_semawhore_create_info = { };
     vk_semawhore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     vk_semawhore_create_info.pNext = 0;
     vk_semawhore_create_info.flags = 0;
 
-    VkFenceCreateInfo vk_fence_create_info = { 0 };
+    VkFenceCreateInfo vk_fence_create_info = { };
     vk_fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     vk_fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
@@ -1097,15 +1097,15 @@ void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_objects,
     //command buffer record
 
 
-    VkRenderingAttachmentInfoKHR vk_color_attachment = { 0 };
+    VkRenderingAttachmentInfoKHR vk_color_attachment = { };
     vk_color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
     vk_color_attachment.imageView = renderer->swapchain_image_view_list[imageIndex];
     vk_color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     vk_color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     vk_color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    vk_color_attachment.clearValue.color = (VkClearColorValue){ 0.0f, 0.0f, 0.0f, 1.0f };
+    vk_color_attachment.clearValue.color = VkClearColorValue{ 0.0f, 0.0f, 0.0f, 1.0f };
 
-    VkRenderingInfoKHR vk_rendering_info = { 0 };
+    VkRenderingInfoKHR vk_rendering_info = { };
     vk_rendering_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
     vk_rendering_info.pNext = 0;
     vk_rendering_info.flags = 0;
@@ -1117,7 +1117,7 @@ void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_objects,
     vk_rendering_info.pDepthAttachment = VK_NULL_HANDLE; //&vk_depth_attachment;
     vk_rendering_info.pStencilAttachment = VK_NULL_HANDLE; //&vk_stencil_attachment;
 
-    VkCommandBufferBeginInfo vk_cmd_buffer_begin_info = { 0 };
+    VkCommandBufferBeginInfo vk_cmd_buffer_begin_info = { };
     vk_cmd_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     vk_cmd_buffer_begin_info.pNext = 0;
     //0 is fine. flags are mean for specific cases
@@ -1167,7 +1167,7 @@ void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_objects,
     // End rendering
     vkCmdEndRenderingKHR(current_frame->cmd_buffers);
 
-    VkImageMemoryBarrier barrier = { 0 };
+    VkImageMemoryBarrier barrier = { };
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
@@ -1199,7 +1199,7 @@ void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_objects,
 
     //command buffer recording over
 
-    VkSubmitInfo vk_submit_info = { 0 };
+    VkSubmitInfo vk_submit_info = { };
     vk_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     vk_submit_info.pNext = 0;
 
@@ -1218,7 +1218,7 @@ void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_objects,
 
     VkResultAssert(vkQueueSubmit(renderer->gfx_q, 1, &vk_submit_info, current_frame->in_flight_fence), "Draw command buffer submitted");
 
-    VkPresentInfoKHR vk_present_info = { 0 };
+    VkPresentInfoKHR vk_present_info = { };
     vk_present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
     vk_present_info.waitSemaphoreCount = 1;
@@ -1276,7 +1276,7 @@ b8 yk_recreate_swapchain(YkRenderer* renderer, YkWindow* win)
 
 VkVertexInputBindingDescription vk_get_binding_desc()
 {
-    VkVertexInputBindingDescription bindingDescription = { 0 };
+    VkVertexInputBindingDescription bindingDescription = { };
 
     bindingDescription.binding = 0;
     bindingDescription.stride = sizeof(vertex);
@@ -1296,12 +1296,12 @@ void get_attrib_desc(VkVertexInputAttributeDescription out[])
     out[1].location = 1;
     out[1].format = VK_FORMAT_R32G32B32_SFLOAT;
     out[1].offset = offsetof(vertex, color);
-
+   
 }
 
 void create_buffer(YkRenderer* ren, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory)
 {
-    VkBufferCreateInfo bufferInfo = {0};
+    VkBufferCreateInfo bufferInfo = { };
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = size;
     bufferInfo.usage = usage;
@@ -1312,7 +1312,7 @@ void create_buffer(YkRenderer* ren, VkDeviceSize size, VkBufferUsageFlags usage,
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(ren->device, *buffer, &memRequirements);
 
-    VkMemoryAllocateInfo allocInfo = {0};
+    VkMemoryAllocateInfo allocInfo = { };
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = findMemoryType(ren,memRequirements.memoryTypeBits, properties);
@@ -1325,7 +1325,7 @@ void create_buffer(YkRenderer* ren, VkDeviceSize size, VkBufferUsageFlags usage,
 
 void copyBuffer(YkRenderer* renderer, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
 {
-    VkCommandBufferAllocateInfo allocInfo = {0};
+    VkCommandBufferAllocateInfo allocInfo = { };
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandPool = renderer->frame_data[renderer->current_frame].cmd_pool;
@@ -1334,13 +1334,13 @@ void copyBuffer(YkRenderer* renderer, VkBuffer srcBuffer, VkBuffer dstBuffer, Vk
     VkCommandBuffer commandBuffer;
     vkAllocateCommandBuffers(renderer->device, &allocInfo, &commandBuffer);
 
-    VkCommandBufferBeginInfo beginInfo = {0};
+    VkCommandBufferBeginInfo beginInfo = { };
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
-    VkBufferCopy copyRegion = {0};
+    VkBufferCopy copyRegion = { };
     copyRegion.srcOffset = 0; // Optional
     copyRegion.dstOffset = 0; // Optional
     copyRegion.size = size;
@@ -1348,7 +1348,7 @@ void copyBuffer(YkRenderer* renderer, VkBuffer srcBuffer, VkBuffer dstBuffer, Vk
 
     vkEndCommandBuffer(commandBuffer);
 
-    VkSubmitInfo submitInfo = {0};
+    VkSubmitInfo submitInfo = { };
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
