@@ -145,7 +145,7 @@ void yk_create_sync_objs(YkRenderer* renderer);
 b8 yk_recreate_swapchain(YkRenderer* renderer,YkWindow* win);
 void copyBuffer(YkRenderer* renderer,VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
-void create_buffer(YkRenderer* ren, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory);
+void yk_create_buffer(YkRenderer* ren, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory);
 
 /*
 void yk_innit_renderer(YkRenderer* renderer, YkWindow* window)
@@ -874,6 +874,8 @@ u32 findMemoryType(YkRenderer* renderer ,u32 typeFilter, VkMemoryPropertyFlags p
     return 69420;
 }
 
+
+
 void yk_create_vert_buffer(YkRenderer* renderer, const vertex vertices[], VkDeviceSize bufferSize, buffer *vert_buffer)
 {//we
 
@@ -882,13 +884,13 @@ void yk_create_vert_buffer(YkRenderer* renderer, const vertex vertices[], VkDevi
     VkBuffer staging_buffer = { };
     VkDeviceMemory staging_buffer_memory = { };
         
-    create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
+    yk_create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
 
     void* data;
     vkMapMemory(renderer->device,staging_buffer_memory, 0, bufferSize, 0, &data);
     memcpy(data, vertices, (size_t)bufferSize);
 
-    create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vert_buffer->handle, &vert_buffer->memory);
+    yk_create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vert_buffer->handle, &vert_buffer->memory);
 
     copyBuffer(renderer,staging_buffer, vert_buffer->handle, bufferSize);
 
@@ -902,14 +904,14 @@ void yk_create_index_buffer(YkRenderer* renderer, const u16 indices[], VkDeviceS
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
-    create_buffer(renderer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, &stagingBufferMemory);
+    yk_create_buffer(renderer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &stagingBuffer, &stagingBufferMemory);
 
     void* data;
     vkMapMemory(renderer->device, stagingBufferMemory, 0, bufferSize, 0, &data);
     memcpy(data, indices, (size_t)bufferSize);
     vkUnmapMemory(renderer->device, stagingBufferMemory);
 
-    create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &index_buffer->handle, &index_buffer->memory);
+    yk_create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &index_buffer->handle, &index_buffer->memory);
 
     copyBuffer(renderer,stagingBuffer,index_buffer->handle, bufferSize);
 
@@ -923,7 +925,7 @@ void createUniformBuffers(YkRenderer* renderer, VkDeviceSize bufferSize, ubuffer
 
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        yk_create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             &ubo[i].buffer.handle, &ubo[i].buffer.memory);
 
         vkMapMemory(renderer->device, ubo[i].buffer.memory, 0, bufferSize, 0, &ubo[i].mapped);
@@ -1052,7 +1054,6 @@ void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
 
 }
 
-
 void yk_renderer_innit_model(YkRenderer* renderer, const vertex vertices[], const u16 indices[], render_object* render_object)
 {
  
@@ -1065,7 +1066,8 @@ void yk_renderer_innit_model(YkRenderer* renderer, const vertex vertices[], cons
     createDescriptorSets(renderer, render_object->ubo, render_object);
 }
 
-void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_objects, int num_obj, YkWindow* win)
+
+void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
 {
     yk_frame_data* current_frame = &renderer->frame_data[renderer->current_frame];
 
@@ -1087,7 +1089,7 @@ void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_objects,
         }
     }
 
-   
+
     VkResultAssert(vkResetFences(renderer->device, 1, &current_frame->in_flight_fence), "Reset fences");
 
 
@@ -1136,30 +1138,30 @@ void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_objects,
     vkCmdSetViewport(current_frame->cmd_buffers, 0, 1, &renderer->viewport);
     vkCmdSetScissor(current_frame->cmd_buffers, 0, 1, &renderer->scissor);
 
-    for (int i = 0; i < num_obj; i++)
+    for (int i = 0; i < renderer->num_ro; i++)
     {
 
-        VkBuffer vertex_buffers[] = {render_objects[i].vert_buffer.handle};
+        VkBuffer vertex_buffers[] = { renderer->render_objects[i].vert_buffer.handle };
 
         //if you pass mutiple buffers
         VkDeviceSize offsets[] = { 0 };
 
         vkCmdBindVertexBuffers(current_frame->cmd_buffers, 0, 1, vertex_buffers, offsets);
-        vkCmdBindIndexBuffer(current_frame->cmd_buffers, render_objects[i].index_buffer.handle, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindIndexBuffer(current_frame->cmd_buffers, renderer->render_objects[i].index_buffer.handle, 0, VK_INDEX_TYPE_UINT16);
 
         if (i % 2 == 0)
         {
-            updateUniformBuffer(renderer, render_objects[i].ubo, renderer->current_frame, -1);
+            updateUniformBuffer(renderer, renderer->render_objects[i].ubo, renderer->current_frame, -1);
         }
         else
         {
-            updateUniformBuffer(renderer, render_objects[i].ubo, renderer->current_frame, 1);
+            updateUniformBuffer(renderer, renderer->render_objects[i].ubo, renderer->current_frame, 1);
         }
-              
+
 
         vkCmdBindDescriptorSets(current_frame->cmd_buffers, VK_PIPELINE_BIND_POINT_GRAPHICS,
-        renderer->pipeline_layout, 0, 1, &render_objects[i].descriptorSet[renderer->current_frame], 0, 0);
-        
+            renderer->pipeline_layout, 0, 1, &renderer->render_objects[i].descriptorSet[renderer->current_frame], 0, 0);
+
         vkCmdDrawIndexed(current_frame->cmd_buffers, 6, 1, 0, 0, 0);
 
     }
@@ -1176,7 +1178,7 @@ void yk_renderer_draw_model(YkRenderer* renderer, render_object* render_objects,
 
     Assert(imageIndex < max_images, "Too many images.")
 
-    barrier.image = renderer->swapchain_image_list[imageIndex];
+        barrier.image = renderer->swapchain_image_list[imageIndex];
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     barrier.subresourceRange.baseMipLevel = 0;
     barrier.subresourceRange.levelCount = 1;
@@ -1299,7 +1301,7 @@ void get_attrib_desc(VkVertexInputAttributeDescription out[])
    
 }
 
-void create_buffer(YkRenderer* ren, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory)
+void yk_create_buffer(YkRenderer* ren, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory)
 {
     VkBufferCreateInfo bufferInfo = { };
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;

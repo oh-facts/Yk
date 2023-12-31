@@ -15,12 +15,13 @@ find_package(Vulkan REQUIRED)
 include_directories(
     src
     include
+    vendor/stb/include
     ${Vulkan_INCLUDE_DIRS}
 )
 
 
 
-set(yk_src "src/yk.cpp" "src/renderer/renderer.cpp" "src/yk_debug_app.cpp")
+set(yk_src "src/yk.cpp" "src/renderer/renderer.cpp" "src/yk_debug_app.cpp" "vendor/stb/src/stb_image.c")
 
 set(yk_platform_layer  "src/win32_window.cpp")
 

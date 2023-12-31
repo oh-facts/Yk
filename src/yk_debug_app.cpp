@@ -26,20 +26,24 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
 
     yk_renderer_innit(&self->ren, &self->window);
 
-    self->ro[0].id = 0;
-    yk_renderer_innit_model(&self->ren, vertices, indices, &self->ro[0]);
+    render_object ro1 = {};
+    ro1.id = 0;
+    yk_renderer_innit_model(&self->ren, vertices, indices, &ro1);
 
 
-    self->ro[1].id = 1;
-    yk_renderer_innit_model(&self->ren, vertices2, indices, &self->ro[1]);
+    render_object ro2 = {};
+    ro2.id = 1;
+    yk_renderer_innit_model(&self->ren, vertices2, indices, &ro2);
 
+    self->ren.num_ro = 2;
+    self->ren.render_objects[0] = ro1;
+    self->ren.render_objects[1] = ro2;
 
 }
 
 YK_API void _debug_app_update(struct YkDebugAppState* state)
 {
-    yk_renderer_draw_model(&state->ren, state->ro, 2, &state->window);
-
+    yk_renderer_update(&state->ren, &state->window);
 //	v3 a = { 1,3 };
 //	printf("%f %f\n", a.x, a.y);
 }
@@ -56,11 +60,11 @@ YK_API void _debug_app_update_references(struct YkDebugAppState* self)
     //yk_renderer_innit(&self->ren, &self->window);
 }
 
-YK_API void _debug_app_shutdown(struct YkDebugAppState* state)
+YK_API void _debug_app_shutdown(struct YkDebugAppState* self)
 {
-    yk_renderer_wait(&state->ren);
-    yk_destroy_model(&state->ren, &state->ro[0]);
-    yk_destroy_model(&state->ren, &state->ro[1]);
+    yk_renderer_wait(&self->ren);
+    yk_destroy_model(&self->ren, &self->ren.render_objects[0]);
+    yk_destroy_model(&self->ren, &self->ren.render_objects[1]);
 
-    yk_free_renderer(&state->ren);
+    yk_free_renderer(&self->ren);
 }
