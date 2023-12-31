@@ -69,6 +69,13 @@
 //              using the physics engine to make porting back and forth easy, because once I have a team of devs. They will be porting this back to C
 //              and working on physics.
 //
+// 
+// Note(facts): I have completed porting to C++. Takes longer to compile, but if I don't port now, it will be harder to port later. Atleast now I can use
+//              jolt. It is so fucking weird that jolt themselves didn't make a C api so other langugages could use. So So weird.
+//
+//
+//
+//              Work on submitting render data to the renderer
 
 
 #include <yk_debug_app.h>
