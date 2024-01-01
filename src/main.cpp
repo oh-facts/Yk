@@ -80,6 +80,7 @@
 
 #include <yk_debug_app.h>
 #include <win32_window.h>
+#include <yk_platform_layer.h>
 
 struct YkMemory
 {
@@ -114,9 +115,7 @@ int main(int argc, char *argv[])
     engine_memory.temp_storage = (u8*)engine_memory.perm_storage + engine_memory.perm_storage_size;
    
 
-    time_t start, now;
-    double elapsed;
-    time(&start);
+   
     struct YkDebugAppState state = { };
     reload_dll(&state);
 
@@ -125,19 +124,41 @@ int main(int argc, char *argv[])
 
     yk_innit_window(&state.window);
     state.start(&state);
-    
-
+    /*
+    YkTime time;
+    yk_time_innit(&time);
+   
+    f32 start = yk_get_time(&time);
+    u32 frame_count = 0;
+    f32 time_elapsed = 0;
+    */
     while (state.is_running(&state))
     {
+        //ToDo(facts): calculate average
+        /*
+        f32 now = yk_get_time(&time);
+        f32 frame_time = now - start;
+        start = now;
+
+        time_elapsed += frame_time;
+        frame_count++;
+
+        if (time_elapsed > 5)
+        {
+            f32 fps = frame_count / time_elapsed;
+
+            printf("fps: %.0f\n", fps);
+            printf("ft:  %f\n", 1/fps);
+
+            frame_count = 0;
+            time_elapsed = 0;
+        }
+        */
         yk_window_poll();
 
         if (!state.window.win_data.is_minimized)
         {
             state.update(&state);
-
-            //ToDo(facts): Do this every time a key is pressed
-            time(&now);
-            elapsed = difftime(now, start);
 
             if (state.window.test == 1) {
                 state.window.test = 0;
@@ -145,11 +166,7 @@ int main(int argc, char *argv[])
 
                 FreeLibrary(state.hModule);
                 reload_dll(&state);
-
-                state.start(&state);
-                //update_ref(&state);
-
-                time(&start);
+               // yk_time_innit(&time);
             }
         }
 

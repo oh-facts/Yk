@@ -5,7 +5,9 @@
 #include <Windows.h>
 #include <yk_api.h>
 
-typedef struct YkWindow YkWindow;
+/*
+	ToDo(facts): Platform layer + make these opaque
+*/
 
 typedef struct win_data
 {
@@ -26,9 +28,12 @@ struct YkWindow
 	win_data win_data;
 };
 
+
+
 YK_API LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 YK_API void yk_innit_window(YkWindow* window);
 YK_API void yk_window_poll();
 YK_API void yk_free_window(YkWindow* window);
+
 
 #endif // !YK_WIN32_WINDOW_H

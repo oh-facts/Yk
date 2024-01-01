@@ -11,8 +11,18 @@ size is in bits
 
 #define DEBUG 1
 
+/*
+	The warnings made me lose my mind so I had to do this. Apparently I shouldn't dereference a "nullptr"
+*/
+
 #if DEBUG
-#define Assert(Expression, msg) if(!(Expression)) {printf("Fatal: %s",msg); volatile int* ptr = 0; *ptr = 0;}
+	#ifdef _MSC_VER
+		#pragma warning(disable : 6011)
+		#define Assert(Expression, msg) if(!(Expression)) {printf("Fatal: %s",msg); volatile int* ptr = 0; *ptr = 0;}
+		#pragma warning(default : 6011)
+	#else
+		#define Assert(Expression, msg) if(!(Expression)) {printf("Fatal: %s",msg); volatile int* ptr = 0; *ptr = 0;}
+	#endif
 #else
 #define Assert(Expression)
 #endif

@@ -129,11 +129,11 @@ void yk_create_surface(YkRenderer* renderer, YkWindow* win);
 void yk_pick_physdevice(YkRenderer* renderer);
 void yk_find_queues(YkRenderer* renderer);
 void yk_create_device(YkRenderer* renderer);
+void yk_create_swapchain(YkRenderer* renderer, YkWindow* win);
 /*
     -------------------------------
 */
 
-void yk_create_swapchain(YkRenderer* renderer, YkWindow* win);
 void createDescriptorSetLayout(YkRenderer* renderer);
 void yk_create_gfx_pipeline(YkRenderer* renderer);
 
@@ -154,31 +154,7 @@ void copyBuffer(YkRenderer* renderer,VkBuffer srcBuffer, VkBuffer dstBuffer, VkD
 
 void yk_create_buffer(YkRenderer* ren, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory);
 
-/*
-void yk_innit_renderer(YkRenderer* renderer, YkWindow* window)
-{
-    start_time = clock();
-    renderer->window_handle = window;
 
-    
-    yk_innit_vulkan(renderer);
-    yk_create_surface(renderer);
-    yk_pick_physdevice(renderer);
-    yk_find_queues(renderer);
-    yk_create_device(renderer);
-    yk_create_swapchain(renderer);
-    createDescriptorSetLayout(renderer);
-    yk_create_gfx_pipeline(renderer);
-    yk_cmd_innit(renderer);
-    yk_create_vert_buffer(renderer);
-    yk_create_index_buffer(renderer);
-    createUniformBuffers(renderer);
-    createDescriptorPool(renderer);
-    createDescriptorSets(renderer);
-    yk_create_sync_objs(renderer);
-  
-}
-*/
 void yk_free_renderer(YkRenderer* renderer)
 {   
     for (i32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
@@ -343,7 +319,7 @@ void yk_pick_physdevice(YkRenderer* renderer)
     // 5.1 starts here
     //Physical Device
 
-    #define max_devices 3
+    constexpr i32 max_devices = 3;
 
     u32 devices = 0;
     vkEnumeratePhysicalDevices(renderer->vk_instance, &devices, 0);
@@ -489,6 +465,12 @@ void yk_create_device(YkRenderer* renderer)
     vk_dynamic_rendering_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
     vk_dynamic_rendering_feature.dynamicRendering = VK_TRUE;
 
+    VkPhysicalDeviceSynchronization2FeaturesKHR vk_sync2_feet = {};
+    vk_sync2_feet.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR;
+    vk_sync2_feet.synchronization2 = VK_TRUE;
+
+    vk_dynamic_rendering_feature.pNext = &vk_sync2_feet;
+
     const char* device_extention_names[2] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME };
 
     VkDeviceCreateInfo vk_device_create_info = { };
@@ -589,7 +571,7 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
         }
     }
 
-    #define max_present_mode 4
+     #define max_present_mode 4
     u32 vk_present_mode_count = 0;
     vkGetPhysicalDeviceSurfacePresentModesKHR(renderer->phys_device, renderer->surface, &vk_present_mode_count, 0);
     Assert(vk_present_mode_count > 0, "Less than 1 present modes found")
@@ -680,6 +662,40 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
 
    
 
+}
+
+void transition_image(YkRenderer* renderer, VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout)
+{
+    VkImageMemoryBarrier2 barrier = { };
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    barrier.pNext = 0;
+    barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    barrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
+
+    barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    barrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;
+
+    barrier.oldLayout = currentLayout;
+    barrier.newLayout = newLayout;
+
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+
+    barrier.image = image;
+
+    barrier.subresourceRange.aspectMask = (newLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+    
+    VkDependencyInfo dep_info = {};
+    dep_info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dep_info.imageMemoryBarrierCount = 1;
+    dep_info.pImageMemoryBarriers = &barrier;
+
+    vkCmdPipelineBarrier2(cmd, &dep_info);
 }
 
 void createDescriptorSetLayout(YkRenderer* renderer)
@@ -897,7 +913,7 @@ void yk_cmd_innit(YkRenderer* renderer)
         vk_cmd_buffer_alloc_info.pNext = 0;
         vk_cmd_buffer_alloc_info.commandPool = renderer->frame_data[i].cmd_pool;
         vk_cmd_buffer_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        vk_cmd_buffer_alloc_info.commandBufferCount = MAX_FRAMES_IN_FLIGHT;
+        vk_cmd_buffer_alloc_info.commandBufferCount = 1;
 
 
         VkResultAssert(vkAllocateCommandBuffers(renderer->device, &vk_cmd_buffer_alloc_info, &renderer->frame_data[i].cmd_buffers), "Command Buffer allocation");
@@ -989,7 +1005,7 @@ void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentIm
 
     mvp_mat.model = yk_m4_translate(mvp_mat.model,  v3{ 0.8f * flag, 0., -8. });
 
-    mvp_mat.model = yk_m4_rotate(mvp_mat.model,time * 30.f, v3 { 0, 1, 0 });
+    mvp_mat.model = yk_m4_rotate(mvp_mat.model,time * 3.f, v3 { 0, 1, 0 });
     mvp_mat.view = yk_m4_look_at(v3 { 0, 0, 1 }, v3 { 0, 0, -1. }, v3 { 0, 1, 0 });
     mvp_mat.proj = yk_m4_perspective(DEG_TO_RAD * 45., renderer->extent.width / (f32)renderer->extent.height, 0.1f, 10.0f);
 
@@ -1111,6 +1127,14 @@ void yk_renderer_innit_model(YkRenderer* renderer, const vertex vertices[], cons
     createDescriptorSets(renderer, render_object->ubo, render_object);
 }
 
+/*
+    Note: A draw loop should typically start with waiting for fences (fence ensure gpu / cpu sync)
+    
+    image index vs current frame
+    https://stackoverflow.com/questions/72794542/c-vulkan-swapchain-image-index-vs-current-frame
+
+    I still don't understand it. But basically, if you're dealing with swapchain index, use image index
+*/
 
 void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
 {
@@ -1121,8 +1145,11 @@ void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
 
 
     VkResultAssert(vkWaitForFences(renderer->device, 1, &current_frame->in_flight_fence, VK_TRUE, UINT64_MAX), "Wait for fences")
+    VkResultAssert(vkResetFences(renderer->device, 1, &current_frame->in_flight_fence), "Reset fences");
 
-        uint32_t imageIndex = -1;
+    
+
+    u32 imageIndex = -1;
 
     if (vkAcquireNextImageKHR(renderer->device, renderer->swapchain, UINT64_MAX,
         current_frame->image_available_semawhore,
@@ -1133,9 +1160,6 @@ void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
             return;
         }
     }
-
-
-    VkResultAssert(vkResetFences(renderer->device, 1, &current_frame->in_flight_fence), "Reset fences");
 
 
 
@@ -1150,7 +1174,7 @@ void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
     vk_color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     vk_color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     vk_color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    vk_color_attachment.clearValue.color = VkClearColorValue{ 0.0f, 0.0f, 0.0f, 1.0f };
+    vk_color_attachment.clearValue.color = VkClearColorValue{ 0.0f, 0.01f, 0.03f, 1.0f };
 
     VkRenderingInfoKHR vk_rendering_info = { };
     vk_rendering_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
@@ -1173,6 +1197,8 @@ void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
     vk_cmd_buffer_begin_info.pInheritanceInfo = 0;
 
     VkResultAssert(vkBeginCommandBuffer(current_frame->cmd_buffers, &vk_cmd_buffer_begin_info), "Command buffer begin");
+    //transition_image(renderer, current_frame->cmd_buffers, renderer->swapchain_image_list[renderer->current_frame], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
 
     // Begin rendering
     vkCmdBeginRenderingKHR(current_frame->cmd_buffers, &vk_rendering_info);
@@ -1214,33 +1240,7 @@ void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
     // End rendering
     vkCmdEndRenderingKHR(current_frame->cmd_buffers);
 
-    VkImageMemoryBarrier barrier = { };
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-    Assert(imageIndex < max_images, "Too many images.")
-
-        barrier.image = renderer->swapchain_image_list[imageIndex];
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-    barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-
-    vkCmdPipelineBarrier(
-        current_frame->cmd_buffers,
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-        0,
-        0, 0,
-        0, 0,
-        1, &barrier
-    );
+    transition_image(renderer, current_frame->cmd_buffers, renderer->swapchain_image_list[imageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     VkResultAssert(vkEndCommandBuffer(current_frame->cmd_buffers), "Command buffer end");
 
@@ -1274,7 +1274,7 @@ void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
     VkSwapchainKHR vk_swapchains[] = { renderer->swapchain };
     vk_present_info.swapchainCount = 1;
     vk_present_info.pSwapchains = vk_swapchains;
-    vk_present_info.pImageIndices = &imageIndex;
+    vk_present_info.pImageIndices = & imageIndex;
 
     vk_present_info.pResults = 0;
 

@@ -25,7 +25,11 @@ set(yk_src "src/yk.cpp" "src/renderer/renderer.cpp" "src/yk_debug_app.cpp" "vend
 
 set(yk_platform_layer  "src/win32_window.cpp")
 
+set(yk_fatform_layer "src/yk_platform_layer.cpp")
+
 add_library(platform STATIC ${yk_platform_layer} )
+add_library(fatform STATIC ${yk_fatform_layer})
+
 
 if(YK_BUILD_SHARED)
     add_library(${PROJECT_NAME} SHARED ${yk_src}) 
@@ -43,7 +47,6 @@ else()
     add_executable(yk_test "src/main.cpp")
 endif()
 target_link_libraries(yk_test yk platform)
-
 #---------------------#
 
 
