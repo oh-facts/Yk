@@ -103,7 +103,7 @@ void _check_vk_result(VkResult result, const char* msg) {
     }
     else
     {
-        volatile int* ptr = 0; 
+        volatile int* ptr = 0;
         *ptr = 0;
     }
 
@@ -129,11 +129,11 @@ void yk_create_surface(YkRenderer* renderer, YkWindow* win);
 void yk_pick_physdevice(YkRenderer* renderer);
 void yk_find_queues(YkRenderer* renderer);
 void yk_create_device(YkRenderer* renderer);
+void yk_create_swapchain(YkRenderer* renderer, YkWindow* win);
 /*
     -------------------------------
 */
 
-void yk_create_swapchain(YkRenderer* renderer, YkWindow* win);
 void createDescriptorSetLayout(YkRenderer* renderer);
 void yk_create_gfx_pipeline(YkRenderer* renderer);
 
@@ -149,48 +149,24 @@ void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentIm
 void createDescriptorSets(YkRenderer* renderer, ubuffer* ubo, render_object* ro);
 
 void yk_create_sync_objs(YkRenderer* renderer);
-b8 yk_recreate_swapchain(YkRenderer* renderer,YkWindow* win);
-void copyBuffer(YkRenderer* renderer,VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+b8 yk_recreate_swapchain(YkRenderer* renderer, YkWindow* win);
+void copyBuffer(YkRenderer* renderer, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
 void yk_create_buffer(YkRenderer* ren, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory);
 
-/*
-void yk_innit_renderer(YkRenderer* renderer, YkWindow* window)
-{
-    start_time = clock();
-    renderer->window_handle = window;
 
-    
-    yk_innit_vulkan(renderer);
-    yk_create_surface(renderer);
-    yk_pick_physdevice(renderer);
-    yk_find_queues(renderer);
-    yk_create_device(renderer);
-    yk_create_swapchain(renderer);
-    createDescriptorSetLayout(renderer);
-    yk_create_gfx_pipeline(renderer);
-    yk_cmd_innit(renderer);
-    yk_create_vert_buffer(renderer);
-    yk_create_index_buffer(renderer);
-    createUniformBuffers(renderer);
-    createDescriptorPool(renderer);
-    createDescriptorSets(renderer);
-    yk_create_sync_objs(renderer);
-  
-}
-*/
 void yk_free_renderer(YkRenderer* renderer)
-{   
+{
     for (i32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
         vkDestroySemaphore(renderer->device, renderer->frame_data[i].image_available_semawhore, 0);
         vkDestroySemaphore(renderer->device, renderer->frame_data[i].render_finished_semawhore, 0);
-        vkDestroyFence(renderer->device, renderer->frame_data[i].in_flight_fence,0);
+        vkDestroyFence(renderer->device, renderer->frame_data[i].in_flight_fence, 0);
 
         vkDestroyCommandPool(renderer->device, renderer->frame_data[i].cmd_pool, 0);
     }
 
-    
+
 
     vkDestroyPipeline(renderer->device, renderer->gfx_pipeline, 0);
     vkDestroyPipelineLayout(renderer->device, renderer->pipeline_layout, 0);
@@ -204,12 +180,12 @@ void yk_free_renderer(YkRenderer* renderer)
 
     vkDestroySwapchainKHR(renderer->device, renderer->swapchain, 0);
 
-   
+
 
     vkDestroyDescriptorPool(renderer->device, renderer->descriptorPool, 0);
     vkDestroyDescriptorSetLayout(renderer->device, renderer->descriptorSetLayout, 0);
 
-   
+
 
     vkDestroyDevice(renderer->device, 0);
     vkDestroySurfaceKHR(renderer->vk_instance, renderer->surface, 0);
@@ -240,7 +216,7 @@ void  yk_innit_vulkan(YkRenderer* renderer)
 {
     log_extention(check_instance_extension_support())
 
-    VkApplicationInfo vk_app_info = {};
+        VkApplicationInfo vk_app_info = {};
     vk_app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     vk_app_info.pNext = 0;
     vk_app_info.pApplicationName = "yekate";
@@ -300,21 +276,21 @@ void  yk_innit_vulkan(YkRenderer* renderer)
     vk_create_info.enabledExtensionCount = num_extensions;
     vk_create_info.ppEnabledExtensionNames = enabled_extensions;
 
-  
+
     VkResultAssert(vkCreateInstance(&vk_create_info, 0, &renderer->vk_instance), "Vulkan instance creation")
 
         //Debug messenger
 #if VK_USE_VALIDATION_LAYERS
 
-    VkDebugUtilsMessengerCreateInfoEXT vk_debug_messenger_create_info = { };
+        VkDebugUtilsMessengerCreateInfoEXT vk_debug_messenger_create_info = { };
     vk_debug_messenger_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     vk_debug_messenger_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
     vk_debug_messenger_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     vk_debug_messenger_create_info.pfnUserCallback = debugCallback;
 
-     PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(renderer->vk_instance, "vkCreateDebugUtilsMessengerEXT");
+    PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(renderer->vk_instance, "vkCreateDebugUtilsMessengerEXT");
     VkResultAssert(vkCreateDebugUtilsMessengerEXT(renderer->vk_instance, &vk_debug_messenger_create_info, 0, &renderer->debug_messenger), "Debug messenger");
-    
+
 #endif
 
 
@@ -343,21 +319,21 @@ void yk_pick_physdevice(YkRenderer* renderer)
     // 5.1 starts here
     //Physical Device
 
-    #define max_devices 3
+    constexpr i32 max_devices = 3;
 
     u32 devices = 0;
     vkEnumeratePhysicalDevices(renderer->vk_instance, &devices, 0);
 
     Assert(devices <= max_devices, "More than 3 graphics cards? Wth?")
 
-    VkPhysicalDevice device_list[max_devices] = { };
+        VkPhysicalDevice device_list[max_devices] = { };
 
     VkResultAssert(vkEnumeratePhysicalDevices(renderer->vk_instance, &devices, device_list), "physical device detection")
- 
-    //ToDo(facts): Account for multiple "good" gpus (one gpu is best)
 
-    //not compulsory, but appreciated
-    bool is_discrete[max_devices] = { false };
+        //ToDo(facts): Account for multiple "good" gpus (one gpu is best)
+
+        //not compulsory, but appreciated
+        bool is_discrete[max_devices] = { false };
 
     //compulsory features are dynamic rendering, syncronization2, buffer device address and descriptor indexing
     bool compulsory_features[max_devices] = { false };
@@ -387,7 +363,7 @@ void yk_pick_physdevice(YkRenderer* renderer)
         {
             is_discrete[i] = true;
         }
-       
+
         if (vk13_feat.dynamicRendering && vk13_feat.synchronization2 && vk12_feat.bufferDeviceAddress && vk12_feat.descriptorIndexing)
         {
             compulsory_features[i] = true;
@@ -409,23 +385,23 @@ void yk_pick_physdevice(YkRenderer* renderer)
             return;
         }
     }
-    
+
     //Control shouldn't come here
     Assert(false, "Your gpu is trash lmao. It doesn't have basic (vulkan 1.2 and 1.3) features.");
- 
+
     //log_extention(check_device_extension_support(renderer->phys_device))
 }
 
 void yk_find_queues(YkRenderer* renderer)
 {
     //Nvidia 4090 has 5. I only intend to use 3. 99% chance are they all refer to the same queue.
-    #define max_queues 5
+#define max_queues 5
     u32 queues = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(renderer->phys_device, &queues, 0);
 
     Assert(queues <= max_queues, "More queues found than supported")
         //w
-    VkQueueFamilyProperties vk_q_fam_prop_list[max_queues];
+        VkQueueFamilyProperties vk_q_fam_prop_list[max_queues];
     u32 current_queues = max_queues;
     vkGetPhysicalDeviceQueueFamilyProperties(renderer->phys_device, &current_queues, vk_q_fam_prop_list);
 
@@ -461,8 +437,8 @@ void yk_find_queues(YkRenderer* renderer)
 
 
     Assert(renderer->qfams[Q_FAM_GFX] != -1, "Graphics Queue not found")
-    Assert(renderer->qfams[Q_FAM_GFX_COMPUTE] != -1, "Graphics Compute Queue not found")
-    Assert(renderer->qfams[Q_FAM_PRESENT] != -1, "Present Queue not found")
+        Assert(renderer->qfams[Q_FAM_GFX_COMPUTE] != -1, "Graphics Compute Queue not found")
+        Assert(renderer->qfams[Q_FAM_PRESENT] != -1, "Present Queue not found")
 
 
 }
@@ -489,6 +465,12 @@ void yk_create_device(YkRenderer* renderer)
     vk_dynamic_rendering_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
     vk_dynamic_rendering_feature.dynamicRendering = VK_TRUE;
 
+    VkPhysicalDeviceSynchronization2FeaturesKHR vk_sync2_feet = {};
+    vk_sync2_feet.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR;
+    vk_sync2_feet.synchronization2 = VK_TRUE;
+
+    vk_dynamic_rendering_feature.pNext = &vk_sync2_feet;
+
     const char* device_extention_names[2] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME };
 
     VkDeviceCreateInfo vk_device_create_info = { };
@@ -514,7 +496,7 @@ void yk_create_device(YkRenderer* renderer)
 
 void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
 {
-  //https://harrylovescode.gitbooks.io/vulkan-api/content/chap06/chap06.html
+    //https://harrylovescode.gitbooks.io/vulkan-api/content/chap06/chap06.html
 
     VkSurfaceCapabilitiesKHR vk_surface_caps = { };
     VkResultAssert(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(renderer->phys_device, renderer->surface, &vk_surface_caps), "Surface Capabilities poll");
@@ -573,13 +555,13 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
     u32 vk_format_count = 0;
     vkGetPhysicalDeviceSurfaceFormatsKHR(renderer->phys_device, renderer->surface, &vk_format_count, 0);
     Assert(vk_format_count > 0, "Format count less than 1")
-    Assert(vk_format_count <= max_format_count, "Too many formats")
+        Assert(vk_format_count <= max_format_count, "Too many formats")
 
-    VkSurfaceFormatKHR vk_surface_format_list[max_format_count] = { };
+        VkSurfaceFormatKHR vk_surface_format_list[max_format_count] = { };
     VkResultAssert(vkGetPhysicalDeviceSurfaceFormatsKHR(renderer->phys_device, renderer->surface, &vk_format_count, vk_surface_format_list), "Surface formats obtain")
 
-    //ToDo(facts, 12/22): Stop being a smartass at 5:58am. Go to sleep
-    VkSurfaceFormatKHR surface_format = { };
+        //ToDo(facts, 12/22): Stop being a smartass at 5:58am. Go to sleep
+        VkSurfaceFormatKHR surface_format = { };
     for (i32 i = vk_format_count - 1; i >= 0; i--)
     {
         surface_format = vk_surface_format_list[i];
@@ -589,17 +571,17 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
         }
     }
 
-    #define max_present_mode 4
+#define max_present_mode 4
     u32 vk_present_mode_count = 0;
     vkGetPhysicalDeviceSurfacePresentModesKHR(renderer->phys_device, renderer->surface, &vk_present_mode_count, 0);
     Assert(vk_present_mode_count > 0, "Less than 1 present modes found")
-    Assert(vk_present_mode_count <= max_present_mode, "Too many present modes")
+        Assert(vk_present_mode_count <= max_present_mode, "Too many present modes")
 
-    VkPresentModeKHR vk_present_mode_list[max_present_mode] = { };
+        VkPresentModeKHR vk_present_mode_list[max_present_mode] = { };
 
     VkResultAssert(vkGetPhysicalDeviceSurfacePresentModesKHR(renderer->phys_device, renderer->surface, &vk_present_mode_count, vk_present_mode_list), "Device Present Modes")
 
-    VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
+        VkPresentModeKHR present_mode = VK_PRESENT_MODE_FIFO_KHR;
 
     //https://harrylovescode.gitbooks.io/vulkan-api/content/chap06/chap06.html
     for (u32 i = 0; i < vk_present_mode_count; i++)
@@ -639,15 +621,15 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
     vk_swapchain_create_info.clipped = VK_TRUE; //Note(facts): Read about later
 
     vkCreateSwapchainKHR(renderer->device, &vk_swapchain_create_info, 0, &renderer->swapchain);
- //   VkResultAssert(, "Created Swapchain");
+    //   VkResultAssert(, "Created Swapchain");
 
-    #define max_images 3
+#define max_images 3
 
     u32 vk_image_num = 0;
     vkGetSwapchainImagesKHR(renderer->device, renderer->swapchain, &vk_image_num, 0);
     Assert(vk_image_num <= max_images, "More swapchain images than expected")
 
-    VkResultAssert(vkGetSwapchainImagesKHR(renderer->device, renderer->swapchain, &vk_image_num, renderer->swapchain_image_list), "Swapchain images found");
+        VkResultAssert(vkGetSwapchainImagesKHR(renderer->device, renderer->swapchain, &vk_image_num, renderer->swapchain_image_list), "Swapchain images found");
 
 
 
@@ -678,8 +660,42 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
         VkResultAssert(vkCreateImageView(renderer->device, &vk_image_view_create_info, 0, &renderer->swapchain_image_view_list[i]), str);
     }
 
-   
 
+
+}
+
+void transition_image(YkRenderer* renderer, VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout)
+{
+    VkImageMemoryBarrier2 barrier = { };
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+    barrier.pNext = 0;
+    barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    barrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
+
+    barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+    barrier.dstAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;
+
+    barrier.oldLayout = currentLayout;
+    barrier.newLayout = newLayout;
+
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+
+    barrier.image = image;
+
+    barrier.subresourceRange.aspectMask = (newLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL) ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+    VkDependencyInfo dep_info = {};
+    dep_info.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dep_info.imageMemoryBarrierCount = 1;
+    dep_info.pImageMemoryBarriers = &barrier;
+
+    vkCmdPipelineBarrier2(cmd, &dep_info);
 }
 
 void createDescriptorSetLayout(YkRenderer* renderer)
@@ -748,7 +764,7 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
     vk_dyn_state_create_info.dynamicStateCount = 2;
     vk_dyn_state_create_info.pDynamicStates = vk_dynamic_states;
 
-    
+
 
     VkVertexInputBindingDescription binding_desc = vk_get_binding_desc();
     VkVertexInputAttributeDescription attrib_desc[2] = { };
@@ -891,21 +907,21 @@ void yk_cmd_innit(YkRenderer* renderer)
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
         VkResultAssert(vkCreateCommandPool(renderer->device, &cmd_pool_info, 0, &renderer->frame_data[i].cmd_pool), "Command pool creation");
-    
+
         VkCommandBufferAllocateInfo vk_cmd_buffer_alloc_info = { };
         vk_cmd_buffer_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         vk_cmd_buffer_alloc_info.pNext = 0;
         vk_cmd_buffer_alloc_info.commandPool = renderer->frame_data[i].cmd_pool;
         vk_cmd_buffer_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        vk_cmd_buffer_alloc_info.commandBufferCount = MAX_FRAMES_IN_FLIGHT;
+        vk_cmd_buffer_alloc_info.commandBufferCount = 1;
 
 
         VkResultAssert(vkAllocateCommandBuffers(renderer->device, &vk_cmd_buffer_alloc_info, &renderer->frame_data[i].cmd_buffers), "Command Buffer allocation");
-    }   
+    }
 }
 
 
-u32 findMemoryType(YkRenderer* renderer ,u32 typeFilter, VkMemoryPropertyFlags properties) {
+u32 findMemoryType(YkRenderer* renderer, u32 typeFilter, VkMemoryPropertyFlags properties) {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(renderer->phys_device, &memProperties);
 
@@ -921,31 +937,31 @@ u32 findMemoryType(YkRenderer* renderer ,u32 typeFilter, VkMemoryPropertyFlags p
 
 
 
-void yk_create_vert_buffer(YkRenderer* renderer, const vertex vertices[], VkDeviceSize bufferSize, buffer *vert_buffer)
+void yk_create_vert_buffer(YkRenderer* renderer, const vertex vertices[], VkDeviceSize bufferSize, buffer* vert_buffer)
 {//we
 
 //    VkDeviceSize bufferSize = sizeof(vertices[0]) * 4;
 
     VkBuffer staging_buffer = { };
     VkDeviceMemory staging_buffer_memory = { };
-        
-    yk_create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
+
+    yk_create_buffer(renderer, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &staging_buffer, &staging_buffer_memory);
 
     void* data;
-    vkMapMemory(renderer->device,staging_buffer_memory, 0, bufferSize, 0, &data);
+    vkMapMemory(renderer->device, staging_buffer_memory, 0, bufferSize, 0, &data);
     memcpy(data, vertices, (size_t)bufferSize);
 
-    yk_create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vert_buffer->handle, &vert_buffer->memory);
+    yk_create_buffer(renderer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &vert_buffer->handle, &vert_buffer->memory);
 
-    copyBuffer(renderer,staging_buffer, vert_buffer->handle, bufferSize);
+    copyBuffer(renderer, staging_buffer, vert_buffer->handle, bufferSize);
 
     vkDestroyBuffer(renderer->device, staging_buffer, 0);
-    vkFreeMemory(renderer->device, staging_buffer_memory,0);
+    vkFreeMemory(renderer->device, staging_buffer_memory, 0);
 }
 
 void yk_create_index_buffer(YkRenderer* renderer, const u16 indices[], VkDeviceSize bufferSize, buffer* index_buffer)
 {
- //   VkDeviceSize bufferSize = sizeof(indices[0]) * 6;
+    //   VkDeviceSize bufferSize = sizeof(indices[0]) * 6;
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
@@ -956,9 +972,9 @@ void yk_create_index_buffer(YkRenderer* renderer, const u16 indices[], VkDeviceS
     memcpy(data, indices, (size_t)bufferSize);
     vkUnmapMemory(renderer->device, stagingBufferMemory);
 
-    yk_create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &index_buffer->handle, &index_buffer->memory);
+    yk_create_buffer(renderer, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &index_buffer->handle, &index_buffer->memory);
 
-    copyBuffer(renderer,stagingBuffer,index_buffer->handle, bufferSize);
+    copyBuffer(renderer, stagingBuffer, index_buffer->handle, bufferSize);
 
     vkDestroyBuffer(renderer->device, stagingBuffer, 0);
     vkFreeMemory(renderer->device, stagingBufferMemory, 0);
@@ -970,7 +986,7 @@ void createUniformBuffers(YkRenderer* renderer, VkDeviceSize bufferSize, ubuffer
 
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        yk_create_buffer(renderer,bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        yk_create_buffer(renderer, bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             &ubo[i].buffer.handle, &ubo[i].buffer.memory);
 
         vkMapMemory(renderer->device, ubo[i].buffer.memory, 0, bufferSize, 0, &ubo[i].mapped);
@@ -987,10 +1003,10 @@ void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentIm
 
     mvp_mat.model = yk_m4_identity();
 
-    mvp_mat.model = yk_m4_translate(mvp_mat.model,  v3{ 0.8f * flag, 0., -8. });
+    mvp_mat.model = yk_m4_translate(mvp_mat.model, v3{ 0.8f * flag, 0., -8. });
 
-    mvp_mat.model = yk_m4_rotate(mvp_mat.model,time * 30.f, v3 { 0, 1, 0 });
-    mvp_mat.view = yk_m4_look_at(v3 { 0, 0, 1 }, v3 { 0, 0, -1. }, v3 { 0, 1, 0 });
+    mvp_mat.model = yk_m4_rotate(mvp_mat.model, time * 3.f, v3{ 0, 1, 0 });
+    mvp_mat.view = yk_m4_look_at(v3{ 0, 0, 1 }, v3{ 0, 0, -1. }, v3{ 0, 1, 0 });
     mvp_mat.proj = yk_m4_perspective(DEG_TO_RAD * 45., renderer->extent.width / (f32)renderer->extent.height, 0.1f, 10.0f);
 
     // +z is back. +y is up , +x is right
@@ -1014,13 +1030,13 @@ void createDescriptorPool(YkRenderer* renderer)
 
     poolInfo.maxSets = 4;
 
-    VkResultAssert(vkCreateDescriptorPool(renderer->device, &poolInfo, 0 , &renderer->descriptorPool), "descripter pool")
+    VkResultAssert(vkCreateDescriptorPool(renderer->device, &poolInfo, 0, &renderer->descriptorPool), "descripter pool")
 
 }
 
 void createDescriptorSets(YkRenderer* renderer, ubuffer* ubo, render_object* ro)
 {
-    VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT] = {renderer->descriptorSetLayout,renderer->descriptorSetLayout };
+    VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT] = { renderer->descriptorSetLayout,renderer->descriptorSetLayout };
     VkDescriptorSetAllocateInfo allocInfo = { };
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = renderer->descriptorPool;
@@ -1029,23 +1045,23 @@ void createDescriptorSets(YkRenderer* renderer, ubuffer* ubo, render_object* ro)
 
     VkResultAssert(vkAllocateDescriptorSets(renderer->device, &allocInfo, &ro->descriptorSet[0]), "descriptor sets")
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-        VkDescriptorBufferInfo bufferInfo = { };
-        bufferInfo.buffer = ubo->buffer.handle;
-        bufferInfo.offset = 0;
-        bufferInfo.range = sizeof(mvp_matrix);
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+            VkDescriptorBufferInfo bufferInfo = { };
+            bufferInfo.buffer = ubo->buffer.handle;
+            bufferInfo.offset = 0;
+            bufferInfo.range = sizeof(mvp_matrix);
 
-        VkWriteDescriptorSet descriptorWrite = { };
-        descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet = ro->descriptorSet[i];
-        descriptorWrite.dstBinding = 0;
-        descriptorWrite.dstArrayElement = 0;
-        descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptorWrite.descriptorCount = 1;
-        descriptorWrite.pBufferInfo = &bufferInfo;
+            VkWriteDescriptorSet descriptorWrite = { };
+            descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptorWrite.dstSet = ro->descriptorSet[i];
+            descriptorWrite.dstBinding = 0;
+            descriptorWrite.dstArrayElement = 0;
+            descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descriptorWrite.descriptorCount = 1;
+            descriptorWrite.pBufferInfo = &bufferInfo;
 
-        vkUpdateDescriptorSets(renderer->device, 1, &descriptorWrite, 0, 0);
-    }
+            vkUpdateDescriptorSets(renderer->device, 1, &descriptorWrite, 0, 0);
+        }
 }
 
 void yk_create_sync_objs(YkRenderer* renderer)
@@ -1101,16 +1117,24 @@ void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
 
 void yk_renderer_innit_model(YkRenderer* renderer, const vertex vertices[], const u16 indices[], render_object* render_object)
 {
- 
+
     yk_create_vert_buffer(renderer, vertices, sizeof(vertices[0]) * 4, &render_object->vert_buffer);
     yk_create_index_buffer(renderer, indices, sizeof(indices[0]) * 6, &render_object->index_buffer);
-    
+
 
     createUniformBuffers(renderer, sizeof(mvp_matrix), render_object->ubo);
-    
+
     createDescriptorSets(renderer, render_object->ubo, render_object);
 }
 
+/*
+    Note: A draw loop should typically start with waiting for fences (fence ensure gpu / cpu sync)
+
+    image index vs current frame
+    https://stackoverflow.com/questions/72794542/c-vulkan-swapchain-image-index-vs-current-frame
+
+    I still don't understand it. But basically, if you're dealing with swapchain index, use image index
+*/
 
 void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
 {
@@ -1121,8 +1145,11 @@ void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
 
 
     VkResultAssert(vkWaitForFences(renderer->device, 1, &current_frame->in_flight_fence, VK_TRUE, UINT64_MAX), "Wait for fences")
+        VkResultAssert(vkResetFences(renderer->device, 1, &current_frame->in_flight_fence), "Reset fences");
 
-        uint32_t imageIndex = -1;
+
+
+    u32 imageIndex = -1;
 
     if (vkAcquireNextImageKHR(renderer->device, renderer->swapchain, UINT64_MAX,
         current_frame->image_available_semawhore,
@@ -1133,9 +1160,6 @@ void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
             return;
         }
     }
-
-
-    VkResultAssert(vkResetFences(renderer->device, 1, &current_frame->in_flight_fence), "Reset fences");
 
 
 
@@ -1150,7 +1174,7 @@ void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
     vk_color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     vk_color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     vk_color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    vk_color_attachment.clearValue.color = VkClearColorValue{ 0.0f, 0.0f, 0.0f, 1.0f };
+    vk_color_attachment.clearValue.color = VkClearColorValue{ 0.0f, 0.01f, 0.03f, 1.0f };
 
     VkRenderingInfoKHR vk_rendering_info = { };
     vk_rendering_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
@@ -1173,6 +1197,8 @@ void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
     vk_cmd_buffer_begin_info.pInheritanceInfo = 0;
 
     VkResultAssert(vkBeginCommandBuffer(current_frame->cmd_buffers, &vk_cmd_buffer_begin_info), "Command buffer begin");
+    //transition_image(renderer, current_frame->cmd_buffers, renderer->swapchain_image_list[renderer->current_frame], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
 
     // Begin rendering
     vkCmdBeginRenderingKHR(current_frame->cmd_buffers, &vk_rendering_info);
@@ -1214,33 +1240,7 @@ void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
     // End rendering
     vkCmdEndRenderingKHR(current_frame->cmd_buffers);
 
-    VkImageMemoryBarrier barrier = { };
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-    Assert(imageIndex < max_images, "Too many images.")
-
-        barrier.image = renderer->swapchain_image_list[imageIndex];
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-    barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-
-    vkCmdPipelineBarrier(
-        current_frame->cmd_buffers,
-        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-        0,
-        0, 0,
-        0, 0,
-        1, &barrier
-    );
+    transition_image(renderer, current_frame->cmd_buffers, renderer->swapchain_image_list[imageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     VkResultAssert(vkEndCommandBuffer(current_frame->cmd_buffers), "Command buffer end");
 
@@ -1300,14 +1300,14 @@ void yk_renderer_wait(YkRenderer* renderer)
 }
 
 b8 yk_recreate_swapchain(YkRenderer* renderer, YkWindow* win)
-{ 
+{
     if (!win->win_data.is_running)
     {
         return false;
     }
 
     vkDeviceWaitIdle(renderer->device);
-   
+
     for (i32 i = 0; i < max_images; i++)
     {
         vkDestroyImageView(renderer->device, renderer->swapchain_image_view_list[i], 0);
@@ -1315,7 +1315,7 @@ b8 yk_recreate_swapchain(YkRenderer* renderer, YkWindow* win)
 
     vkDestroySwapchainKHR(renderer->device, renderer->swapchain, 0);
 
- 
+
     yk_create_swapchain(renderer, win);
 
     return true;
@@ -1343,7 +1343,7 @@ void get_attrib_desc(VkVertexInputAttributeDescription out[])
     out[1].location = 1;
     out[1].format = VK_FORMAT_R32G32B32_SFLOAT;
     out[1].offset = offsetof(vertex, color);
-   
+
 }
 
 void yk_create_buffer(YkRenderer* ren, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory)
@@ -1356,13 +1356,13 @@ void yk_create_buffer(YkRenderer* ren, VkDeviceSize size, VkBufferUsageFlags usa
 
     VkResultAssert(vkCreateBuffer(ren->device, &bufferInfo, 0, buffer), "Created buffer")
 
-    VkMemoryRequirements memRequirements;
+        VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(ren->device, *buffer, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo = { };
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = findMemoryType(ren,memRequirements.memoryTypeBits, properties);
+    allocInfo.memoryTypeIndex = findMemoryType(ren, memRequirements.memoryTypeBits, properties);
 
     VkResultAssert(vkAllocateMemory(ren->device, &allocInfo, 0, bufferMemory), "Buffer memory allocation");
 
