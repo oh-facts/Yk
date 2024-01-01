@@ -121,11 +121,18 @@ void _check_vk_result(VkResult result, const char* msg) {
 #define log_extention(Expression)
 #endif
 
+/*
+    Pure vulkan related boilerplate
+*/
 void yk_innit_vulkan(YkRenderer* renderer);
 void yk_create_surface(YkRenderer* renderer, YkWindow* win);
 void yk_pick_physdevice(YkRenderer* renderer);
 void yk_find_queues(YkRenderer* renderer);
 void yk_create_device(YkRenderer* renderer);
+/*
+    -------------------------------
+*/
+
 void yk_create_swapchain(YkRenderer* renderer, YkWindow* win);
 void createDescriptorSetLayout(YkRenderer* renderer);
 void yk_create_gfx_pipeline(YkRenderer* renderer);
@@ -335,9 +342,7 @@ void yk_pick_physdevice(YkRenderer* renderer)
 {
     // 5.1 starts here
     //Physical Device
-    VkPhysicalDevice vk_phys_device = { };
 
-    
     #define max_devices 3
 
     u32 devices = 0;
@@ -348,27 +353,67 @@ void yk_pick_physdevice(YkRenderer* renderer)
     VkPhysicalDevice device_list[max_devices] = { };
 
     VkResultAssert(vkEnumeratePhysicalDevices(renderer->vk_instance, &devices, device_list), "physical device detection")
-    vk_phys_device = device_list[0];
+ 
+    //ToDo(facts): Account for multiple "good" gpus (one gpu is best)
 
-    //ToDo(facts) poll device properties properly
-    // But I only have one GPU so its fine for now.
+    //not compulsory, but appreciated
+    bool is_discrete[max_devices] = { false };
 
+    //compulsory features are dynamic rendering, syncronization2, buffer device address and descriptor indexing
+    bool compulsory_features[max_devices] = { false };
 
     for (i32 i = 0; i < devices; i++)
     {
         VkPhysicalDeviceProperties vk_phys_device_props = { };
         vkGetPhysicalDeviceProperties(device_list[i], &vk_phys_device_props);
 
+        VkPhysicalDeviceFeatures2 vk_phys_device_feat = { };
+        vk_phys_device_feat.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+
+        VkPhysicalDeviceVulkan13Features vk13_feat = { };
+        VkPhysicalDeviceVulkan12Features vk12_feat = { };
+
+        vk12_feat.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+        vk13_feat.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+
+        vk_phys_device_feat.pNext = &vk12_feat;
+        vk12_feat.pNext = &vk13_feat;
+        vk13_feat.pNext = 0;
+
+        vkGetPhysicalDeviceFeatures2(device_list[i], &vk_phys_device_feat);
+
+
         if (vk_phys_device_props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
         {
+            is_discrete[i] = true;
+        }
+       
+        if (vk13_feat.dynamicRendering && vk13_feat.synchronization2 && vk12_feat.bufferDeviceAddress && vk12_feat.descriptorIndexing)
+        {
+            compulsory_features[i] = true;
+        }
+
+        if (is_discrete[i] && compulsory_features[i])
+        {
             renderer->phys_device = device_list[i];
-            log_device(&vk_phys_device_props)
-            break;
+            return;
         }
     }
 
-
-    log_extention(check_device_extension_support(renderer->phys_device))
+    for (i32 i = 0; i < 3; i++)
+    {
+        if (compulsory_features[i])
+        {
+            renderer->phys_device = device_list[i];
+            printf("You don't have a discrete gpu. But your gpu supports the features required");
+            return;
+        }
+    }
+    
+    //Control shouldn't come here
+    Assert(false, "Your gpu is trash lmao. It doesn't have basic (vulkan 1.2 and 1.3) features.");
+ 
+    //log_extention(check_device_extension_support(renderer->phys_device))
 }
 
 void yk_find_queues(YkRenderer* renderer)
