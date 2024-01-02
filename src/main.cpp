@@ -130,12 +130,30 @@ int main(int argc, char *argv[])
     yk_innit_window(&state.window);
     state.start(&state);
 
-    //clock_t now = clock();
+ 
+    //ToDo (facts 8:07 1/2/24): Calculate average
+    LARGE_INTEGER start_counter = {};
+    QueryPerformanceCounter(&start_counter);
+
+    LARGE_INTEGER perf_freq = {};
+    QueryPerformanceFrequency(&perf_freq);
+    i64 counter_freq = perf_freq.QuadPart;
+
+
+
+    f64 total_time_elapsed = 0;
+
+    f32 time_since_print = 0;
+    
+    constexpr u32 print_stats_time = 1;
 
     while (state.is_running(&state))
     {
+        f64 last_time_elapsed = total_time_elapsed;
+
         yk_window_poll();
-      //  printf("%f\n", (clock() - now)/1000.f);
+        
+        //game loop--------
         if (!state.window.win_data.is_minimized)
         {
             state.update(&state);
@@ -150,7 +168,30 @@ int main(int argc, char *argv[])
                 state.start(&state);
             }
         }
+        //-------game loop
 
+        LARGE_INTEGER end_counter = {};
+        QueryPerformanceCounter(&end_counter);
+
+        i64 counter_elapsed = end_counter.QuadPart - start_counter.QuadPart;
+        total_time_elapsed = (1.f * counter_elapsed) / counter_freq;
+        
+        f64 difference = total_time_elapsed - last_time_elapsed;
+        time_since_print += difference;
+
+        if (time_since_print > print_stats_time)
+        {
+            f64 frame_time = total_time_elapsed - last_time_elapsed;
+
+            printf("\n     perf stats     \n");
+            printf("\n--------------------\n");
+            printf("frame time : %.3f ms\n", frame_time * 1000.f);
+            printf("frame rate : %.0f \n", 1/frame_time);
+            printf("---------------------\n");
+
+            time_since_print = 0;
+        }
+     
     }
 
     yk_free_window(&state.window);
