@@ -114,14 +114,10 @@ int main(int argc, char *argv[])
     engine_memory.temp_storage = (u8*)engine_memory.perm_storage + engine_memory.perm_storage_size;
    
 
-    //time_t start, now;
-    //double elapsed;
-    //time(&start);
     struct YkDebugAppState state = { };
     reload_dll(&state);
 
     state.ren.clock = clock();
-
 
     yk_innit_window(&state.window);
     state.start(&state);
@@ -135,10 +131,6 @@ int main(int argc, char *argv[])
         {
             state.update(&state);
 
-            //ToDo(facts): Do this every time a key is pressed
-      //      time(&now);
-        //    elapsed = difftime(now, start);
-
             if (state.window.test == 1) {
                 state.window.test = 0;
                 state.shutdown(&state);
@@ -147,9 +139,6 @@ int main(int argc, char *argv[])
                 reload_dll(&state);
 
                 state.start(&state);
-                //update_ref(&state);
-
-               // time(&start);
             }
         }
 
