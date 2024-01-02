@@ -11,17 +11,19 @@ project(yk)
 include_directories(src)
 
 find_package(Vulkan REQUIRED)
+add_subdirectory(vendor/vma REQUIRED)
 
 include_directories(
     src
     include
     vendor/stb/include
+    vendor/vma/include
     ${Vulkan_INCLUDE_DIRS}
 )
 
 
 
-set(yk_src "src/yk.cpp" "src/renderer/renderer.cpp" "src/yk_debug_app.cpp" "vendor/stb/src/stb_image.c")
+set(yk_src  "src/renderer/vma_implementation.cpp" "src/renderer/renderer.cpp" "src/yk_debug_app.cpp" "vendor/stb/src/stb_image.c" )
 
 set(yk_platform_layer  "src/win32_window.cpp")
 
@@ -34,7 +36,7 @@ else()
     add_library(${PROJECT_NAME} STATIC ${yk_src})
 endif()
 
-target_link_libraries(${PROJECT_NAME}  ${Vulkan_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}  ${Vulkan_LIBRARIES} GPUOpen::VulkanMemoryAllocator)
 
 if(YK_BUILD_SHARED)
     add_executable(yk_test "src/main.cpp")

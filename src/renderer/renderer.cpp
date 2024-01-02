@@ -1,5 +1,5 @@
 #include <renderer/renderer.h>
-
+#include <yk_window.h>
 
 #if defined (_WIN32)
 #include <Windows.h>
@@ -1113,6 +1113,15 @@ void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
     yk_create_swapchain(renderer, window);
     //---pure boiler plate ---//
 
+    VmaAllocatorCreateInfo allocatorInfo = {};
+    allocatorInfo.physicalDevice = renderer->phys_device;
+    allocatorInfo.device = renderer->device;
+    allocatorInfo.instance = renderer->vk_instance;
+    allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+
+  //  VmaAllocator allocator = {};
+    vmaCreateAllocator(&allocatorInfo, &renderer->allocator);
+
     /* per objectish */
     createDescriptorSetLayout(renderer);
     yk_create_gfx_pipeline(renderer);
@@ -1122,6 +1131,8 @@ void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
     //---can be optimized per object. But boilerplate for now --//
     yk_create_sync_objs(renderer);
     //---can be optimized per object. But boilerplate for now --//
+
+//    vmaDestroyAllocator(allocator)
 
 }
 

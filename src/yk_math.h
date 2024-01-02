@@ -1,8 +1,9 @@
 #ifndef YK_MATH
 #define YK_MATH
 
+#include <defines.h>
 #include <math.h>
-#include <yk.h>
+
 #define PI 	(3.14159265359f)
 #define DEG_TO_RAD (PI/180.f)
 #define RAD_TO_DEG (180.f/PI)
