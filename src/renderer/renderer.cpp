@@ -1015,7 +1015,7 @@ void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentIm
 
     mvp_mat.model = yk_m4_translate(mvp_mat.model, v3{ 0.8f * flag, 0., -8. });
 
-    mvp_mat.model = yk_m4_rotate(mvp_mat.model, time * 3.f, v3{ 0, 1, 0 });
+    mvp_mat.model = yk_m4_rotate(mvp_mat.model, time * 1.f, v3{ 0, 1, 0 });
     mvp_mat.view = yk_m4_look_at(v3{ 0, 0, 1 }, v3{ 0, 0, -1. }, v3{ 0, 1, 0 });
     mvp_mat.proj = yk_m4_perspective(DEG_TO_RAD * 45., renderer->extent.width / (f32)renderer->extent.height, 0.1f, 10.0f);
 
@@ -1100,9 +1100,12 @@ void yk_create_sync_objs(YkRenderer* renderer)
     }
 
 }
-
+#define VMA_IMPLEMENTATION
+#include <vk_mem_alloc.h>
 void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
 {
+  
+
     renderer->current_frame = 0;
     //---pure boiler plate ---//
     yk_innit_vulkan(renderer);
@@ -1122,7 +1125,16 @@ void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
     //---can be optimized per object. But boilerplate for now --//
     yk_create_sync_objs(renderer);
     //---can be optimized per object. But boilerplate for now --//
+    VmaAllocator _allocator;
 
+    VmaAllocatorCreateInfo allocatorInfo = {};
+    allocatorInfo.physicalDevice = renderer->phys_device;
+    allocatorInfo.device = renderer->device;
+    allocatorInfo.instance = renderer->vk_instance;
+    allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+    vmaCreateAllocator(&allocatorInfo, &_allocator);
+
+    vmaDestroyAllocator(_allocator);
 }
 
 void yk_renderer_innit_model(YkRenderer* renderer, const vertex vertices[], const u16 indices[], render_object* render_object)

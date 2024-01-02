@@ -5,6 +5,11 @@ set(CMAKE_CXX_STANDARD 20)
 #project name
 project(yk)
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nullability-completeness")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nullability-completeness")
+endif()
 
 #--------target--------#
 
@@ -16,6 +21,7 @@ include_directories(
     src
     include
     vendor/stb/include
+    vendor/vma
     ${Vulkan_INCLUDE_DIRS}
 )
 
