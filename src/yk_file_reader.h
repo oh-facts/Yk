@@ -18,12 +18,12 @@ static char* yk_read_text_file(const char* filepath);
     Reads a binary file (no next transformations applied) at filepath and retuns data as a char *
     The returned char* needs to be freed by the caller.
 */
-static char* yk_read_binary_file(const char* filename, size_t* fileSize);
+static char* yk_read_binary_file(const char* filename, size_t* out_fileSize);
 
 /*
     Copies a file at source path and creates a new file at destination path with the contents
 */
-static int copy_file(const char* sourcePath, const char* destinationPath);
+static int yk_clone_file(const char* sourcePath, const char* destinationPath);
 
 
 /*
@@ -112,7 +112,7 @@ char* yk_read_binary_file(const char* filename, size_t* fileSize)
     return buffer;
 }
 
-int copy_file(const char* sourcePath, const char* destinationPath) {
+int yk_clone_file(const char* sourcePath, const char* destinationPath) {
     FILE* sourceFile, * destinationFile;
     char buffer[4096];
     size_t bytesRead;

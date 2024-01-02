@@ -85,8 +85,13 @@
 
 /*
     Anyways work on making the renderer not require win layer. I don't want dogshit windows.h to meddle with the rest of my project. FUCK MICROSOFT (John Malkovwitch voice)
+    Done
 */
 
+/*
+    time works now. I can only imagine I was having some buffer overflow, since I am calculating time very differently now and it works. Made branches just in case someone 
+    wants to investigate.
+*/
 
 #include <yk_debug_app.h>
 

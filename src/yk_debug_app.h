@@ -35,7 +35,7 @@ struct YkDebugAppState
 
 inline void reload_dll(struct YkDebugAppState* state)
 {
-    copy_file("yk.dll", "temp.dll");
+    yk_clone_file("yk.dll", "temp.dll");
 
     state->hModule = LoadLibraryA("temp.dll");
     if (state->hModule == NULL) {

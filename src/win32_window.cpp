@@ -113,6 +113,7 @@ void yk_free_window(YkWindow* window)
     DestroyWindow((HWND)window->win_handle);
 }
 
+/*
 void yk_get_framebuffer_size(YkWindow* win, u32* width, u32* height)
 {
     RECT clientRect;
@@ -121,3 +122,4 @@ void yk_get_framebuffer_size(YkWindow* win, u32* width, u32* height)
     *width = (u32)clientRect.right - clientRect.left;
     *height = (u32)clientRect.bottom - clientRect.top;
 }
+*/

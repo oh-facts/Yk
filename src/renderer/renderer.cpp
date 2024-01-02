@@ -122,6 +122,16 @@ void _check_vk_result(VkResult result, const char* msg) {
 #define log_extention(Expression)
 #endif
 
+void yk_get_framebuffer_size(YkWindow* win, u32* width, u32* height)
+{
+    RECT clientRect;
+    GetClientRect((HWND)win->win_handle, &clientRect);
+
+    *width = (u32)clientRect.right - clientRect.left;
+    *height = (u32)clientRect.bottom - clientRect.top;
+}
+
+
 /*
     Pure vulkan related boilerplate
 */
@@ -1274,7 +1284,7 @@ void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
     VkSwapchainKHR vk_swapchains[] = { renderer->swapchain };
     vk_present_info.swapchainCount = 1;
     vk_present_info.pSwapchains = vk_swapchains;
-    vk_present_info.pImageIndices = &imageIndex;
+    vk_present_info.pImageIndices = & imageIndex;
 
     vk_present_info.pResults = 0;
 

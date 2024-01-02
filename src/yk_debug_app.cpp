@@ -16,8 +16,8 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
     const vertex vertices2[] = {
        {{-0.5f, -0.5f}, {1.0f, 33 / 255.0f, 140 / 255.0f}},
        {{0.5f, -0.5f}, {1.f, 216 / 255.f, 0}},
-       {{0.5f, 0.5f}, {33 / 255.f, 177 / 255.f, 1.f}},
-       {{-0.5f, 0.5f}, {1.0f, 33 / 255.0f, 140 / 255.0f}}
+       {{0.f, 0.5f}, {33 / 255.f, 177 / 255.f, 1.f}},
+       {{-0.f, 0.5f}, {1.0f, 33 / 255.0f, 140 / 255.0f}}
     };
 
     const u16 indices[] = {
