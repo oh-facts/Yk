@@ -122,7 +122,6 @@ int main(int argc, char *argv[])
     engine_memory.perm_storage = VirtualAlloc(base_address, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     engine_memory.temp_storage = (u8*)engine_memory.perm_storage + engine_memory.perm_storage_size;
    
-
     struct YkDebugAppState state = { };
     reload_dll(&state);
 
@@ -131,10 +130,12 @@ int main(int argc, char *argv[])
     yk_innit_window(&state.window);
     state.start(&state);
 
+    //clock_t now = clock();
+
     while (state.is_running(&state))
     {
         yk_window_poll();
-
+      //  printf("%f\n", (clock() - now)/1000.f);
         if (!state.window.win_data.is_minimized)
         {
             state.update(&state);
