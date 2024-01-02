@@ -114,7 +114,7 @@ void yk_free_window(YkWindow* window)
     DestroyWindow(window->win_handle);
 }
 
-/*
+
 struct _YkTime
 {
     LARGE_INTEGER freq;
@@ -139,4 +139,3 @@ f32 yk_get_time(YkTime* time)
 
     return ((f32)now.QuadPart - _time->start.QuadPart) / _time->freq.QuadPart;
 }
-*/

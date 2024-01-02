@@ -31,10 +31,10 @@ YK_API void yk_innit_window(YkWindow* window);
 YK_API void yk_window_poll();
 YK_API void yk_free_window(YkWindow* window);
 
-//typedef void* YkTime;
+typedef void* YkTime;
 
-//YK_API void yk_time_innit(YkTime* time);
-//YK_API f32 yk_get_time(YkTime* time);
+YK_API void yk_time_innit(YkTime* time);
+YK_API f32 yk_get_time(YkTime* time);
 
 
 #endif // !YK_WIN32_WINDOW_H

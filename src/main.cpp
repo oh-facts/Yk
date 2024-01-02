@@ -114,32 +114,32 @@ int main(int argc, char* argv[])
     engine_memory.perm_storage = VirtualAlloc(base_address, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     engine_memory.temp_storage = (u8*)engine_memory.perm_storage + engine_memory.perm_storage_size;
 
-
+    YkTime time;
+    yk_time_innit(&time);
 
     struct YkDebugAppState state = { };
     reload_dll(&state);
 
-    state.ren.clock = clock();
+    state.ren.clock = yk_get_time(&time);
 
 
     yk_innit_window(&state.window);
     state.start(&state);
-    /*
-    YkTime time;
-    yk_time_innit(&time);
+    
+   
 
     f32 start = yk_get_time(&time);
     u32 frame_count = 0;
     f32 time_elapsed = 0;
-    */
+    
     while (state.is_running(&state))
     {
         //ToDo(facts): calculate average
-        /*
+        
         f32 now = yk_get_time(&time);
         f32 frame_time = now - start;
         start = now;
-
+        printf("e");
         time_elapsed += frame_time;
         frame_count++;
 
@@ -153,19 +153,20 @@ int main(int argc, char* argv[])
             frame_count = 0;
             time_elapsed = 0;
         }
-        */
+        
         yk_window_poll();
 
         if (!state.window.win_data.is_minimized)
         {
+            printf("f");
             state.update(&state);
-
+            printf("f");
             if (state.window.test == 1) {
                 state.window.test = 0;
                 state.shutdown(&state);
-
-                FreeLibrary(state.hModule);
-                reload_dll(&state);
+                printf("q");
+                //FreeLibrary(state.hModule);
+               // reload_dll(&state);
                 // yk_time_innit(&time);
             }
         }
