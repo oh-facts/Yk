@@ -78,9 +78,17 @@
 //              Work on submitting render data to the renderer
 
 
+/*
+    Absolutely no idea why I am having some crashes. Made new branches to investigate later.
+    Considering sdl because windows.h is a fuckfest
+*/
+
+/*
+    Anyways work on making the renderer not require win layer. I don't want dogshit windows.h to meddle with the rest of my project. FUCK MICROSOFT (John Malkovwitch voice)
+*/
+
+
 #include <yk_debug_app.h>
-#include <win32_window.h>
-#include <yk_platform_layer.h>
 
 struct YkMemory
 {
@@ -115,47 +123,38 @@ int main(int argc, char *argv[])
     engine_memory.temp_storage = (u8*)engine_memory.perm_storage + engine_memory.perm_storage_size;
    
 
-   
     struct YkDebugAppState state = { };
     reload_dll(&state);
 
     state.ren.clock = clock();
 
 
-    yk_innit_window(&state.window);
-    state.start(&state);
-    /*
-    YkTime time;
-    yk_time_innit(&time);
-   
-    f32 start = yk_get_time(&time);
-    u32 frame_count = 0;
-    f32 time_elapsed = 0;
-    */
+ 
+    //ToDo (facts 8:07 1/2/24): Calculate average
+    LARGE_INTEGER start_counter = {};
+    QueryPerformanceCounter(&start_counter);
+
+    LARGE_INTEGER perf_freq = {};
+    QueryPerformanceFrequency(&perf_freq);
+    i64 counter_freq = perf_freq.QuadPart;
+
+
+
+    f64 total_time_elapsed = 0;
+
+    f32 time_since_print = 0;
+    
+    constexpr u32 print_stats_time = 1;
+
     while (state.is_running(&state))
     {
-        //ToDo(facts): calculate average
-        /*
-        f32 now = yk_get_time(&time);
-        f32 frame_time = now - start;
-        start = now;
+        f64 last_time_elapsed = total_time_elapsed;
 
-        time_elapsed += frame_time;
-        frame_count++;
-
-        if (time_elapsed > 5)
-        {
-            f32 fps = frame_count / time_elapsed;
-
-            printf("fps: %.0f\n", fps);
-            printf("ft:  %f\n", 1/fps);
-
-            frame_count = 0;
-            time_elapsed = 0;
-        }
-        */
+    while (state.is_running(&state))
+    {
         yk_window_poll();
-
+        
+        //game loop--------
         if (!state.window.win_data.is_minimized)
         {
             state.update(&state);
@@ -164,12 +163,36 @@ int main(int argc, char *argv[])
                 state.window.test = 0;
                 state.shutdown(&state);
 
-                FreeLibrary(state.hModule);
-                reload_dll(&state);
-               // yk_time_innit(&time);
+
+                state.start(&state);
             }
         }
+        //-------game loop
 
+        LARGE_INTEGER end_counter = {};
+        QueryPerformanceCounter(&end_counter);
+
+        i64 counter_elapsed = end_counter.QuadPart - start_counter.QuadPart;
+        total_time_elapsed = (1.f * counter_elapsed) / counter_freq;
+        
+        f64 difference = total_time_elapsed - last_time_elapsed;
+        time_since_print += difference;
+
+        if (time_since_print > print_stats_time)
+        {
+            f64 frame_time = total_time_elapsed - last_time_elapsed;
+
+            printf("\n     perf stats     \n");
+            printf("\n--------------------\n");
+            printf("frame time : %.3f ms\n", frame_time * 1000.f);
+            printf("frame rate : %.0f \n", 1/frame_time);
+            printf("---------------------\n");
+
+            time_since_print = 0;
+
+            }
+        }
+     
     }
 
     yk_free_window(&state.window);
