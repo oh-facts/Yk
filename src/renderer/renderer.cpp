@@ -2,6 +2,7 @@
 
 
 #if defined (_WIN32)
+#include <Windows.h>
 #include <vulkan/vulkan_win32.h>
 #elif defined(__linux__)
 #include <vulkan/vulkan_xcb.h>
@@ -125,7 +126,7 @@ void _check_vk_result(VkResult result, const char* msg) {
     Pure vulkan related boilerplate
 */
 void yk_innit_vulkan(YkRenderer* renderer);
-void yk_create_surface(YkRenderer* renderer, YkWindow* win);
+void yk_create_surface(YkRenderer* renderer, void* native_handle);
 void yk_pick_physdevice(YkRenderer* renderer);
 void yk_find_queues(YkRenderer* renderer);
 void yk_create_device(YkRenderer* renderer);
@@ -296,7 +297,7 @@ void  yk_innit_vulkan(YkRenderer* renderer)
 
 }
 
-void yk_create_surface(YkRenderer* renderer, YkWindow* win)
+void yk_create_surface(YkRenderer* renderer, void * native_handle)
 {
     //Needs to be done first because queues need to be able to present and for that I need a surface
     //34.2.3
@@ -306,12 +307,10 @@ void yk_create_surface(YkRenderer* renderer, YkWindow* win)
     vk_win32_surface_create_info_khr.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     vk_win32_surface_create_info_khr.pNext = 0;
     vk_win32_surface_create_info_khr.flags = 0;
-    vk_win32_surface_create_info_khr.hinstance = win->hinstance;
-    vk_win32_surface_create_info_khr.hwnd = win->win_handle;
+    vk_win32_surface_create_info_khr.hinstance = GetModuleHandle(0);
+    vk_win32_surface_create_info_khr.hwnd = (HWND)native_handle;
 
     VkResultAssert(vkCreateWin32SurfaceKHR(renderer->vk_instance, &vk_win32_surface_create_info_khr, 0, &renderer->surface), "Win 32 Surface Creation");
-
-
 }
 
 void yk_pick_physdevice(YkRenderer* renderer)
@@ -511,12 +510,13 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
         vk_extent = vk_surface_caps.currentExtent;
     }
     else {
-        RECT clientRect;
-        GetClientRect(win->win_handle, &clientRect);
+        u32 width = 0;
+        u32 height = 0;
+        yk_get_framebuffer_size(win, &width, &height);
 
         VkExtent2D actualExtent = {
-            .width = (uint32_t)(clientRect.right - clientRect.left),
-            .height = (uint32_t)(clientRect.bottom - clientRect.top)
+            .width = width,
+            .height = height
         };
 
         // Ensure the width and height are never zero
@@ -1096,7 +1096,7 @@ void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
     renderer->current_frame = 0;
     //---pure boiler plate ---//
     yk_innit_vulkan(renderer);
-    yk_create_surface(renderer, window);
+    yk_create_surface(renderer, window->win_handle);
     yk_pick_physdevice(renderer);
     yk_find_queues(renderer);
     yk_create_device(renderer);
@@ -1145,7 +1145,7 @@ void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
 
 
     VkResultAssert(vkWaitForFences(renderer->device, 1, &current_frame->in_flight_fence, VK_TRUE, UINT64_MAX), "Wait for fences")
-        VkResultAssert(vkResetFences(renderer->device, 1, &current_frame->in_flight_fence), "Reset fences");
+    VkResultAssert(vkResetFences(renderer->device, 1, &current_frame->in_flight_fence), "Reset fences");
 
 
 

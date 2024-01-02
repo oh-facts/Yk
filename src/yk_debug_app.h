@@ -3,7 +3,7 @@
 
 #include <yk.h>
 #include <yk_api.h>
-
+#include <Windows.h>
 typedef void (*debug_app_start_fn)(struct YkDebugAppState* state);
 typedef void (*debug_app_update_fn)(struct YkDebugAppState* state);
 typedef int (*debug_app_is_running_fn)(struct YkDebugAppState* state);
@@ -55,6 +55,8 @@ inline void reload_dll(struct YkDebugAppState* state)
         FreeLibrary(state->hModule);
         exit(1);
     }
+
+    printf("dll reload successful\n");
 }
 
 #endif // !YK_APP_H

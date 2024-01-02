@@ -1,8 +1,7 @@
-#ifndef YK_WIN32_WINDOW_H
-#define YK_WIN32_WINDOW_H
+#ifndef YK_WINDOW_H
+#define YK_WINDOW_H
 
 #include<yk.h>
-#include <Windows.h>
 #include <yk_api.h>
 
 typedef struct YkWindow YkWindow;
@@ -21,14 +20,13 @@ struct YkWindow
 {
 	//test is a debug key press I use, until I get input properly implemented
 	int test;
-	HWND win_handle;
-	HINSTANCE hinstance;
+	void * win_handle;
 	win_data win_data;
 };
 
-YK_API LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 YK_API void yk_innit_window(YkWindow* window);
 YK_API void yk_window_poll();
 YK_API void yk_free_window(YkWindow* window);
+YK_API void yk_get_framebuffer_size(YkWindow* win, u32* width, u32* height);
 
 #endif // !YK_WIN32_WINDOW_H

@@ -1,9 +1,10 @@
-#include <win32_window.h>
+#include <yk_window.h>
+#include <Windows.h>
 
 #define WIN_SIZE_X 800
 #define WIN_SIZE_Y 600
 
-LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+YK_API LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
 
     switch (msg)
@@ -15,7 +16,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case VK_ESCAPE:
         {
             win->test = 1;
-            printf("w");
         }break;
         }
     }break;
@@ -64,7 +64,6 @@ void yk_innit_window(YkWindow* window)
 {
     window->win_data.is_running = true;
     window->win_data.is_minimized = false;
-    window->hinstance = GetModuleHandle(0);
     window->win_data.size_x = WIN_SIZE_X;
     window->win_data.size_y = WIN_SIZE_Y;
     window->test = 0;
@@ -74,7 +73,7 @@ void yk_innit_window(YkWindow* window)
     wc.lpfnWndProc = WndProc;
     wc.cbClsExtra = 0;
     wc.cbWndExtra = 0;
-    wc.hInstance = window->hinstance;
+    wc.hInstance = GetModuleHandle(0);
     wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
     wc.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
@@ -94,8 +93,8 @@ void yk_innit_window(YkWindow* window)
         exit(-1);
     }
 
-    ShowWindow(window->win_handle, SW_SHOWNORMAL);
-    UpdateWindow(window->win_handle);
+    ShowWindow((HWND)window->win_handle, SW_SHOWNORMAL);
+    UpdateWindow((HWND)window->win_handle);
 }
 
 void yk_window_poll()
@@ -111,6 +110,14 @@ void yk_window_poll()
 
 void yk_free_window(YkWindow* window)
 {
-    DestroyWindow(window->win_handle);
+    DestroyWindow((HWND)window->win_handle);
 }
 
+void yk_get_framebuffer_size(YkWindow* win, u32* width, u32* height)
+{
+    RECT clientRect;
+    GetClientRect((HWND)win->win_handle, &clientRect);
+
+    *width = (u32)clientRect.right - clientRect.left;
+    *height = (u32)clientRect.bottom - clientRect.top;
+}

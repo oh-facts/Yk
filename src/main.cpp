@@ -78,8 +78,17 @@
 //              Work on submitting render data to the renderer
 
 
+/*
+    Absolutely no idea why I am having some crashes. Made new branches to investigate later.
+    Considering sdl because windows.h is a fuckfest
+*/
+
+/*
+    Anyways work on making the renderer not require win layer. I don't want dogshit windows.h to meddle with the rest of my project. FUCK MICROSOFT (John Malkovwitch voice)
+*/
+
+
 #include <yk_debug_app.h>
-#include <win32_window.h>
 
 struct YkMemory
 {
@@ -121,7 +130,6 @@ int main(int argc, char *argv[])
 
     yk_innit_window(&state.window);
     state.start(&state);
-    
 
     while (state.is_running(&state))
     {
