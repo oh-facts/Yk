@@ -93,6 +93,10 @@
     wants to investigate.
 */
 
+/*
+    Work on the renderer now
+*/
+
 #include <yk_debug_app.h>
 
 struct YkMemory
