@@ -98,6 +98,18 @@
 */
 
 //ToDo(facts): compile vma as a dll so I don't have to compile it again
+//             false alarm. It doesn't take time anymore. idky gabe hates me so much lmao
+//
+
+//  I haven't gotten much work done. I understand vulkan a little better though. Also, I started following vkguide and its been helpful. My code wasn't too far off from what he did
+//  (Except sync2, descr indexing and buffer address. Dynamic rendering was practicially identical though
+//  
+//  The dll hotreloading has easily been the best decision so far. It works wonderfully rn. Idk how I managed other engines w/o it. Tbf I didn't
+// 
+// ToDo(facts 1703 1/5/24): Work through vkguide
+//
+//
+
 
 #include <yk_debug_app.h>
 
