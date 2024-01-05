@@ -68,6 +68,8 @@ struct YkRenderer
 	AllocatedImage draw_image;
 	VmaAllocator vma_allocator;
 
+	u32 frames_rendered;
+
 
 #if VK_USE_VALIDATION_LAYERS
 	VkDebugUtilsMessengerEXT debug_messenger;

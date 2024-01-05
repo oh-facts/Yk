@@ -1451,8 +1451,6 @@ void yk_renderer_raster_draw(YkRenderer* renderer, YkWindow* win)
 
     //command buffer recording over
 
-    VkPipelineStageFlags2 flags2 = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-
     VkSemaphoreSubmitInfo signal_semaphore = yk_semawhore_submit_info_create(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, current_frame->render_finished_semawhore);
     VkSemaphoreSubmitInfo wait_semaphore = yk_semawhore_submit_info_create(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, current_frame->image_available_semawhore );
 
@@ -1522,7 +1520,7 @@ void yk_renderer_draw(YkRenderer* renderer, YkWindow* win)
     transition_image(renderer, current_frame->cmd_buffers, renderer->swapchain_image_list[imageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     VkClearColorValue clearValue;
-    float flash = abs(sin(renderer->current_frame / 120.f));
+    float flash = abs(sin(renderer->frames_rendered / 120.f));
     clearValue = { { 0.0f, 0.0f, flash, 1.0f } };
 
     VkImageSubresourceRange clear_range = {
@@ -1538,6 +1536,45 @@ void yk_renderer_draw(YkRenderer* renderer, YkWindow* win)
     transition_image(renderer, current_frame->cmd_buffers, renderer->swapchain_image_list[imageIndex], VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     VkResultAssert(vkEndCommandBuffer(current_frame->cmd_buffers), "Command buffer end");
 
+    VkSemaphoreSubmitInfo signal_semaphore = yk_semawhore_submit_info_create(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, current_frame->render_finished_semawhore);
+    VkSemaphoreSubmitInfo wait_semaphore = yk_semawhore_submit_info_create(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, current_frame->image_available_semawhore);
+
+    VkCommandBufferSubmitInfo cmd_buffer_submit_info = yk_cmd_buffer_submit_info_create(current_frame->cmd_buffers);
+
+    VkSubmitInfo2 submit_info = yk_submit_info_create(&cmd_buffer_submit_info, &signal_semaphore, &wait_semaphore);
+
+
+
+    VkResultAssert(vkQueueSubmit2(renderer->gfx_q, 1, &submit_info, current_frame->in_flight_fence), "Draw command buffer submitted");
+
+
+    VkPresentInfoKHR vk_present_info = { };
+    vk_present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    vk_present_info.waitSemaphoreCount = 1;
+    vk_present_info.pWaitSemaphores = &current_frame->render_finished_semawhore;
+
+    vk_present_info.swapchainCount = 1;
+    vk_present_info.pSwapchains = &renderer->swapchain;
+    vk_present_info.pImageIndices = &imageIndex;
+
+    vk_present_info.pResults = 0;
+
+    //present q same as graphics for now
+    VkResult qpresent_result = vkQueuePresentKHR(renderer->gfx_q, &vk_present_info);
+
+    if (qpresent_result == VK_ERROR_OUT_OF_DATE_KHR || qpresent_result == VK_SUBOPTIMAL_KHR || win->win_data.is_resized)
+    {
+        win->win_data.is_resized = false;
+        if (yk_recreate_swapchain(renderer, win) == false)
+        {
+            return;
+        }
+    }
+
+    renderer->current_frame = (renderer->current_frame + 1) % MAX_FRAMES_IN_FLIGHT;
+
+    renderer->frames_rendered++;
 }
 
 void yk_renderer_wait(YkRenderer* renderer)
