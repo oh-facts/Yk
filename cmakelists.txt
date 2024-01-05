@@ -14,24 +14,26 @@ endif()
 #--------target--------#
 
 include_directories(src)
-
+#add_subdirectory(vendor/vma/include)
 find_package(Vulkan REQUIRED)
 
 include_directories(
     src
     include
     vendor/stb/include
-    vendor/vma
+    vendor/vma/include
     ${Vulkan_INCLUDE_DIRS}
 )
 
 
 
-set(yk_src "src/yk.cpp" "src/renderer/renderer.cpp" "src/yk_debug_app.cpp" "vendor/stb/src/stb_image.c")
+set(yk_src "src/yk.cpp" "src/renderer/renderer.cpp" "src/yk_debug_app.cpp" "vendor/stb/src/stb_image.c" )
 
 set(yk_platform_layer  "src/win32_window.cpp")
 
 add_library(platform STATIC ${yk_platform_layer} )
+
+
 
 if(YK_BUILD_SHARED)
     add_library(${PROJECT_NAME} SHARED ${yk_src}) 

@@ -10,7 +10,7 @@
 #include <renderer/mn_types.h>
 #include <yk_api.h>
 #include <time.h>
-
+#include <vma/vk_mem_alloc.h>
 typedef struct YkRenderer YkRenderer;
 
 /*
@@ -65,6 +65,9 @@ struct YkRenderer
 	render_object render_objects[10];
 	i32 num_ro;
 
+	AllocatedImage draw_image;
+	VmaAllocator vma_allocator;
+
 
 #if VK_USE_VALIDATION_LAYERS
 	VkDebugUtilsMessengerEXT debug_messenger;
@@ -88,7 +91,9 @@ void yk_renderer_wait(YkRenderer* renderer);
 void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window);
 void yk_renderer_innit_model(YkRenderer* renderer, const vertex vertices[], const u16 indices[], render_object* render_object);
 
-void yk_renderer_update(YkRenderer* renderer, YkWindow* win);
+void yk_renderer_raster_draw(YkRenderer* renderer, YkWindow* win);
+
+void yk_renderer_draw(YkRenderer* renderer, YkWindow* win);
 
 void yk_destroy_model(YkRenderer* renderer, render_object* render_object);
 

@@ -1,0 +1,20 @@
+# CMakeLists.txt for the library
+
+cmake_minimum_required(VERSION 3.12)
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+project(vma)
+
+find_package(Vulkan REQUIRED)
+
+include_directories(
+   
+  ${Vulkan_INCLUDE_DIRS}
+)
+
+
+set(SOURCE_FILES vma/src.c)
+
+# Create a shared library
+add_library(vma ${SOURCE_FILES})
+
+target_link_libraries(vma  ${Vulkan_LIBRARIES})

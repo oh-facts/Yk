@@ -8,7 +8,7 @@
 #define VK_EXT_PRINT_DEBUG 0
 #define VK_PRINT_SUCCESS 0
 #define LOG_DEVICE_DETAILS 0
-
+#include <vma/vk_mem_alloc.h>
 
 typedef struct vertex vertex;
 
@@ -55,5 +55,13 @@ typedef struct render_object
 	VkDescriptorSet descriptorSet[MAX_FRAMES_IN_FLIGHT];
 }render_object;
 
+struct AllocatedImage 
+{
+	VkImage image;
+	VkImageView imageView;
+ 	VmaAllocation allocation;
+	VkExtent3D imageExtent;
+	VkFormat imageFormat;
+};
 
 #endif // !RENDERER_MN_TYPES

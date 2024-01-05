@@ -165,6 +165,184 @@ void copyBuffer(YkRenderer* renderer, VkBuffer srcBuffer, VkBuffer dstBuffer, Vk
 
 void yk_create_buffer(YkRenderer* ren, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory);
 
+void yk_cleanup_swapchain(YkRenderer* renderer);
+
+
+/*
+ -------util-------
+*/
+VkImageCreateInfo image_create_info(VkFormat format, VkImageUsageFlags usage_flags, VkExtent3D extent)
+{
+    VkImageCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    info.pNext = 0;
+    
+    info.imageType = VK_IMAGE_TYPE_2D;
+    
+    info.format = format;
+    info.extent = extent;
+
+    info.mipLevels = 1;
+    info.arrayLayers = 1;
+
+    info.samples = VK_SAMPLE_COUNT_1_BIT;
+
+    info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    info.usage = usage_flags;
+    
+    return info;
+}
+
+VkImageViewCreateInfo image_view_create_info(VkFormat format, VkImage image, VkImageAspectFlags aspect_flags)
+{
+    VkImageViewCreateInfo info = {};
+
+    info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    info.pNext = 0;
+
+    info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    info.image = image;
+    info.format = format;
+    info.subresourceRange.baseMipLevel = 0;
+    info.subresourceRange.levelCount = 1;
+    info.subresourceRange.baseArrayLayer = 0;
+    info.subresourceRange.layerCount = 1;
+    info.subresourceRange.aspectMask = aspect_flags;
+
+    return info;
+}
+
+void copy_image_to_image(VkCommandBuffer cmd, VkImage src, VkImage dst, VkExtent2D src_size, VkExtent2D dst_size)
+{
+    
+    VkImageBlit2 blit_reg = {};
+    blit_reg.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
+
+    //srcOffset[0] is top left corner. [1] is bottom right. Over here we are specifying the extent of the copy, which is whole image.
+    blit_reg.srcOffsets[1].x = src_size.width;
+    blit_reg.srcOffsets[1].y = src_size.height;
+    blit_reg.srcOffsets[1].y = 1;
+
+    blit_reg.dstOffsets[1].x = dst_size.width;
+    blit_reg.dstOffsets[1].y = dst_size.height;
+    blit_reg.dstOffsets[1].z = 1;
+
+    blit_reg.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blit_reg.srcSubresource.baseArrayLayer = 0;
+    blit_reg.srcSubresource.layerCount= 1;
+    blit_reg.srcSubresource.mipLevel = 0;
+
+    blit_reg.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blit_reg.dstSubresource.baseArrayLayer = 0;
+    blit_reg.dstSubresource.layerCount = 1;
+    blit_reg.dstSubresource.mipLevel = 0;
+
+    VkBlitImageInfo2 blit_info = {};
+    blit_info.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2;
+    blit_info.dstImage = dst;
+    blit_info.dstImageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    blit_info.srcImage = src;
+    blit_info.srcImageLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    blit_info.filter = VK_FILTER_LINEAR;
+    blit_info.regionCount = 1;
+    blit_info.pRegions = &blit_reg;
+
+    vkCmdBlitImage2(cmd, &blit_info);
+}
+
+VkCommandBufferBeginInfo yk_cmd_buffer_begin_info_create(VkCommandBufferUsageFlags flags)
+{
+    VkCommandBufferBeginInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    info.pNext = 0;
+    info.pInheritanceInfo = 0;
+    info.flags = flags;
+    return info;
+}
+
+VkSemaphoreSubmitInfo yk_semawhore_submit_info_create(VkPipelineStageFlags2 stage_mask, VkSemaphore semawhore)
+{
+    VkSemaphoreSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    submitInfo.pNext = 0;
+    submitInfo.semaphore = semawhore;
+    submitInfo.stageMask = stage_mask;
+    submitInfo.deviceIndex = 0;
+    submitInfo.value = 1;
+
+    return submitInfo;
+}
+
+VkCommandBufferSubmitInfo yk_cmd_buffer_submit_info_create(VkCommandBuffer cmd)
+{
+    VkCommandBufferSubmitInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+    info.pNext = 0;
+    info.commandBuffer = cmd;
+    info.deviceMask = 0;
+
+    return info;
+
+}
+
+VkSubmitInfo2 yk_submit_info_create(VkCommandBufferSubmitInfo* cmd, VkSemaphoreSubmitInfo* signalSemaphoreInfo, VkSemaphoreSubmitInfo* waitSemaphoreInfo)
+{
+
+    VkSubmitInfo2 out = { };
+    out.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    out.pNext = 0;
+    out.flags = 0;
+
+    out.waitSemaphoreInfoCount = waitSemaphoreInfo ? 1 : 0;
+    out.pWaitSemaphoreInfos = waitSemaphoreInfo;
+
+    out.signalSemaphoreInfoCount = signalSemaphoreInfo ? 1 : 0;
+    out.pSignalSemaphoreInfos = signalSemaphoreInfo;
+
+    out.commandBufferInfoCount = 1;
+    out.pCommandBufferInfos = cmd;
+
+    return out;
+
+}
+
+#define VMA_DEBUG_LOG
+#include <vma/vk_mem_alloc.h>
+
+void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
+{
+
+
+    renderer->current_frame = 0;
+    //---pure boiler plate ---//
+    yk_innit_vulkan(renderer);
+    yk_create_surface(renderer, window->win_handle);
+    yk_pick_physdevice(renderer);
+    yk_create_device(renderer);
+   
+    VmaAllocatorCreateInfo allocatorInfo = {};
+    allocatorInfo.physicalDevice = renderer->phys_device;
+    allocatorInfo.device = renderer->device;
+    allocatorInfo.instance = renderer->vk_instance;
+    allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+
+    VkResultAssert(vmaCreateAllocator(&allocatorInfo, &renderer->vma_allocator), "Created Allocator");
+
+    yk_find_queues(renderer);
+    yk_create_swapchain(renderer, window);
+    //---pure boiler plate ---//
+
+    /* per objectish */
+    createDescriptorSetLayout(renderer);
+    yk_create_gfx_pipeline(renderer);
+    yk_cmd_innit(renderer);
+    /* per objectish */
+    createDescriptorPool(renderer);
+    //---can be optimized per object. But boilerplate for now --//
+    yk_create_sync_objs(renderer);
+    //---can be optimized per object. But boilerplate for now --//
+
+}
 
 void yk_free_renderer(YkRenderer* renderer)
 {
@@ -184,19 +362,15 @@ void yk_free_renderer(YkRenderer* renderer)
 
     //Note(facts 11/24 0525): Glaring issue. max images is assumed to be three no matter what. Incase its lesser, I'll be deleting images that don't exist. Ugly bug.
     //Store image count somewhere. Good idea when you abstract the renderer further. But that is bikeshed until you understand vulkan and gfx programming.
-    for (i32 i = 0; i < max_images; i++)
-    {
-        vkDestroyImageView(renderer->device, renderer->swapchain_image_view_list[i], 0);
-    }
-
-    vkDestroySwapchainKHR(renderer->device, renderer->swapchain, 0);
-
+    
+    
+    yk_cleanup_swapchain(renderer);
 
 
     vkDestroyDescriptorPool(renderer->device, renderer->descriptorPool, 0);
     vkDestroyDescriptorSetLayout(renderer->device, renderer->descriptorSetLayout, 0);
 
-
+    vmaDestroyAllocator(renderer->vma_allocator);
 
     vkDestroyDevice(renderer->device, 0);
     vkDestroySurfaceKHR(renderer->vk_instance, renderer->surface, 0);
@@ -227,7 +401,7 @@ void  yk_innit_vulkan(YkRenderer* renderer)
 {
     log_extention(check_instance_extension_support())
 
-        VkApplicationInfo vk_app_info = {};
+    VkApplicationInfo vk_app_info = {};
     vk_app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     vk_app_info.pNext = 0;
     vk_app_info.pApplicationName = "yekate";
@@ -401,6 +575,63 @@ void yk_pick_physdevice(YkRenderer* renderer)
     //log_extention(check_device_extension_support(renderer->phys_device))
 }
 
+
+void yk_create_device(YkRenderer* renderer)
+{
+
+    //Logical Device starts here
+    float queue_priority = 1;
+
+    // Note(facts): The graphic , compute and present queue families are all index 0. And this is common behaviour. For now I am leaving this
+    // like this. Later, I will make sure that incase they are different families, each gets its own queue
+
+    VkDeviceQueueCreateInfo vk_device_q_create_info = { };
+    vk_device_q_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    vk_device_q_create_info.pNext = 0;
+    vk_device_q_create_info.flags = 0;
+    vk_device_q_create_info.queueFamilyIndex = Q_FAM_GFX;
+    //this is number of queues you want to create. Not how many queues are available in that queue family
+    vk_device_q_create_info.queueCount = 1;
+    vk_device_q_create_info.pQueuePriorities = &queue_priority;
+
+
+    //ToDo(facts 1032 1/4/24): When selecting necessary features in pick physical device, also enable them there.
+    //                         And maybe make a neater way to enable features.
+    VkPhysicalDeviceDynamicRenderingFeaturesKHR vk_dynamic_rendering_feature = { };
+    vk_dynamic_rendering_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+    vk_dynamic_rendering_feature.dynamicRendering = VK_TRUE;
+
+    VkPhysicalDeviceSynchronization2FeaturesKHR vk_sync2_feet = {};
+    vk_sync2_feet.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR;
+    vk_sync2_feet.synchronization2 = VK_TRUE;
+
+    VkPhysicalDeviceBufferDeviceAddressFeaturesKHR vk_buffer_device_address = {};
+    vk_buffer_device_address.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_KHR;
+    vk_buffer_device_address.bufferDeviceAddress = VK_TRUE;
+
+    vk_sync2_feet.pNext = &vk_buffer_device_address;
+
+    vk_dynamic_rendering_feature.pNext = &vk_sync2_feet;
+
+    const char* device_extention_names[2] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME };
+
+    VkDeviceCreateInfo vk_device_create_info = { };
+    vk_device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    vk_device_create_info.pNext = &vk_dynamic_rendering_feature;
+    vk_device_create_info.flags = 0;
+    vk_device_create_info.queueCreateInfoCount = 1;
+    vk_device_create_info.pQueueCreateInfos = &vk_device_q_create_info;
+    vk_device_create_info.enabledLayerCount = 0;    //ignored
+    vk_device_create_info.ppEnabledLayerNames = 0;  //ignored
+    vk_device_create_info.enabledExtensionCount = 2;
+    vk_device_create_info.ppEnabledExtensionNames = device_extention_names;
+    vk_device_create_info.pEnabledFeatures = 0;
+
+    VkResultAssert(vkCreateDevice(renderer->phys_device, &vk_device_create_info, 0, &renderer->device), "Vulkan device creation");
+
+}
+
+
 void yk_find_queues(YkRenderer* renderer)
 {
     //Nvidia 4090 has 5. I only intend to use 3. 99% chance are they all refer to the same queue.
@@ -446,61 +677,13 @@ void yk_find_queues(YkRenderer* renderer)
 
 
     Assert(renderer->qfams[Q_FAM_GFX] != -1, "Graphics Queue not found")
-        Assert(renderer->qfams[Q_FAM_GFX_COMPUTE] != -1, "Graphics Compute Queue not found")
-        Assert(renderer->qfams[Q_FAM_PRESENT] != -1, "Present Queue not found")
+    Assert(renderer->qfams[Q_FAM_GFX_COMPUTE] != -1, "Graphics Compute Queue not found")
+    Assert(renderer->qfams[Q_FAM_PRESENT] != -1, "Present Queue not found")
 
-
-}
-
-void yk_create_device(YkRenderer* renderer)
-{
-
-    //Logical Device starts here
-    float queue_priority = 1;
-
-    // Note(facts): The graphic , compute and present queue families are all index 0. And this is common behaviour. For now I am leaving this
-    // like this. Later, I will make sure that incase they are different families, each gets its own queue
-
-    VkDeviceQueueCreateInfo vk_device_q_create_info = { };
-    vk_device_q_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-    vk_device_q_create_info.pNext = 0;
-    vk_device_q_create_info.flags = 0;
-    vk_device_q_create_info.queueFamilyIndex = Q_FAM_GFX;
-    //this is number of queues you want to create. Not how many queues are available in that queue family
-    vk_device_q_create_info.queueCount = 1;
-    vk_device_q_create_info.pQueuePriorities = &queue_priority;
-
-    VkPhysicalDeviceDynamicRenderingFeaturesKHR vk_dynamic_rendering_feature = { };
-    vk_dynamic_rendering_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
-    vk_dynamic_rendering_feature.dynamicRendering = VK_TRUE;
-
-    VkPhysicalDeviceSynchronization2FeaturesKHR vk_sync2_feet = {};
-    vk_sync2_feet.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR;
-    vk_sync2_feet.synchronization2 = VK_TRUE;
-
-    vk_dynamic_rendering_feature.pNext = &vk_sync2_feet;
-
-    const char* device_extention_names[2] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME };
-
-    VkDeviceCreateInfo vk_device_create_info = { };
-    vk_device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    vk_device_create_info.pNext = &vk_dynamic_rendering_feature;
-    vk_device_create_info.flags = 0;
-    vk_device_create_info.queueCreateInfoCount = 1;
-    vk_device_create_info.pQueueCreateInfos = &vk_device_q_create_info;
-    vk_device_create_info.enabledLayerCount = 0;    //ignored
-    vk_device_create_info.ppEnabledLayerNames = 0;  //ignored
-    vk_device_create_info.enabledExtensionCount = 2;
-    vk_device_create_info.ppEnabledExtensionNames = device_extention_names;
-    vk_device_create_info.pEnabledFeatures = 0;
-
-    VkResultAssert(vkCreateDevice(renderer->phys_device, &vk_device_create_info, 0, &renderer->device), "Vulkan device creation");
 
     // ToDo(facts 12/24 0439): Its all one queue. Come back to this later. If even one gfx card is made where the queues are literally different,
     // I will account for them
     vkGetDeviceQueue(renderer->device, Q_FAM_GFX, 0, &renderer->gfx_q);
-
-
 }
 
 void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
@@ -639,7 +822,7 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
     vkGetSwapchainImagesKHR(renderer->device, renderer->swapchain, &vk_image_num, 0);
     Assert(vk_image_num <= max_images, "More swapchain images than expected")
 
-        VkResultAssert(vkGetSwapchainImagesKHR(renderer->device, renderer->swapchain, &vk_image_num, renderer->swapchain_image_list), "Swapchain images found");
+    VkResultAssert(vkGetSwapchainImagesKHR(renderer->device, renderer->swapchain, &vk_image_num, renderer->swapchain_image_list), "Swapchain images found");
 
 
 
@@ -670,9 +853,52 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
         VkResultAssert(vkCreateImageView(renderer->device, &vk_image_view_create_info, 0, &renderer->swapchain_image_view_list[i]), str);
     }
 
+    VkExtent3D draw_image_extent = { (u32)win->win_data.size_x, (u32)win->win_data.size_y, 1 };
+
+    renderer->draw_image.imageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+    renderer->draw_image.imageExtent = draw_image_extent;
+
+    VkImageUsageFlags draw_image_usage_flags = {};
+    draw_image_usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    draw_image_usage_flags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    draw_image_usage_flags |= VK_IMAGE_USAGE_STORAGE_BIT;
+    draw_image_usage_flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+    VkImageCreateInfo draw_image_create_info = image_create_info(renderer->draw_image.imageFormat, draw_image_usage_flags, draw_image_extent);
+
+    VmaAllocationCreateInfo draw_image_alloc_info = {};
+    draw_image_alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    draw_image_alloc_info.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    VkResultAssert(vmaCreateImage(renderer->vma_allocator, &draw_image_create_info, &draw_image_alloc_info,
+                                  &renderer->draw_image.image, &renderer->draw_image.allocation, 0), "Draw Image creation")
+
+    VkImageViewCreateInfo draw_image_view_create_info = image_view_create_info(renderer->draw_image.imageFormat, renderer->draw_image.image, VK_IMAGE_ASPECT_COLOR_BIT);
+
+    VkResultAssert(vkCreateImageView(renderer->device, &draw_image_view_create_info, 0, &renderer->draw_image.imageView), "Draw image view creation");
+    
+
 
 
 }
+
+void yk_cleanup_swapchain(YkRenderer* renderer)
+{
+
+    for (i32 i = 0; i < max_images; i++)
+    {
+        vkDestroyImageView(renderer->device, renderer->swapchain_image_view_list[i], 0);
+    }
+
+    //draw image
+    vkDestroyImageView(renderer->device, renderer->draw_image.imageView, 0);
+    vmaDestroyImage(renderer->vma_allocator, renderer->draw_image.image, renderer->draw_image.allocation);
+    //draw image
+
+    vkDestroySwapchainKHR(renderer->device, renderer->swapchain, 0);
+
+}
+
 
 void transition_image(YkRenderer* renderer, VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout)
 {
@@ -1015,7 +1241,7 @@ void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentIm
 
     mvp_mat.model = yk_m4_translate(mvp_mat.model, v3{ 0.8f * flag, 0., -8. });
 
-    mvp_mat.model = yk_m4_rotate(mvp_mat.model, time * 1.f, v3{ 0, 1, 0 });
+    mvp_mat.model = yk_m4_rotate(mvp_mat.model, time * 1.f, v3{ -5, 0, -999 });
     mvp_mat.view = yk_m4_look_at(v3{ 0, 0, 1 }, v3{ 0, 0, -1. }, v3{ 0, 1, 0 });
     mvp_mat.proj = yk_m4_perspective(DEG_TO_RAD * 45., renderer->extent.width / (f32)renderer->extent.height, 0.1f, 10.0f);
 
@@ -1100,42 +1326,6 @@ void yk_create_sync_objs(YkRenderer* renderer)
     }
 
 }
-#define VMA_IMPLEMENTATION
-#include <vk_mem_alloc.h>
-void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
-{
-  
-
-    renderer->current_frame = 0;
-    //---pure boiler plate ---//
-    yk_innit_vulkan(renderer);
-    yk_create_surface(renderer, window->win_handle);
-    yk_pick_physdevice(renderer);
-    yk_find_queues(renderer);
-    yk_create_device(renderer);
-    yk_create_swapchain(renderer, window);
-    //---pure boiler plate ---//
-
-    /* per objectish */
-    createDescriptorSetLayout(renderer);
-    yk_create_gfx_pipeline(renderer);
-    yk_cmd_innit(renderer);
-    /* per objectish */
-    createDescriptorPool(renderer);
-    //---can be optimized per object. But boilerplate for now --//
-    yk_create_sync_objs(renderer);
-    //---can be optimized per object. But boilerplate for now --//
-    VmaAllocator _allocator;
-
-    VmaAllocatorCreateInfo allocatorInfo = {};
-    allocatorInfo.physicalDevice = renderer->phys_device;
-    allocatorInfo.device = renderer->device;
-    allocatorInfo.instance = renderer->vk_instance;
-    allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
-    vmaCreateAllocator(&allocatorInfo, &_allocator);
-
-    vmaDestroyAllocator(_allocator);
-}
 
 void yk_renderer_innit_model(YkRenderer* renderer, const vertex vertices[], const u16 indices[], render_object* render_object)
 {
@@ -1158,7 +1348,7 @@ void yk_renderer_innit_model(YkRenderer* renderer, const vertex vertices[], cons
     I still don't understand it. But basically, if you're dealing with swapchain index, use image index
 */
 
-void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
+void yk_renderer_raster_draw(YkRenderer* renderer, YkWindow* win)
 {
     yk_frame_data* current_frame = &renderer->frame_data[renderer->current_frame];
 
@@ -1210,14 +1400,7 @@ void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
     vk_rendering_info.pDepthAttachment = VK_NULL_HANDLE; //&vk_depth_attachment;
     vk_rendering_info.pStencilAttachment = VK_NULL_HANDLE; //&vk_stencil_attachment;
 
-    VkCommandBufferBeginInfo vk_cmd_buffer_begin_info = { };
-    vk_cmd_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    vk_cmd_buffer_begin_info.pNext = 0;
-    //0 is fine. flags are mean for specific cases
-    vk_cmd_buffer_begin_info.flags = 0;
-    //for secondary buffers
-    vk_cmd_buffer_begin_info.pInheritanceInfo = 0;
-
+    VkCommandBufferBeginInfo vk_cmd_buffer_begin_info = yk_cmd_buffer_begin_info_create(0);
     VkResultAssert(vkBeginCommandBuffer(current_frame->cmd_buffers, &vk_cmd_buffer_begin_info), "Command buffer begin");
     //transition_image(renderer, current_frame->cmd_buffers, renderer->swapchain_image_list[renderer->current_frame], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
@@ -1268,34 +1451,28 @@ void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
 
     //command buffer recording over
 
-    VkSubmitInfo vk_submit_info = { };
-    vk_submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    vk_submit_info.pNext = 0;
+    VkPipelineStageFlags2 flags2 = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-    VkSemaphore vk_wait_semawhores[] = { current_frame->image_available_semawhore };
-    VkPipelineStageFlags vk_wait_stages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    vk_submit_info.waitSemaphoreCount = 1;
-    vk_submit_info.pWaitSemaphores = vk_wait_semawhores;
-    vk_submit_info.pWaitDstStageMask = vk_wait_stages;
+    VkSemaphoreSubmitInfo signal_semaphore = yk_semawhore_submit_info_create(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, current_frame->render_finished_semawhore);
+    VkSemaphoreSubmitInfo wait_semaphore = yk_semawhore_submit_info_create(VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT, current_frame->image_available_semawhore );
 
-    vk_submit_info.commandBufferCount = 1;
-    vk_submit_info.pCommandBuffers = &renderer->frame_data[renderer->current_frame].cmd_buffers;
+    VkCommandBufferSubmitInfo cmd_buffer_submit_info = yk_cmd_buffer_submit_info_create(current_frame->cmd_buffers);
 
-    VkSemaphore vk_signal_semawhores[] = { current_frame->render_finished_semawhore };
-    vk_submit_info.signalSemaphoreCount = 1;
-    vk_submit_info.pSignalSemaphores = vk_signal_semawhores;
+    VkSubmitInfo2 submit_info = yk_submit_info_create(&cmd_buffer_submit_info, &signal_semaphore, &wait_semaphore);
 
-    VkResultAssert(vkQueueSubmit(renderer->gfx_q, 1, &vk_submit_info, current_frame->in_flight_fence), "Draw command buffer submitted");
+    
+
+    VkResultAssert(vkQueueSubmit2(renderer->gfx_q, 1, &submit_info, current_frame->in_flight_fence) , "Draw command buffer submitted");
+
 
     VkPresentInfoKHR vk_present_info = { };
     vk_present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
     vk_present_info.waitSemaphoreCount = 1;
-    vk_present_info.pWaitSemaphores = vk_signal_semawhores;
+    vk_present_info.pWaitSemaphores = &current_frame->render_finished_semawhore;
 
-    VkSwapchainKHR vk_swapchains[] = { renderer->swapchain };
     vk_present_info.swapchainCount = 1;
-    vk_present_info.pSwapchains = vk_swapchains;
+    vk_present_info.pSwapchains = &renderer->swapchain;
     vk_present_info.pImageIndices = & imageIndex;
 
     vk_present_info.pResults = 0;
@@ -1316,6 +1493,53 @@ void yk_renderer_update(YkRenderer* renderer, YkWindow* win)
     // printf("we");
 }
 
+void yk_renderer_draw(YkRenderer* renderer, YkWindow* win)
+{
+    yk_frame_data* current_frame = &renderer->frame_data[renderer->current_frame];
+
+    PFN_vkCmdBeginRenderingKHR vkCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(renderer->device, "vkCmdBeginRenderingKHR");
+    PFN_vkCmdEndRenderingKHR vkCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)vkGetDeviceProcAddr(renderer->device, "vkCmdEndRenderingKHR");
+
+
+    VkResultAssert(vkWaitForFences(renderer->device, 1, &current_frame->in_flight_fence, VK_TRUE, UINT64_MAX), "Wait for fences")
+    VkResultAssert(vkResetFences(renderer->device, 1, &current_frame->in_flight_fence), "Reset fences");
+
+    u32 imageIndex = -1;
+
+    if (vkAcquireNextImageKHR(renderer->device, renderer->swapchain, UINT64_MAX,
+        current_frame->image_available_semawhore,
+        VK_NULL_HANDLE, &imageIndex) == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        if (yk_recreate_swapchain(renderer, win) == false)
+        {
+            return;
+        }
+    }
+
+    VkCommandBufferBeginInfo vk_cmd_buffer_begin_info = yk_cmd_buffer_begin_info_create(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    VkResultAssert(vkBeginCommandBuffer(current_frame->cmd_buffers, &vk_cmd_buffer_begin_info), "Command buffer begin");
+
+    transition_image(renderer, current_frame->cmd_buffers, renderer->swapchain_image_list[imageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+
+    VkClearColorValue clearValue;
+    float flash = abs(sin(renderer->current_frame / 120.f));
+    clearValue = { { 0.0f, 0.0f, flash, 1.0f } };
+
+    VkImageSubresourceRange clear_range = {
+                                                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                                   .baseMipLevel = 0,
+                                                   .levelCount = VK_REMAINING_MIP_LEVELS,
+                                                   .baseArrayLayer = 0,
+                                                   .layerCount = VK_REMAINING_ARRAY_LAYERS
+    };
+
+    vkCmdClearColorImage(current_frame->cmd_buffers, renderer->swapchain_image_list[imageIndex], VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clear_range);
+
+    transition_image(renderer, current_frame->cmd_buffers, renderer->swapchain_image_list[imageIndex], VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    VkResultAssert(vkEndCommandBuffer(current_frame->cmd_buffers), "Command buffer end");
+
+}
+
 void yk_renderer_wait(YkRenderer* renderer)
 {
     vkDeviceWaitIdle(renderer->device);
@@ -1330,12 +1554,8 @@ b8 yk_recreate_swapchain(YkRenderer* renderer, YkWindow* win)
 
     vkDeviceWaitIdle(renderer->device);
 
-    for (i32 i = 0; i < max_images; i++)
-    {
-        vkDestroyImageView(renderer->device, renderer->swapchain_image_view_list[i], 0);
-    }
+    yk_cleanup_swapchain(renderer);
 
-    vkDestroySwapchainKHR(renderer->device, renderer->swapchain, 0);
 
 
     yk_create_swapchain(renderer, win);

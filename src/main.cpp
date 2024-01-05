@@ -97,6 +97,8 @@
     Work on the renderer now
 */
 
+//ToDo(facts): compile vma as a dll so I don't have to compile it again
+
 #include <yk_debug_app.h>
 
 struct YkMemory
@@ -202,7 +204,7 @@ int main(int argc, char *argv[])
         }
      
     }
-
+    state.shutdown(&state);
     yk_free_window(&state.window);
 
     FreeLibrary(state.hModule);
