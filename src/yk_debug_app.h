@@ -17,6 +17,14 @@ typedef void (*debug_app_shutdown_fn)(struct YkDebugAppState* state);
     thing. Shipped builds will be static libraries.
 */
 
+/*
+    Sandbox entries should be able to define their own functions.
+    So each sandbox entry could be treated as a different app.
+    I am not saying main.cpp entries. That would involve too much 
+    irrelevant work to set up engine work. Every sandbox entry would have
+    a start, update and shutdown.
+*/
+
 struct YkDebugAppState
 {
     //ToDo(facts): Organize better later. Should renderer be part of "game" code? I do it rn so I can debug since the renderer isn't complete.

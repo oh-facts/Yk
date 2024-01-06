@@ -45,10 +45,10 @@ struct YkRenderer
 
 	VkViewport viewport;
 	VkRect2D scissor;
-	VkExtent2D extent;
 	
-	VkImage swapchain_image_list[max_images];
-	VkImageView swapchain_image_view_list[max_images];
+	VkExtent2D sc_extent;
+	VkImage sc_images[max_images];
+	VkImageView sc_image_views[max_images];
 
 	VkDescriptorSetLayout descriptorSetLayout;
 	VkPipelineLayout pipeline_layout;

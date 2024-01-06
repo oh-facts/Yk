@@ -221,7 +221,7 @@ void copy_image_to_image(VkCommandBuffer cmd, VkImage src, VkImage dst, VkExtent
     //srcOffset[0] is top left corner. [1] is bottom right. Over here we are specifying the extent of the copy, which is whole image.
     blit_reg.srcOffsets[1].x = src_size.width;
     blit_reg.srcOffsets[1].y = src_size.height;
-    blit_reg.srcOffsets[1].y = 1;
+    blit_reg.srcOffsets[1].z = 1;
 
     blit_reg.dstOffsets[1].x = dst_size.width;
     blit_reg.dstOffsets[1].y = dst_size.height;
@@ -305,6 +305,34 @@ VkSubmitInfo2 yk_submit_info_create(VkCommandBufferSubmitInfo* cmd, VkSemaphoreS
     return out;
 
 }
+
+// -----------------
+
+/*
+    Render commands.
+    When using the renderer backend to render. It is common to just send commands to the renderer.
+*/
+
+void yk_renderer_draw_bg(YkRenderer* renderer, VkCommandBuffer cmd)
+{
+
+    VkClearColorValue clearValue;
+    float flash = abs(sin(renderer->frames_rendered / 120.f));
+    clearValue = { { 0.0f, 0.0f, flash, 1.0f } };
+
+    VkImageSubresourceRange clear_range = {
+                                                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                                   .baseMipLevel = 0,
+                                                   .levelCount = VK_REMAINING_MIP_LEVELS,
+                                                   .baseArrayLayer = 0,
+                                                   .layerCount = VK_REMAINING_ARRAY_LAYERS
+    };
+
+    vkCmdClearColorImage(cmd, renderer->draw_image.image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clear_range);
+
+}
+
+
 
 #define VMA_DEBUG_LOG
 #include <vma/vk_mem_alloc.h>
@@ -724,19 +752,19 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
 
 
     //cursed fuckery
-    renderer->extent = vk_extent;
+    renderer->sc_extent = vk_extent;
 
     VkViewport vk_viewport = { };
     vk_viewport.x = 0.0f;
     vk_viewport.y = 0.0f;
-    vk_viewport.width = (f32)renderer->extent.width;
-    vk_viewport.height = (f32)renderer->extent.height;
+    vk_viewport.width = (f32)renderer->sc_extent.width;
+    vk_viewport.height = (f32)renderer->sc_extent.height;
     vk_viewport.minDepth = 0.0f;
     vk_viewport.maxDepth = 1.0f;
 
     VkRect2D vk_scissor = { };
     vk_scissor.offset = VkOffset2D{ 0,0 };
-    vk_scissor.extent = renderer->extent;
+    vk_scissor.extent = renderer->sc_extent;
 
     renderer->scissor = vk_scissor;
     renderer->viewport = vk_viewport;
@@ -803,7 +831,7 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
     vk_swapchain_create_info.imageFormat = surface_format.format;
     vk_swapchain_create_info.imageExtent = vk_extent;
     vk_swapchain_create_info.imageArrayLayers = 1;
-    vk_swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    vk_swapchain_create_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     vk_swapchain_create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     vk_swapchain_create_info.queueFamilyIndexCount = 1;
     vk_swapchain_create_info.pQueueFamilyIndices = vk_qfam_indices;
@@ -822,7 +850,7 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
     vkGetSwapchainImagesKHR(renderer->device, renderer->swapchain, &vk_image_num, 0);
     Assert(vk_image_num <= max_images, "More swapchain images than expected")
 
-    VkResultAssert(vkGetSwapchainImagesKHR(renderer->device, renderer->swapchain, &vk_image_num, renderer->swapchain_image_list), "Swapchain images found");
+    VkResultAssert(vkGetSwapchainImagesKHR(renderer->device, renderer->swapchain, &vk_image_num, renderer->sc_images), "Swapchain images found");
 
 
 
@@ -832,7 +860,7 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
         VkImageViewCreateInfo vk_image_view_create_info = { };
         vk_image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         vk_image_view_create_info.pNext = 0;
-        vk_image_view_create_info.image = renderer->swapchain_image_list[i];
+        vk_image_view_create_info.image = renderer->sc_images[i];
         vk_image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
         vk_image_view_create_info.format = surface_format.format;
 
@@ -850,7 +878,7 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
         vk_image_view_create_info.subresourceRange = subresourcerange;
         char str[25];
         sprintf(str, "Image View Creation %d", i);
-        VkResultAssert(vkCreateImageView(renderer->device, &vk_image_view_create_info, 0, &renderer->swapchain_image_view_list[i]), str);
+        VkResultAssert(vkCreateImageView(renderer->device, &vk_image_view_create_info, 0, &renderer->sc_image_views[i]), str);
     }
 
     VkExtent3D draw_image_extent = { (u32)win->win_data.size_x, (u32)win->win_data.size_y, 1 };
@@ -887,7 +915,7 @@ void yk_cleanup_swapchain(YkRenderer* renderer)
 
     for (i32 i = 0; i < max_images; i++)
     {
-        vkDestroyImageView(renderer->device, renderer->swapchain_image_view_list[i], 0);
+        vkDestroyImageView(renderer->device, renderer->sc_image_views[i], 0);
     }
 
     //draw image
@@ -1022,14 +1050,14 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
     VkViewport vk_viewport = { };
     vk_viewport.x = 0.0f;
     vk_viewport.y = 0.0f;
-    vk_viewport.width = (f32)renderer->extent.width;
-    vk_viewport.height = (f32)renderer->extent.height;
+    vk_viewport.width = (f32)renderer->sc_extent.width;
+    vk_viewport.height = (f32)renderer->sc_extent.height;
     vk_viewport.minDepth = 0.0f;
     vk_viewport.maxDepth = 1.0f;
 
     VkRect2D vk_scissor = { };
     vk_scissor.offset = VkOffset2D{ 0,0 };
-    vk_scissor.extent = renderer->extent;
+    vk_scissor.extent = renderer->sc_extent;
 
     VkPipelineViewportStateCreateInfo vk_viewport_state = { };
     vk_viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -1243,7 +1271,7 @@ void updateUniformBuffer(YkRenderer* renderer, ubuffer ubo[], uint32_t currentIm
 
     mvp_mat.model = yk_m4_rotate(mvp_mat.model, time * 1.f, v3{ -5, 0, -999 });
     mvp_mat.view = yk_m4_look_at(v3{ 0, 0, 1 }, v3{ 0, 0, -1. }, v3{ 0, 1, 0 });
-    mvp_mat.proj = yk_m4_perspective(DEG_TO_RAD * 45., renderer->extent.width / (f32)renderer->extent.height, 0.1f, 10.0f);
+    mvp_mat.proj = yk_m4_perspective(DEG_TO_RAD * 45., renderer->sc_extent.width / (f32)renderer->sc_extent.height, 0.1f, 10.0f);
 
     // +z is back. +y is up , +x is right
 
@@ -1382,7 +1410,7 @@ void yk_renderer_raster_draw(YkRenderer* renderer, YkWindow* win)
 
     VkRenderingAttachmentInfoKHR vk_color_attachment = { };
     vk_color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
-    vk_color_attachment.imageView = renderer->swapchain_image_view_list[imageIndex];
+    vk_color_attachment.imageView = renderer->sc_image_views[imageIndex];
     vk_color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     vk_color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     vk_color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -1402,7 +1430,7 @@ void yk_renderer_raster_draw(YkRenderer* renderer, YkWindow* win)
 
     VkCommandBufferBeginInfo vk_cmd_buffer_begin_info = yk_cmd_buffer_begin_info_create(0);
     VkResultAssert(vkBeginCommandBuffer(current_frame->cmd_buffers, &vk_cmd_buffer_begin_info), "Command buffer begin");
-    //transition_image(renderer, current_frame->cmd_buffers, renderer->swapchain_image_list[renderer->current_frame], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+    //transition_image(renderer, current_frame->cmd_buffers, renderer->sc_image_list[renderer->current_frame], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
 
     // Begin rendering
@@ -1445,7 +1473,7 @@ void yk_renderer_raster_draw(YkRenderer* renderer, YkWindow* win)
     // End rendering
     vkCmdEndRenderingKHR(current_frame->cmd_buffers);
 
-    transition_image(renderer, current_frame->cmd_buffers, renderer->swapchain_image_list[imageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    transition_image(renderer, current_frame->cmd_buffers, renderer->sc_images[imageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     VkResultAssert(vkEndCommandBuffer(current_frame->cmd_buffers), "Command buffer end");
 
@@ -1514,26 +1542,23 @@ void yk_renderer_draw(YkRenderer* renderer, YkWindow* win)
         }
     }
 
-    VkCommandBufferBeginInfo vk_cmd_buffer_begin_info = yk_cmd_buffer_begin_info_create(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    VkCommandBufferBeginInfo vk_cmd_buffer_begin_info = yk_cmd_buffer_begin_info_create(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);   
     VkResultAssert(vkBeginCommandBuffer(current_frame->cmd_buffers, &vk_cmd_buffer_begin_info), "Command buffer begin");
 
-    transition_image(renderer, current_frame->cmd_buffers, renderer->swapchain_image_list[imageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+    transition_image(renderer, current_frame->cmd_buffers, renderer->draw_image.image , VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
-    VkClearColorValue clearValue;
-    float flash = abs(sin(renderer->frames_rendered / 120.f));
-    clearValue = { { 0.0f, 0.0f, flash, 1.0f } };
+    yk_renderer_draw_bg(renderer, current_frame->cmd_buffers);
 
-    VkImageSubresourceRange clear_range = {
-                                                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                                                   .baseMipLevel = 0,
-                                                   .levelCount = VK_REMAINING_MIP_LEVELS,
-                                                   .baseArrayLayer = 0,
-                                                   .layerCount = VK_REMAINING_ARRAY_LAYERS
-    };
+    transition_image(renderer, current_frame->cmd_buffers, renderer->draw_image.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    transition_image(renderer, current_frame->cmd_buffers, renderer->sc_images[imageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    vkCmdClearColorImage(current_frame->cmd_buffers, renderer->swapchain_image_list[imageIndex], VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clear_range);
+    copy_image_to_image(current_frame->cmd_buffers, renderer->draw_image.image,
+                        renderer->sc_images[imageIndex], VkExtent2D{ renderer->draw_image.imageExtent.width, renderer->draw_image.imageExtent.height },
+                        renderer->sc_extent);
 
-    transition_image(renderer, current_frame->cmd_buffers, renderer->swapchain_image_list[imageIndex], VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+    transition_image(renderer, current_frame->cmd_buffers, renderer->sc_images[imageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
     VkResultAssert(vkEndCommandBuffer(current_frame->cmd_buffers), "Command buffer end");
 
     VkSemaphoreSubmitInfo signal_semaphore = yk_semawhore_submit_info_create(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT, current_frame->render_finished_semawhore);
