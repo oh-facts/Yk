@@ -1,17 +1,16 @@
-#ifndef YK_RENDERER_H
-#define YK_RENDERER_H
+#ifndef RENDERER_H
+#define RENDERER_H
 
+#include <renderer/mn_types.h>
 
-#include <yk.h>
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
-#include <yk_math.h>
-#include <yk_math.h>
-#include <renderer/mn_types.h>
+
 #include <yk_api.h>
-#include <time.h>
+
 #include <vma/vk_mem_alloc.h>
-typedef struct YkRenderer YkRenderer;
+#include <time.h>
+#include <yk_window.h>
 
 /*
 * Most of this is internal state and unrequired by other structs. Still, I don't know enough about vulkan to want to abstract this away.
@@ -19,7 +18,7 @@ typedef struct YkRenderer YkRenderer;
 */
 
 //https://github.com/KhronosGroup/Vulkan-Samples/blob/main/samples/api/hpp_hello_triangle/hpp_hello_triangle.h
-typedef struct yk_frame_data
+struct yk_frame_data
 {
 	VkFence in_flight_fence;
 
@@ -29,7 +28,7 @@ typedef struct yk_frame_data
 	VkSemaphore image_available_semawhore;
 	VkSemaphore render_finished_semawhore;
 	
-} yk_frame_data;
+};
 
 struct YkRenderer
 {
@@ -49,10 +48,12 @@ struct YkRenderer
 	VkExtent2D sc_extent;
 	VkImage sc_images[max_images];
 	VkImageView sc_image_views[max_images];
+ 
+	VkDescriptorSetLayout r_descriptorSetLayout;
+	VkPipelineLayout r_pipeline_layout;
+	VkPipeline r_pipeline;
 
-	VkDescriptorSetLayout descriptorSetLayout;
-	VkPipelineLayout pipeline_layout;
-	VkPipeline gfx_pipeline;
+	VkDescriptorSetLayout desc_layouts;
 
 	VkDescriptorPool descriptorPool;
 
@@ -84,7 +85,6 @@ enum Q_FAM
 	Q_FAM_GFX_COMPUTE,
 	Q_FAM_PRESENT
 };
-
 
 void yk_free_renderer(YkRenderer* renderer);
 

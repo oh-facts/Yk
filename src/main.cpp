@@ -108,6 +108,10 @@
 // 
 // ToDo(facts 1703 1/5/24): Work through vkguide
 //
+// ToDo(facts): Make a py script to compile shaders. Something like py ./shaderc "foo/main.frag". This will compile and put main.frag.spv inside res/shaders/foo/
+//  
+// ToDo(facts): Make the debug application entry handler thing.
+//
 //
 
 

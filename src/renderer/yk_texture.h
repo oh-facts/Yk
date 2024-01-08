@@ -1,7 +1,7 @@
 #ifndef YK_TEXTURE_H
 #define YK_TEXTURE_H
-#include <yk.h>
-#include <mn_types.h>
+
+#include <renderer/mn_types.h>
 
 struct YkTexture
 {

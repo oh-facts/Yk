@@ -1,6 +1,5 @@
 #ifndef RENDERER_MN_TYPES
 #define RENDERER_MN_TYPES
-#include <yk.h>
 
 #define VkDEBUG 1
 
@@ -9,41 +8,43 @@
 #define VK_PRINT_SUCCESS 0
 #define LOG_DEVICE_DETAILS 0
 #include <vma/vk_mem_alloc.h>
+#include <time.h>
 
+#include <yk_math.h>
 typedef struct vertex vertex;
 
 #define max_images 3
 
 #define MAX_FRAMES_IN_FLIGHT 2
 
-typedef struct vertex
+struct vertex
 {
 	v2 pos;
 	v3 color;
-}vertex;
+};
 
 
-typedef struct mvp_matrix
+struct mvp_matrix
 {
 	m4 model;
 	m4 view;
 	m4 proj;
-}mvp_matrix;
+};
 
-typedef struct buffer
+struct buffer
 {
 	VkBuffer handle;
 	VkDeviceMemory memory;
-}buffer;
+};
 
-typedef struct ubuffer
+struct ubuffer
 {
 	buffer buffer;
 	//this mapping is done to update the buffer from the cpu
 	void* mapped;
-}ubuffer;
+};
 
-typedef struct render_object
+struct render_object
 {
 	buffer vert_buffer;
 	buffer index_buffer;
@@ -53,7 +54,7 @@ typedef struct render_object
 	//debug purpose
 	int id;
 	VkDescriptorSet descriptorSet[MAX_FRAMES_IN_FLIGHT];
-}render_object;
+};
 
 struct AllocatedImage 
 {

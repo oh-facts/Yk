@@ -385,8 +385,8 @@ void yk_free_renderer(YkRenderer* renderer)
 
 
 
-    vkDestroyPipeline(renderer->device, renderer->gfx_pipeline, 0);
-    vkDestroyPipelineLayout(renderer->device, renderer->pipeline_layout, 0);
+    vkDestroyPipeline(renderer->device, renderer->r_pipeline, 0);
+    vkDestroyPipelineLayout(renderer->device, renderer->r_pipeline_layout, 0);
 
     //Note(facts 11/24 0525): Glaring issue. max images is assumed to be three no matter what. Incase its lesser, I'll be deleting images that don't exist. Ugly bug.
     //Store image count somewhere. Good idea when you abstract the renderer further. But that is bikeshed until you understand vulkan and gfx programming.
@@ -396,7 +396,7 @@ void yk_free_renderer(YkRenderer* renderer)
 
 
     vkDestroyDescriptorPool(renderer->device, renderer->descriptorPool, 0);
-    vkDestroyDescriptorSetLayout(renderer->device, renderer->descriptorSetLayout, 0);
+    vkDestroyDescriptorSetLayout(renderer->device, renderer->r_descriptorSetLayout, 0);
 
     vmaDestroyAllocator(renderer->vma_allocator);
 
@@ -975,7 +975,7 @@ void createDescriptorSetLayout(YkRenderer* renderer)
     layoutInfo.bindingCount = 1;
     layoutInfo.pBindings = &uboLayoutBinding;
 
-    VkResultAssert(vkCreateDescriptorSetLayout(renderer->device, &layoutInfo, 0, &renderer->descriptorSetLayout), "descr set layout")
+    VkResultAssert(vkCreateDescriptorSetLayout(renderer->device, &layoutInfo, 0, &renderer->r_descriptorSetLayout), "descr set layout")
 }
 
 void yk_create_gfx_pipeline(YkRenderer* renderer)
@@ -1028,7 +1028,7 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
     vk_dyn_state_create_info.dynamicStateCount = 2;
     vk_dyn_state_create_info.pDynamicStates = vk_dynamic_states;
 
-
+        
 
     VkVertexInputBindingDescription binding_desc = vk_get_binding_desc();
     VkVertexInputAttributeDescription attrib_desc[2] = { };
@@ -1123,7 +1123,7 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
     VkPipelineLayoutCreateInfo vk_pipeline_layout_info = { };
     vk_pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     vk_pipeline_layout_info.setLayoutCount = 1;
-    vk_pipeline_layout_info.pSetLayouts = &renderer->descriptorSetLayout;
+    vk_pipeline_layout_info.pSetLayouts = &renderer->r_descriptorSetLayout;
     vk_pipeline_layout_info.pushConstantRangeCount = 0;
     vk_pipeline_layout_info.pPushConstantRanges = 0;
 
@@ -1148,13 +1148,13 @@ void yk_create_gfx_pipeline(YkRenderer* renderer)
     vk_graphics_pipeline_create_info.renderPass = VK_NULL_HANDLE;
 
 
-    VkResultAssert(vkCreateGraphicsPipelines(renderer->device, VK_NULL_HANDLE, 1, &vk_graphics_pipeline_create_info, 0, &renderer->gfx_pipeline), "Graphics pipeline creation");
+    VkResultAssert(vkCreateGraphicsPipelines(renderer->device, VK_NULL_HANDLE, 1, &vk_graphics_pipeline_create_info, 0, &renderer->r_pipeline), "Graphics pipeline creation");
 
     vkDestroyShaderModule(renderer->device, vk_frag_shader_module, 0);
     vkDestroyShaderModule(renderer->device, vk_vert_shader_module, 0);
 
     //Tee hee
-    renderer->pipeline_layout = vk_pipeline_layout;
+    renderer->r_pipeline_layout = vk_pipeline_layout;
     renderer->scissor = vk_scissor;
     renderer->viewport = vk_viewport;
 }
@@ -1300,7 +1300,7 @@ void createDescriptorPool(YkRenderer* renderer)
 
 void createDescriptorSets(YkRenderer* renderer, ubuffer* ubo, render_object* ro)
 {
-    VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT] = { renderer->descriptorSetLayout,renderer->descriptorSetLayout };
+    VkDescriptorSetLayout layouts[MAX_FRAMES_IN_FLIGHT] = { renderer->r_descriptorSetLayout,renderer->r_descriptorSetLayout };
     VkDescriptorSetAllocateInfo allocInfo = { };
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = renderer->descriptorPool;
@@ -1436,7 +1436,7 @@ void yk_renderer_raster_draw(YkRenderer* renderer, YkWindow* win)
     // Begin rendering
     vkCmdBeginRenderingKHR(current_frame->cmd_buffers, &vk_rendering_info);
 
-    vkCmdBindPipeline(current_frame->cmd_buffers, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->gfx_pipeline);
+    vkCmdBindPipeline(current_frame->cmd_buffers, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->r_pipeline);
 
 
     vkCmdSetViewport(current_frame->cmd_buffers, 0, 1, &renderer->viewport);
@@ -1464,7 +1464,7 @@ void yk_renderer_raster_draw(YkRenderer* renderer, YkWindow* win)
 
 
         vkCmdBindDescriptorSets(current_frame->cmd_buffers, VK_PIPELINE_BIND_POINT_GRAPHICS,
-            renderer->pipeline_layout, 0, 1, &renderer->render_objects[i].descriptorSet[renderer->current_frame], 0, 0);
+            renderer->r_pipeline_layout, 0, 1, &renderer->render_objects[i].descriptorSet[renderer->current_frame], 0, 0);
 
         vkCmdDrawIndexed(current_frame->cmd_buffers, 6, 1, 0, 0, 0);
 
