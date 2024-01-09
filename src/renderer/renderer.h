@@ -48,15 +48,9 @@ struct YkRenderer
 	VkExtent2D sc_extent;
 	VkImage sc_images[max_images];
 	VkImageView sc_image_views[max_images];
- 
-	VkDescriptorSetLayout r_descriptorSetLayout;
-	VkPipelineLayout r_pipeline_layout;
-	VkPipeline r_pipeline;
-
-	VkDescriptorSetLayout desc_layouts;
-
-	VkDescriptorPool descriptorPool;
-
+	
+	VkDescriptorPool global_pool;
+	
 	yk_frame_data frame_data[MAX_FRAMES_IN_FLIGHT];
 
 	clock_t clock;
@@ -66,7 +60,14 @@ struct YkRenderer
 	render_object render_objects[10];
 	i32 num_ro;
 
+	VkDescriptorSet draw_image_desc;
+	VkDescriptorSetLayout draw_image_layouts;
+	VkPipeline gradient_pp;
+	VkPipelineLayout gradient_pp_layouts;
+
 	AllocatedImage draw_image;
+	
+
 	VmaAllocator vma_allocator;
 
 	u32 frames_rendered;
