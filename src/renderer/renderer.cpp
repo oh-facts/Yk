@@ -374,11 +374,12 @@ VkDescriptorSet desc_set_allocate(VkDevice device, VkDescriptorPool pool, VkDesc
     return out;
 }
 
+
 void shader_module_innit(VkDevice device, const char* filename, VkShaderModule* shader_module)
 {
-    
+
     size_t len = 0;
-    
+
     //ToDo(facts): Use arena
     //This allocation is literally what arenas are for
     const char* shader_code = yk_read_binary_file(filename, &len);
@@ -394,6 +395,192 @@ void shader_module_innit(VkDevice device, const char* filename, VkShaderModule* 
 }
 
 
+/*
+    I take an array but atm I only support one
+*/
+VkPipeline yk_create_raster_pipeline(VkDevice device, const char* vert_path, const char* frag_path, VkPipelineLayout* layout)
+{
+    VkGraphicsPipelineCreateInfo gfx_pl_info = {};
+    gfx_pl_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    
+
+    //shader stage info 
+    //------------------
+    VkShaderModule vert_shader = {};
+    shader_module_innit(device, vert_path, &vert_shader);
+
+    VkShaderModule frag_shader = {};
+    shader_module_innit(device, frag_path, &frag_shader);
+
+    //ToDo(facts): Make a shader stage creator thing.
+    VkPipelineShaderStageCreateInfo vert_shader_stage_info = {};
+    vert_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    vert_shader_stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
+    vert_shader_stage_info.module = vert_shader;
+    vert_shader_stage_info.pName = "main";
+
+    VkPipelineShaderStageCreateInfo frag_shader_stage_info = {};
+    frag_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    frag_shader_stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    frag_shader_stage_info.module = frag_shader;
+    frag_shader_stage_info.pName = "main";
+
+    constexpr i32 shader_stages_count = 2;
+    VkPipelineShaderStageCreateInfo shader_stages[shader_stages_count] = { vert_shader_stage_info, frag_shader_stage_info };
+
+    //------------------
+
+    //vertex input
+    //------------------
+    //we are doing vertex pulling now. So we wont send vertex data directly
+    VkPipelineVertexInputStateCreateInfo vert_input = { .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+    //------------------
+
+
+    
+    //Note(facts 12/23 0223) : Complete pipeline. Then rendering.
+
+
+    
+    //Input assembly
+    //------------------
+    VkPipelineInputAssemblyStateCreateInfo input_asm = { };
+    input_asm.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    input_asm.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    input_asm.primitiveRestartEnable = VK_FALSE;
+    //------------------
+
+    //Not using tesselation
+    //-----------------
+
+    //view port state
+    //------------------
+    //Since this is dynamic. We are defaulting values (it will be ignored anyways). Count values matter but we're using 1 for now
+    VkPipelineViewportStateCreateInfo viewport_state = { };
+    viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewport_state.viewportCount = 1;
+    viewport_state.scissorCount = 1;
+    //------------------
+
+
+    //Rasterization
+    //------------------
+    VkPipelineRasterizationStateCreateInfo rasterizer = { };
+    rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizer.depthClampEnable = VK_FALSE;
+    rasterizer.rasterizerDiscardEnable = VK_FALSE;
+    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizer.lineWidth = 1.0f;
+    rasterizer.cullMode = VK_CULL_MODE_NONE;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    
+    //Note(facts 12/23 2:20): come back to this later
+    rasterizer.depthBiasEnable = VK_FALSE;
+    rasterizer.depthBiasConstantFactor = 0.0f;
+    rasterizer.depthBiasClamp = 0.0f;
+    rasterizer.depthBiasSlopeFactor = 0.0f;
+    //------------------
+
+    //Multisampling
+    //------------------
+    VkPipelineMultisampleStateCreateInfo multisampling = { };
+    multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampling.sampleShadingEnable = VK_FALSE;
+    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    multisampling.minSampleShading = 1.0f;
+    multisampling.pSampleMask = 0;
+    multisampling.alphaToCoverageEnable = VK_FALSE;
+    multisampling.alphaToOneEnable = VK_FALSE;
+    //------------------
+
+    //Depth stencil
+    //------------------
+
+
+    //------------------
+
+    //color blend stuff
+    //------------------
+    //These values are default for no blending
+    VkPipelineColorBlendAttachmentState color_blend_attatchment = { };
+    color_blend_attatchment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    color_blend_attatchment.blendEnable = VK_FALSE;
+    color_blend_attatchment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+    color_blend_attatchment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;
+    color_blend_attatchment.colorBlendOp = VK_BLEND_OP_ADD;
+    color_blend_attatchment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    color_blend_attatchment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    color_blend_attatchment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+    //thes values are default for yes blending
+    /*
+    {
+        color_blend_attatchment.blendEnable = VK_TRUE;
+        color_blend_attatchment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        color_blend_attatchment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        color_blend_attatchment.colorBlendOp = VK_BLEND_OP_ADD;
+        color_blend_attatchment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        color_blend_attatchment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        color_blend_attatchment.alphaBlendOp = VK_BLEND_OP_ADD;
+    }
+    */
+
+    //ToDo(facts): I have no fucking idea what this means
+    //I just want a triangle
+
+    VkPipelineColorBlendStateCreateInfo color_blending = { };
+    color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    color_blending.logicOpEnable = VK_FALSE;
+    color_blending.logicOp = VK_LOGIC_OP_COPY;
+    color_blending.attachmentCount = 1;
+    color_blending.pAttachments = &color_blend_attatchment;
+    color_blending.blendConstants[0] = 0.0f;
+    color_blending.blendConstants[1] = 0.0f;
+    color_blending.blendConstants[2] = 0.0f;
+    color_blending.blendConstants[3] = 0.0f;
+
+    //------------------
+
+ 
+    //Dynamic state
+    //------------------
+    VkDynamicState dynamic_states[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    VkPipelineDynamicStateCreateInfo dyn_state_create_info = { };
+    dyn_state_create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dyn_state_create_info.dynamicStateCount = 2;
+    dyn_state_create_info.pDynamicStates = dynamic_states;
+    //------------------
+
+    //layout
+    //------------------
+    //THis is where desc set data goes
+    VkPipelineLayoutCreateInfo layout_info = {};
+    layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    
+    VkResultAssert(vkCreatePipelineLayout(device, &layout_info, 0, layout), "pipeline layout creation")
+    //------------------
+
+    gfx_pl_info.stageCount = shader_stages_count;
+    gfx_pl_info.pStages = shader_stages;
+    gfx_pl_info.pVertexInputState = &vert_input;
+    gfx_pl_info.pInputAssemblyState = &input_asm;
+    gfx_pl_info.pTessellationState = 0;
+    gfx_pl_info.pViewportState = &viewport_state;
+    gfx_pl_info.pRasterizationState = &rasterizer;
+    gfx_pl_info.pMultisampleState = &multisampling;
+    gfx_pl_info.pDepthStencilState = 0;
+    gfx_pl_info.pColorBlendState = &color_blending;
+    gfx_pl_info.pDynamicState = &dyn_state_create_info;
+    gfx_pl_info.layout = *layout;
+
+    VkPipeline out = {};
+    vkCreateGraphicsPipelines(device, 0, 1, &gfx_pl_info, 0, &out);
+
+    vkDestroyShaderModule(device, frag_shader, 0);
+    vkDestroyShaderModule(device, vert_shader, 0);
+
+    return out;
+}
 
 // -----------------
 
@@ -456,10 +643,17 @@ void gradient_pipeline(YkRenderer* renderer)
     vkDestroyShaderModule(renderer->device, compute_module,0);
 }
 
+void triangle_pipeline(YkRenderer* renderer)
+{
+   renderer->triangle_pl = yk_create_raster_pipeline(renderer->device, "res/default.vert.spv", "res/default.frag.spv", &renderer->triangle_pl_layout);
+
+}
+
 
 void pipeline_innit(YkRenderer* renderer)
 {
     gradient_pipeline(renderer);
+    triangle_pipeline(renderer);
 }
 
 
@@ -489,6 +683,42 @@ void yk_renderer_draw_bg(YkRenderer* renderer, VkCommandBuffer cmd)
    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, renderer->gradient_pp);
    vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_COMPUTE,renderer->gradient_pp_layouts, 0, 1, &renderer->draw_image_desc,0,0);
    vkCmdDispatch(cmd, renderer->draw_image.imageExtent.width / 16.0 , renderer->draw_image.imageExtent.height / 16.0, 1);
+}
+
+void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
+{
+    PFN_vkCmdBeginRenderingKHR vkCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(renderer->device, "vkCmdBeginRenderingKHR");
+    PFN_vkCmdEndRenderingKHR vkCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)vkGetDeviceProcAddr(renderer->device, "vkCmdEndRenderingKHR");
+
+    VkRenderingAttachmentInfoKHR vk_color_attachment = { };
+    vk_color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+    vk_color_attachment.imageView = renderer->draw_image.imageView;
+    vk_color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    vk_color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    vk_color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    vk_color_attachment.clearValue.color = VkClearColorValue{ 1.0f, 0.0f, 0.0f, 1.0f };
+
+    VkRenderingInfoKHR vk_rendering_info = { };
+    vk_rendering_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
+    vk_rendering_info.pNext = 0;
+    vk_rendering_info.flags = 0;
+    vk_rendering_info.renderArea = renderer->scissor;
+    vk_rendering_info.layerCount = 1;
+    vk_rendering_info.viewMask = 0;
+    vk_rendering_info.colorAttachmentCount = 1;
+    vk_rendering_info.pColorAttachments = &vk_color_attachment;
+    vk_rendering_info.pDepthAttachment = VK_NULL_HANDLE; //&vk_depth_attachment;
+    vk_rendering_info.pStencilAttachment = VK_NULL_HANDLE; //&vk_stencil_attachment;
+
+    vkCmdBeginRenderingKHR(cmd, &vk_rendering_info);
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->triangle_pl);
+
+    vkCmdSetViewport(cmd, 0, 1, &renderer->viewport);
+    vkCmdSetScissor(cmd, 0, 1, &renderer->scissor);
+
+    vkCmdDraw(cmd, 3, 1, 0, 0);
+
+    vkCmdEndRendering(cmd);
 }
 
 
@@ -535,6 +765,9 @@ void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
 
 void yk_free_renderer(YkRenderer* renderer)
 {
+    vkDestroyPipelineLayout(renderer->device, renderer->triangle_pl_layout, 0);
+    vkDestroyPipeline(renderer->device, renderer->triangle_pl, 0);
+
     vkDestroyPipelineLayout(renderer->device, renderer->gradient_pp_layouts,0);
     vkDestroyPipeline(renderer->device, renderer->gradient_pp,0);
     
@@ -1208,10 +1441,6 @@ void yk_renderer_draw(YkRenderer* renderer, YkWindow* win)
 {
     yk_frame_data* current_frame = &renderer->frame_data[renderer->current_frame];
 
-    PFN_vkCmdBeginRenderingKHR vkCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(renderer->device, "vkCmdBeginRenderingKHR");
-    PFN_vkCmdEndRenderingKHR vkCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)vkGetDeviceProcAddr(renderer->device, "vkCmdEndRenderingKHR");
-
-
     VkResultAssert(vkWaitForFences(renderer->device, 1, &current_frame->in_flight_fence, VK_TRUE, UINT64_MAX), "Wait for fences")
     VkResultAssert(vkResetFences(renderer->device, 1, &current_frame->in_flight_fence), "Reset fences");
 
@@ -1234,7 +1463,10 @@ void yk_renderer_draw(YkRenderer* renderer, YkWindow* win)
 
     yk_renderer_draw_bg(renderer, current_frame->cmd_buffers);
 
-    transition_image(renderer, current_frame->cmd_buffers, renderer->draw_image.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    transition_image(renderer, current_frame->cmd_buffers, renderer->draw_image.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    yk_renderer_draw_triangle(renderer, current_frame->cmd_buffers);
+
+    transition_image(renderer, current_frame->cmd_buffers, renderer->draw_image.image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     transition_image(renderer, current_frame->cmd_buffers, renderer->sc_images[imageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     copy_image_to_image(current_frame->cmd_buffers, renderer->draw_image.image,

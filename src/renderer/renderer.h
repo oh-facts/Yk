@@ -65,6 +65,9 @@ struct YkRenderer
 	VkPipeline gradient_pp;
 	VkPipelineLayout gradient_pp_layouts;
 
+	VkPipelineLayout triangle_pl_layout;
+	VkPipeline triangle_pl;
+
 	AllocatedImage draw_image;
 	
 
