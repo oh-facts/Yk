@@ -12,6 +12,13 @@
 #include <time.h>
 #include <yk_window.h>
 
+struct ComputePushConstants {
+	v4 data1;
+	v4 data2;
+	v4 data3;
+	v4 data4;
+};
+
 /*
 * Most of this is internal state and unrequired by other structs. Still, I don't know enough about vulkan to want to abstract this away.
 * So this will be a megastruct until then.

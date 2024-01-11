@@ -15,6 +15,8 @@ void yk_cleanup_swapchain(YkRenderer* renderer);
 
 void pipeline_innit(YkRenderer* renderer);
 void gradient_pipeline(YkRenderer* renderer);
+void triangle_pipeline(YkRenderer* renderer);
+
 /*
  -------util-------
 */
@@ -390,6 +392,15 @@ void gradient_pipeline(YkRenderer* renderer)
     compute_layout.pSetLayouts = &renderer->draw_image_layouts;
     compute_layout.setLayoutCount = 1;
 
+
+    VkPushConstantRange push_constant = {};
+    push_constant.offset = 0;
+    push_constant.size = sizeof(ComputePushConstants);
+    push_constant.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+    compute_layout.pushConstantRangeCount = 1;
+    compute_layout.pPushConstantRanges = &push_constant;
+
     VkResultAssert(vkCreatePipelineLayout(renderer->device, &compute_layout, 0, &renderer->gradient_pp_layouts), "w");
 
     VkShaderModule compute_module = {};
@@ -450,6 +461,13 @@ void yk_renderer_draw_bg(YkRenderer* renderer, VkCommandBuffer cmd)
 
    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, renderer->gradient_pp);
    vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_COMPUTE,renderer->gradient_pp_layouts, 0, 1, &renderer->draw_image_desc,0,0);
+
+   ComputePushConstants push = {};
+   push.data1 = v4{ 1.0,0.0, 1.0,1.0 };
+   push.data2 = v4{ 0.0,0.0, 1.0,1.0 };
+
+   vkCmdPushConstants(cmd, renderer->gradient_pp_layouts, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push), &push);
+   
    vkCmdDispatch(cmd, renderer->draw_image.imageExtent.width / 16.0 , renderer->draw_image.imageExtent.height / 16.0, 1);
 }
 
