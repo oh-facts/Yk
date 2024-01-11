@@ -1,5 +1,5 @@
-#ifndef YKR_UTIL_H
-#define YKR_UTIL_H
+#ifndef YKR_DEBUG_UTIL_H
+#define YKR_DEBUG_UTIL_H
 
 /*
     Internal Util functions. No one outside this folder should see this
@@ -42,8 +42,5 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     void* pUserData);
 
 
-void copy_image_to_image(VkCommandBuffer cmd, VkImage src, VkImage dst, VkExtent2D src_size, VkExtent2D dst_size);
-VkImageViewCreateInfo image_view_create_info(VkFormat format, VkImage image, VkImageAspectFlags aspect_flags);
-VkImageCreateInfo image_create_info(VkFormat format, VkImageUsageFlags usage_flags, VkExtent3D extent);
 
 #endif

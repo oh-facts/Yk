@@ -1,5 +1,5 @@
 #include <renderer/ykr_instance.h>
-#include <renderer/ykr_util.h>
+#include <renderer/ykr_debug_util.h>
 
 
 #if defined (_WIN32)
@@ -97,7 +97,7 @@ void  yk_innit_vulkan(YkRenderer* renderer)
         //Debug messenger
 #if VK_USE_VALIDATION_LAYERS
 
-        VkDebugUtilsMessengerCreateInfoEXT vk_debug_messenger_create_info = { };
+    VkDebugUtilsMessengerCreateInfoEXT vk_debug_messenger_create_info = { };
     vk_debug_messenger_create_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     vk_debug_messenger_create_info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
     vk_debug_messenger_create_info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
@@ -277,8 +277,8 @@ void yk_find_queues(YkRenderer* renderer)
     vkGetPhysicalDeviceQueueFamilyProperties(renderer->phys_device, &queues, 0);
 
     Assert(queues <= max_queues, "More queues found than supported")
-        //w
-        VkQueueFamilyProperties vk_q_fam_prop_list[max_queues];
+    //w
+    VkQueueFamilyProperties vk_q_fam_prop_list[max_queues];
     u32 current_queues = max_queues;
     vkGetPhysicalDeviceQueueFamilyProperties(renderer->phys_device, &current_queues, vk_q_fam_prop_list);
 
