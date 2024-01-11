@@ -1,5 +1,6 @@
 # CMakeLists.txt for the library
-
+#ToDo(facts): Do somethign about this. It used to exist because I used to build vma as a dll because compilation times were like twice. But that is no
+#             more the case even though I made 0 changes. My laptop was being iffy.
 cmake_minimum_required(VERSION 3.12)
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 project(vma)

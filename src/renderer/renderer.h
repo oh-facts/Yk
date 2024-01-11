@@ -1,7 +1,7 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
-#include <renderer/mn_types.h>
+#include <renderer/ykr_common.h>
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
@@ -57,19 +57,17 @@ struct YkRenderer
 
 	uint32_t current_frame;
 
-	render_object render_objects[10];
-	i32 num_ro;
+	AllocatedImage draw_image;
 
 	VkDescriptorSet draw_image_desc;
 	VkDescriptorSetLayout draw_image_layouts;
+
 	VkPipeline gradient_pp;
 	VkPipelineLayout gradient_pp_layouts;
 
 	VkPipelineLayout triangle_pl_layout;
 	VkPipeline triangle_pl;
 
-	AllocatedImage draw_image;
-	
 
 	VmaAllocator vma_allocator;
 
@@ -95,20 +93,10 @@ void yk_free_renderer(YkRenderer* renderer);
 void yk_renderer_wait(YkRenderer* renderer);
 
 void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window);
-void yk_renderer_innit_model(YkRenderer* renderer, const vertex vertices[], const u16 indices[], render_object* render_object);
-
-void yk_renderer_raster_draw(YkRenderer* renderer, YkWindow* win);
 
 void yk_renderer_draw(YkRenderer* renderer, YkWindow* win);
 
-void yk_destroy_model(YkRenderer* renderer, render_object* render_object);
-
-VkVertexInputBindingDescription vk_get_binding_desc();
-void get_attrib_desc(VkVertexInputAttributeDescription out[]);
-
 b8 yk_recreate_swapchain(YkRenderer* renderer, struct YkWindow* win);
-
-void yk_create_buffer(YkRenderer* ren, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer* buffer, VkDeviceMemory* bufferMemory);
 
 
 typedef struct mvp_matrix mvp_matrix;

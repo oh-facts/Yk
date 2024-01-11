@@ -27,7 +27,9 @@ include_directories(
 
 
 
-set(yk_src "src/yk.cpp" "src/renderer/renderer.cpp" "src/yk_debug_app.cpp" "vendor/stb/src/stb_image.c" "src/renderer/descriptors.cpp")
+set(yk_src "src/yk.cpp" "src/renderer/renderer.cpp" "src/yk_debug_app.cpp" 
+            "vendor/stb/src/stb_image.c" "vendor/vma/src/vk_mem_alloc.cpp" "src/renderer/descriptors.cpp"
+            "src/renderer/ykr_util.cpp")
 
 set(yk_platform_layer  "src/win32_window.cpp")
 
