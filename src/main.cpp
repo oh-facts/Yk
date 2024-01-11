@@ -112,7 +112,12 @@
 //  
 // ToDo(facts): Make the debug application entry handler thing.
 //
+// ToDo(facts 0445 1/11/24): organize renderer functions in different files. It is a pain to scroll around 2000 locs where most functions are complete. 
+//                           Also, remove all obsolete code
+// ToDo(facts):              Set up imgui
+// 
 //
+
 
 
 #include <yk_debug_app.h>
