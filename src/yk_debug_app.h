@@ -33,12 +33,17 @@ struct YkDebugAppState
 
     HMODULE hModule;
 
+    /*
+    Only update matters here. The rest are here because I was trying random stuff.
+    */
+
     debug_app_update_fn update;
     debug_app_start_fn start;
     debug_app_is_running_fn is_running;
     debug_app_update_ref_fn update_ref;
     debug_app_shutdown_fn shutdown;
 
+    
 };
 
 inline void reload_dll(struct YkDebugAppState* state)

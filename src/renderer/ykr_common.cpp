@@ -1,5 +1,5 @@
 #include <renderer/ykr_common.h>
-
+#include <renderer/ykr_debug_util.h>
 
 VkImageCreateInfo image_create_info(VkFormat format, VkImageUsageFlags usage_flags, VkExtent3D extent)
 {
@@ -78,4 +78,53 @@ void copy_image_to_image(VkCommandBuffer cmd, VkImage src, VkImage dst, VkExtent
     blit_info.pRegions = &blit_reg;
 
     vkCmdBlitImage2(cmd, &blit_info);
+}
+
+YkBuffer ykr_create_buffer(VmaAllocator allocator, size_t alloc_size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage)
+{
+    VkBufferCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    info.size = alloc_size;
+    info.usage = usage;
+    
+    VmaAllocationCreateInfo alloc_info = {};
+    alloc_info.usage = memory_usage;
+    alloc_info.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+    YkBuffer out = {};
+
+    VkResultAssert(vmaCreateBuffer(allocator, &info, &alloc_info, &out.buffer, &out.alloc, &out.info), "Vma buffer creation")
+
+    return out;
+}
+
+void ykr_destroy_buffer(VmaAllocator allocator, const YkBuffer* buffer)
+{
+    vmaDestroyBuffer(allocator, buffer->buffer, buffer->alloc);
+}
+
+void ykr_imm_submit(VkDevice device, VkCommandBuffer cmd, VkFence fence, void (*fn)(VkCommandBuffer, void *), void* data, VkQueue queue)
+{
+    vkResetFences(device, 1, &fence);
+    vkResetCommandBuffer(cmd, 0);
+
+    VkCommandBufferBeginInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    vkBeginCommandBuffer(cmd, &info);
+    fn(cmd, data);
+    vkEndCommandBuffer(cmd);
+
+    VkCommandBufferSubmitInfo buffer_submit_info = {};
+    buffer_submit_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+    buffer_submit_info.commandBuffer = cmd;
+    
+    VkSubmitInfo2 submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    submit_info.pCommandBufferInfos = &buffer_submit_info;
+    submit_info.commandBufferInfoCount = 1;
+
+    vkQueueSubmit2(queue, 1, &submit_info, fence);    
+    vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
 }

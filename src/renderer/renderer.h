@@ -75,10 +75,17 @@ struct YkRenderer
 	VkPipelineLayout triangle_pl_layout;
 	VkPipeline triangle_pl;
 
+	VkPipelineLayout mesh_pl_layout;
+	VkPipeline mesh_pl;
+	YkMeshBuffer rectangle;
 
 	VmaAllocator vma_allocator;
 
 	u32 frames_rendered;
+
+	VkFence imm_fence;
+	VkCommandPool imm_cmdpool;
+	VkCommandBuffer imm_cmd;
 
 
 #if VK_USE_VALIDATION_LAYERS

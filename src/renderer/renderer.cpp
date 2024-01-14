@@ -1,7 +1,8 @@
 #include <renderer/renderer.h>
 #include <renderer/ykr_debug_util.h>
 #include <renderer/ykr_instance.h>
-
+#define VMA_IMPLEMENTATION
+#include <vma/vk_mem_alloc.h>
 /*
     -------------------------------
 */
@@ -16,10 +17,41 @@ void yk_cleanup_swapchain(YkRenderer* renderer);
 void pipeline_innit(YkRenderer* renderer);
 void gradient_pipeline(YkRenderer* renderer);
 void triangle_pipeline(YkRenderer* renderer);
+void mesh_pipeline(YkRenderer* renderer);
+
+
+YkMeshBuffer ykr_upload_mesh(YkRenderer* renderer, YkVertex vertices[], u32 num_vertices, u32 indices[], u32 num_indices);
+void init_mesh(YkRenderer* renderer);
 
 /*
  -------util-------
 */
+
+void init_mesh(YkRenderer* renderer)
+{
+    YkVertex rect_vertices[4] = {};
+    rect_vertices[0].pos = { 0.5,-0.5, 0 };
+    rect_vertices[1].pos = { 0.5,0.5, 0 };
+    rect_vertices[2].pos = { -0.5,-0.5, 0 };
+    rect_vertices[3].pos = { -0.5,0.5, 0 };
+
+    rect_vertices[0].color = { 0,0, 0,1 };
+    rect_vertices[1].color = { 0.5,0.5,0.5 ,1 };
+    rect_vertices[2].color = { 1,0, 0,1 };
+    rect_vertices[3].color = { 0,1, 0,1 };
+
+    u32 rect_indices[6] = {};
+
+    rect_indices[0] = 0;
+    rect_indices[1] = 1;
+    rect_indices[2] = 2;
+
+    rect_indices[3] = 2;
+    rect_indices[4] = 1;
+    rect_indices[5] = 3;
+
+    renderer->rectangle = ykr_upload_mesh(renderer, rect_vertices, 4, rect_indices, 6);
+}
 
 VkCommandBufferBeginInfo yk_cmd_buffer_begin_info_create(VkCommandBufferUsageFlags flags)
 {
@@ -168,7 +200,7 @@ void shader_module_innit(VkDevice device, const char* filename, VkShaderModule* 
 /*
     I take an array but atm I only support one
 */
-VkPipeline yk_create_raster_pipeline(VkDevice device, const char* vert_path, const char* frag_path, VkPipelineLayout* layout)
+VkPipeline yk_create_raster_pipeline(VkDevice device, const char* vert_path, const char* frag_path, VkPipelineLayout* layout, VkPipelineLayoutCreateInfo* layout_info)
 {
     VkGraphicsPipelineCreateInfo gfx_pl_info = {};
     gfx_pl_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -324,10 +356,11 @@ VkPipeline yk_create_raster_pipeline(VkDevice device, const char* vert_path, con
     //layout
     //------------------
     //THis is where desc set data goes
-    VkPipelineLayoutCreateInfo layout_info = {};
-    layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+   // VkPipelineLayoutCreateInfo layout_info = {};
+   // layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    //layout_info.
     
-    VkResultAssert(vkCreatePipelineLayout(device, &layout_info, 0, layout), "pipeline layout creation")
+    VkResultAssert(vkCreatePipelineLayout(device, layout_info, 0, layout), "pipeline layout creation")
     //------------------
 
     gfx_pl_info.stageCount = shader_stages_count;
@@ -424,15 +457,32 @@ void gradient_pipeline(YkRenderer* renderer)
 
 void triangle_pipeline(YkRenderer* renderer)
 {
-   renderer->triangle_pl = yk_create_raster_pipeline(renderer->device, "res/default.vert.spv", "res/default.frag.spv", &renderer->triangle_pl_layout);
-
+    VkPipelineLayoutCreateInfo layout_info = {};
+    layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    renderer->triangle_pl = yk_create_raster_pipeline(renderer->device, "res/default.vert.spv", "res/default.frag.spv", &renderer->triangle_pl_layout, &layout_info);
 }
 
+void mesh_pipeline(YkRenderer* renderer)
+{
+    VkPipelineLayoutCreateInfo layout_info = {};
+    layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    
+    VkPushConstantRange range = {};
+    range.offset = 0;
+    range.size = sizeof(YkDrawPushConstants);
+    range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    layout_info.pushConstantRangeCount = 1;
+    layout_info.pPushConstantRanges = &range;
+
+    renderer->mesh_pl = yk_create_raster_pipeline(renderer->device, "res/mesh.vert.spv", "res/default.frag.spv", &renderer->mesh_pl_layout, &layout_info);
+}
 
 void pipeline_innit(YkRenderer* renderer)
 {
     gradient_pipeline(renderer);
     triangle_pipeline(renderer);
+    mesh_pipeline(renderer);
 }
 
 
@@ -463,7 +513,7 @@ void yk_renderer_draw_bg(YkRenderer* renderer, VkCommandBuffer cmd)
    vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_COMPUTE,renderer->gradient_pp_layouts, 0, 1, &renderer->draw_image_desc,0,0);
 
    ComputePushConstants push = {};
-   push.data1 = v4{ 1.0,0.0, 1.0,1.0 };
+   push.data1 = v4{ 0.0,1.0, 1.0,1.0 };
    push.data2 = v4{ 0.0,0.0, 1.0,1.0 };
 
    vkCmdPushConstants(cmd, renderer->gradient_pp_layouts, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push), &push);
@@ -496,20 +546,32 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
     vk_rendering_info.pDepthAttachment = VK_NULL_HANDLE; //&vk_depth_attachment;
     vk_rendering_info.pStencilAttachment = VK_NULL_HANDLE; //&vk_stencil_attachment;
 
+
+    // -----------begin rendering -----------//
     vkCmdBeginRenderingKHR(cmd, &vk_rendering_info);
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->triangle_pl);
 
     vkCmdSetViewport(cmd, 0, 1, &renderer->viewport);
     vkCmdSetScissor(cmd, 0, 1, &renderer->scissor);
 
+    // -------------triangle----------------//
     vkCmdDraw(cmd, 3, 1, 0, 0);
+    // -------------triangle----------------//
+
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl);
+
+    YkDrawPushConstants push_constants;
+    push_constants.world_matrix = yk_m4_identity();
+    push_constants.v_buffer = renderer->rectangle.v_address;
+
+    vkCmdPushConstants(cmd, renderer->mesh_pl_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(YkDrawPushConstants), &push_constants);
+    vkCmdBindIndexBuffer(cmd, renderer->rectangle.i_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+    vkCmdDrawIndexed(cmd, 6, 1, 0, 0, 0);
 
     vkCmdEndRendering(cmd);
+
 }
-
-
-#define VMA_DEBUG_LOG
-#include <vma/vk_mem_alloc.h>
 
 void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
 {
@@ -547,6 +609,8 @@ void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
     pipeline_innit(renderer);
     //---can be optimized per object. But boilerplate for now --//
 
+    init_mesh(renderer);
+
 }
 
 void yk_free_renderer(YkRenderer* renderer)
@@ -556,6 +620,9 @@ void yk_free_renderer(YkRenderer* renderer)
 
     vkDestroyPipelineLayout(renderer->device, renderer->gradient_pp_layouts,0);
     vkDestroyPipeline(renderer->device, renderer->gradient_pp,0);
+
+    vkDestroyPipelineLayout(renderer->device, renderer->mesh_pl_layout, 0);
+    vkDestroyPipeline(renderer->device, renderer->mesh_pl, 0);
     
     vkDestroyDescriptorPool(renderer->device,renderer->global_pool, 0);
     vkDestroyDescriptorSetLayout(renderer->device,renderer->draw_image_layouts,0);
@@ -569,7 +636,11 @@ void yk_free_renderer(YkRenderer* renderer)
         vkDestroyCommandPool(renderer->device, renderer->frame_data[i].cmd_pool, 0);
     }
 
-
+    vkDestroyCommandPool(renderer->device, renderer->imm_cmdpool, 0);
+    vkDestroyFence(renderer->device, renderer->imm_fence, 0);
+    
+    vmaDestroyBuffer(renderer->vma_allocator, renderer->rectangle.v_buffer.buffer, renderer->rectangle.v_buffer.alloc);
+    vmaDestroyBuffer(renderer->vma_allocator, renderer->rectangle.i_buffer.buffer, renderer->rectangle.i_buffer.alloc);
 
   //  vkDestroyPipeline(renderer->device, renderer->r_pipeline, 0);
   //  vkDestroyPipelineLayout(renderer->device, renderer->r_pipeline_layout, 0);
@@ -598,7 +669,7 @@ void yk_free_renderer(YkRenderer* renderer)
 }
 
 
-void transition_image(YkRenderer* renderer, VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout)
+void transition_image(VkCommandBuffer cmd, VkImage image, VkImageLayout currentLayout, VkImageLayout newLayout)
 {
     VkImageMemoryBarrier2 barrier = { };
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -632,6 +703,16 @@ void transition_image(YkRenderer* renderer, VkCommandBuffer cmd, VkImage image, 
     vkCmdPipelineBarrier2(cmd, &dep_info);
 }
 
+VkCommandBufferAllocateInfo yk_create_cmd_buffer_allocate_info(VkCommandPool pool, u32 count)
+{
+    VkCommandBufferAllocateInfo out = { };
+    out.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    out.pNext = 0;
+    out.commandPool = pool;
+    out.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    out.commandBufferCount = count;
+    return out;
+}
 
 void yk_cmd_innit(YkRenderer* renderer)
 {
@@ -641,26 +722,31 @@ void yk_cmd_innit(YkRenderer* renderer)
     cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     cmd_pool_info.queueFamilyIndex = Q_FAM_GFX;
 
+    //frame data cmds
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
         VkResultAssert(vkCreateCommandPool(renderer->device, &cmd_pool_info, 0, &renderer->frame_data[i].cmd_pool), "Command pool creation");
 
-        VkCommandBufferAllocateInfo vk_cmd_buffer_alloc_info = { };
-        vk_cmd_buffer_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        vk_cmd_buffer_alloc_info.pNext = 0;
-        vk_cmd_buffer_alloc_info.commandPool = renderer->frame_data[i].cmd_pool;
-        vk_cmd_buffer_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        vk_cmd_buffer_alloc_info.commandBufferCount = 1;
+        VkCommandBufferAllocateInfo cmd_buffer_alloc_info = yk_create_cmd_buffer_allocate_info(renderer->frame_data[i].cmd_pool, 1);
 
 
-        VkResultAssert(vkAllocateCommandBuffers(renderer->device, &vk_cmd_buffer_alloc_info, &renderer->frame_data[i].cmd_buffers), "Command Buffer allocation");
+        VkResultAssert(vkAllocateCommandBuffers(renderer->device, &cmd_buffer_alloc_info, &renderer->frame_data[i].cmd_buffers), "Command Buffer allocation");
     }
+
+    //imm cmds
+    VkResultAssert(vkCreateCommandPool(renderer->device, &cmd_pool_info, 0, &renderer->imm_cmdpool), "Command pool creation");
+   
+    VkCommandBufferAllocateInfo cmd_buffer_alloc_info = yk_create_cmd_buffer_allocate_info(renderer->imm_cmdpool, 1);
+
+    VkResultAssert(vkAllocateCommandBuffers(renderer->device, &cmd_buffer_alloc_info, &renderer->imm_cmd), "Command Buffer allocation");
+
+
 }
 
 
-u32 findMemoryType(YkRenderer* renderer, u32 typeFilter, VkMemoryPropertyFlags properties) {
+u32 findMemoryType(VkPhysicalDevice phys_device, u32 typeFilter, VkMemoryPropertyFlags properties) {
     VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(renderer->phys_device, &memProperties);
+    vkGetPhysicalDeviceMemoryProperties(phys_device, &memProperties);
 
     for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
         if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
@@ -681,7 +767,7 @@ void yk_create_sync_objs(YkRenderer* renderer)
 
     //if semaphores aren't extended with semaphore types, they will be binary
 
-
+    
     VkSemaphoreCreateInfo vk_semawhore_create_info = { };
     vk_semawhore_create_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     vk_semawhore_create_info.pNext = 0;
@@ -691,12 +777,17 @@ void yk_create_sync_objs(YkRenderer* renderer)
     vk_fence_create_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     vk_fence_create_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
+    //frame data
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
         VkResultAssert(vkCreateSemaphore(renderer->device, &vk_semawhore_create_info, 0, &renderer->frame_data[i].image_available_semawhore), "Image ready semaphore");
         VkResultAssert(vkCreateSemaphore(renderer->device, &vk_semawhore_create_info, 0, &renderer->frame_data[i].render_finished_semawhore), "Render finished semaphore");
         VkResultAssert(vkCreateFence(renderer->device, &vk_fence_create_info, 0, &renderer->frame_data[i].in_flight_fence), "flight fence");
     }
+
+
+    //imm
+    VkResultAssert(vkCreateFence(renderer->device, &vk_fence_create_info, 0, &renderer->imm_fence), "flight fence");
 
 }
 
@@ -722,22 +813,22 @@ void yk_renderer_draw(YkRenderer* renderer, YkWindow* win)
     VkCommandBufferBeginInfo vk_cmd_buffer_begin_info = yk_cmd_buffer_begin_info_create(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);   
     VkResultAssert(vkBeginCommandBuffer(current_frame->cmd_buffers, &vk_cmd_buffer_begin_info), "Command buffer begin");
 
-    transition_image(renderer, current_frame->cmd_buffers, renderer->draw_image.image , VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
+    transition_image(current_frame->cmd_buffers, renderer->draw_image.image , VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
     yk_renderer_draw_bg(renderer, current_frame->cmd_buffers);
 
-    transition_image(renderer, current_frame->cmd_buffers, renderer->draw_image.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    transition_image(current_frame->cmd_buffers, renderer->draw_image.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
     yk_renderer_draw_triangle(renderer, current_frame->cmd_buffers);
 
-    transition_image(renderer, current_frame->cmd_buffers, renderer->draw_image.image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-    transition_image(renderer, current_frame->cmd_buffers, renderer->sc_images[imageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    transition_image(current_frame->cmd_buffers, renderer->draw_image.image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    transition_image(current_frame->cmd_buffers, renderer->sc_images[imageIndex], VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     copy_image_to_image(current_frame->cmd_buffers, renderer->draw_image.image,
                         renderer->sc_images[imageIndex], VkExtent2D{ renderer->draw_image.imageExtent.width, renderer->draw_image.imageExtent.height },
                         renderer->sc_extent);
 
 
-    transition_image(renderer, current_frame->cmd_buffers, renderer->sc_images[imageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    transition_image(current_frame->cmd_buffers, renderer->sc_images[imageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     VkResultAssert(vkEndCommandBuffer(current_frame->cmd_buffers), "Command buffer end");
 
@@ -789,6 +880,7 @@ void yk_renderer_wait(YkRenderer* renderer)
 
 b8 yk_recreate_swapchain(YkRenderer* renderer, YkWindow* win)
 {
+    printf("w");
     if (!win->win_data.is_running)
     {
         return false;
@@ -803,4 +895,68 @@ b8 yk_recreate_swapchain(YkRenderer* renderer, YkWindow* win)
     yk_create_swapchain(renderer, win);
 
     return true;
+}
+
+
+struct copy_buffer_data
+{
+    size_t vert_buffer_size;
+    size_t index_buffer_size;
+    VkBuffer vert_buffer;
+    VkBuffer index_buffer;
+    VkBuffer staging;
+};
+
+void _copy_vert_index_buffer(VkCommandBuffer cmd, void* data)
+{
+    copy_buffer_data* copy_buffer = (copy_buffer_data*)data;
+
+    VkBufferCopy vert_copy = { };
+    vert_copy.size = copy_buffer->vert_buffer_size;
+
+    vkCmdCopyBuffer(cmd, copy_buffer->staging, copy_buffer->vert_buffer, 1, &vert_copy);
+
+    VkBufferCopy index_copy = { };
+    index_copy.srcOffset = copy_buffer->vert_buffer_size;
+    index_copy.size = copy_buffer->index_buffer_size;
+
+    vkCmdCopyBuffer(cmd, copy_buffer->staging, copy_buffer->index_buffer, 1, &index_copy);
+}
+
+YkMeshBuffer ykr_upload_mesh(YkRenderer* renderer, YkVertex vertices[], u32 num_vertices, u32 indices[], u32 num_indices)
+{
+    const size_t vert_buffer_size = sizeof(YkVertex) * num_vertices;
+    const size_t index_buffer_size = sizeof(u32) * num_indices;
+
+    YkMeshBuffer out = {};
+    out.v_buffer = ykr_create_buffer(renderer->vma_allocator, vert_buffer_size,
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VMA_MEMORY_USAGE_GPU_ONLY);
+
+    VkBufferDeviceAddressInfo device_info = {};
+    device_info.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO;
+    device_info.buffer = out.v_buffer.buffer;
+
+    out.v_address = vkGetBufferDeviceAddress(renderer->device, &device_info);
+    out.i_buffer = ykr_create_buffer(renderer->vma_allocator, index_buffer_size,
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+        VMA_MEMORY_USAGE_GPU_ONLY);
+
+
+    YkBuffer staging = ykr_create_buffer(renderer->vma_allocator, vert_buffer_size + index_buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
+    void* data = staging.alloc->GetMappedData();
+
+    memcpy(data, vertices, vert_buffer_size);
+    memcpy((char*)data + vert_buffer_size, indices, index_buffer_size);
+
+
+    copy_buffer_data copy_buffer_data = { vert_buffer_size, index_buffer_size, out.v_buffer.buffer, out.i_buffer.buffer, staging.buffer };
+
+
+    ykr_imm_submit(renderer->device, renderer->imm_cmd, renderer->imm_fence, _copy_vert_index_buffer, (void*)&copy_buffer_data, renderer->gfx_q);
+
+    ykr_destroy_buffer(renderer->vma_allocator, &staging);
+
+    return out;
+
 }
