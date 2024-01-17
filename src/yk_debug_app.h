@@ -30,7 +30,7 @@ struct YkDebugAppState
     //ToDo(facts): Organize better later. Should renderer be part of "game" code? I do it rn so I can debug since the renderer isn't complete.
     YkWindow window;
     YkRenderer ren;
-
+    YkMemory engine_memory;
     HMODULE hModule;
 
     /*

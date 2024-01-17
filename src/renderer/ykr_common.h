@@ -12,7 +12,7 @@
 #include <vma/vk_mem_alloc.h>
 #include <time.h>
 #include <stdio.h>
-
+#include <yk_memory.h>
 #include <yk_math.h>
 
 #define max_images 3
@@ -51,11 +51,31 @@ struct YkMeshBuffer
 	VkDeviceAddress v_address;
 };
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 struct YkDrawPushConstants
 {
-	m4 world_matrix;
+	glm::mat4 world_matrix;
 	VkDeviceAddress v_buffer;
 };
+
+
+struct geo_surface
+{
+	u32 start;
+	u32 count;
+};
+
+struct mesh_asset
+{
+	const char* name;
+	struct YkMeshBuffer buffer;
+	struct geo_surface* surfaces;
+	u32 num_surfaces;
+};
+
+struct YkRenderer;
 
 void copy_image_to_image(VkCommandBuffer cmd, VkImage src, VkImage dst, VkExtent2D src_size, VkExtent2D dst_size);
 VkImageViewCreateInfo image_view_create_info(VkFormat format, VkImage image, VkImageAspectFlags aspect_flags);
@@ -66,4 +86,6 @@ void ykr_destroy_buffer(VmaAllocator allocator, const YkBuffer* buffer);
 
 typedef void (*imm_submit_fn)(VkCommandBuffer cmd);
 void ykr_imm_submit(VkDevice device, VkCommandBuffer cmd, VkFence fence, void (*fn)(VkCommandBuffer, void*), void* data, VkQueue queue);
+
+mesh_asset* yk_load_mesh(YkRenderer* renderer, const char* filepath, void* memory, size_t size);
 #endif // !YKR_COMMON_H

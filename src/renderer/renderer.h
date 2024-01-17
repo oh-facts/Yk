@@ -65,6 +65,7 @@ struct YkRenderer
 	uint32_t current_frame;
 
 	AllocatedImage draw_image;
+	AllocatedImage depth_image;
 
 	VkDescriptorSet draw_image_desc;
 	VkDescriptorSetLayout draw_image_layouts;
@@ -78,6 +79,9 @@ struct YkRenderer
 	VkPipelineLayout mesh_pl_layout;
 	VkPipeline mesh_pl;
 	YkMeshBuffer rectangle;
+
+	mesh_asset* test_meshes;
+	size_t test_mesh_count;
 
 	VmaAllocator vma_allocator;
 
@@ -112,6 +116,6 @@ void yk_renderer_draw(YkRenderer* renderer, YkWindow* win);
 
 b8 yk_recreate_swapchain(YkRenderer* renderer, struct YkWindow* win);
 
+YkMeshBuffer ykr_upload_mesh(YkRenderer* renderer, YkVertex vertices[], u32 num_vertices, u32 indices[], u32 num_indices);
 
-typedef struct mvp_matrix mvp_matrix;
 #endif

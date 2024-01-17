@@ -230,7 +230,7 @@ void yk_create_device(YkRenderer* renderer)
     VkPhysicalDeviceDynamicRenderingFeaturesKHR vk_dynamic_rendering_feature = { };
     vk_dynamic_rendering_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
     vk_dynamic_rendering_feature.dynamicRendering = VK_TRUE;
-
+    
     VkPhysicalDeviceSynchronization2FeaturesKHR vk_sync2_feet = {};
     vk_sync2_feet.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR;
     vk_sync2_feet.synchronization2 = VK_TRUE;
@@ -453,6 +453,8 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
     vkCreateSwapchainKHR(renderer->device, &vk_swapchain_create_info, 0, &renderer->swapchain);
     //   VkResultAssert(, "Created Swapchain");
 
+    //swap chain images
+
 #define max_images 3
 
     u32 vk_image_num = 0;
@@ -490,6 +492,8 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
         VkResultAssert(vkCreateImageView(renderer->device, &vk_image_view_create_info, 0, &renderer->sc_image_views[i]), str);
     }
 
+    //draw image
+
     VkExtent3D draw_image_extent = { (u32)win->win_data.size_x, (u32)win->win_data.size_y, 1 };
 
     renderer->draw_image.imageFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
@@ -514,23 +518,40 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
 
     VkResultAssert(vkCreateImageView(renderer->device, &draw_image_view_create_info, 0, &renderer->draw_image.imageView), "Draw image view creation");
     
+    //depth image
+    renderer->depth_image.imageFormat = VK_FORMAT_D32_SFLOAT;
+    renderer->depth_image.imageExtent = draw_image_extent;
 
+    VkImageUsageFlags depth_image_usage_flags = {};
+    depth_image_usage_flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    
+    VkImageCreateInfo depth_image_create_info = image_create_info(renderer->depth_image.imageFormat, depth_image_usage_flags, draw_image_extent);
+    vmaCreateImage(renderer->vma_allocator, &depth_image_create_info, &draw_image_alloc_info, &renderer->depth_image.image, &renderer->depth_image.allocation, 0);
 
+    VkImageViewCreateInfo dview_info = image_view_create_info(renderer->depth_image.imageFormat, renderer->depth_image.image, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+    VkResultAssert(vkCreateImageView(renderer->device, &dview_info, 0, &renderer->depth_image.imageView), "depth image view creation");
 
 }
 
 void yk_cleanup_swapchain(YkRenderer* renderer)
 {
-
+    //sc image views
     for (i32 i = 0; i < max_images; i++)
     {
         vkDestroyImageView(renderer->device, renderer->sc_image_views[i], 0);
     }
-
+    //-------------
+    
     //draw image
     vkDestroyImageView(renderer->device, renderer->draw_image.imageView, 0);
     vmaDestroyImage(renderer->vma_allocator, renderer->draw_image.image, renderer->draw_image.allocation);
-    //draw image
+    //-------------
+
+    //depth image
+    vkDestroyImageView(renderer->device, renderer->depth_image.imageView, 0);
+    vmaDestroyImage(renderer->vma_allocator, renderer->depth_image.image, renderer->depth_image.allocation);
+    //-------------
 
     vkDestroySwapchainKHR(renderer->device, renderer->swapchain, 0);
 

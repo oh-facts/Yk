@@ -16,19 +16,22 @@ endif()
 include_directories(src)
 #add_subdirectory(vendor/vma/include)
 find_package(Vulkan REQUIRED)
+add_subdirectory(vendor/glm)
 
 include_directories(
     src
     include
+    vendor/glm/
     vendor/stb/include
     vendor/vma/include
+    vendor/cgltf/include
     ${Vulkan_INCLUDE_DIRS}
 )
 
 
 
 set(yk_src "src/yk.cpp" "vendor/vma/src/vk_mem_alloc.cpp" "src/renderer/renderer.cpp" "src/yk_debug_app.cpp" 
-            "src/renderer/descriptors.cpp"
+            "src/renderer/descriptors.cpp" "src/yk_memory.cpp"
             "src/renderer/ykr_debug_util.cpp" "src/renderer/ykr_common.cpp" "src/renderer/ykr_instance.cpp")
 
 set(yk_platform_layer  "src/win32_window.cpp")
@@ -44,7 +47,7 @@ else()
     add_library(${PROJECT_NAME} STATIC ${yk_src})
 endif()
 
-target_link_libraries(${PROJECT_NAME}  ${Vulkan_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}  ${Vulkan_LIBRARIES} glm::glm)
 
 if(YK_BUILD_SHARED)
     add_executable(yk_test "src/main.cpp")

@@ -3,6 +3,8 @@
 #include <renderer/ykr_instance.h>
 #define VMA_IMPLEMENTATION
 #include <vma/vk_mem_alloc.h>
+
+
 /*
     -------------------------------
 */
@@ -196,11 +198,10 @@ void shader_module_innit(VkDevice device, const char* filename, VkShaderModule* 
     free((char*)shader_code);
 }
 
-
 /*
     I take an array but atm I only support one
 */
-VkPipeline yk_create_raster_pipeline(VkDevice device, const char* vert_path, const char* frag_path, VkPipelineLayout* layout, VkPipelineLayoutCreateInfo* layout_info)
+VkPipeline yk_create_raster_pipeline(VkDevice device, const char* vert_path, const char* frag_path, VkPipelineLayout* layout, VkPipelineLayoutCreateInfo* layout_info, VkFormat cformat, VkFormat dformat)
 {
     VkGraphicsPipelineCreateInfo gfx_pl_info = {};
     gfx_pl_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -274,7 +275,7 @@ VkPipeline yk_create_raster_pipeline(VkDevice device, const char* vert_path, con
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
     rasterizer.cullMode = VK_CULL_MODE_NONE;
-    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
     
     //Note(facts 12/23 2:20): come back to this later
     rasterizer.depthBiasEnable = VK_FALSE;
@@ -297,8 +298,16 @@ VkPipeline yk_create_raster_pipeline(VkDevice device, const char* vert_path, con
 
     //Depth stencil
     //------------------
-
-
+    VkPipelineDepthStencilStateCreateInfo depth_info = {};
+    depth_info.depthTestEnable = VK_TRUE;
+    depth_info.depthWriteEnable = VK_TRUE;
+    depth_info.depthCompareOp = VK_COMPARE_OP_LESS;
+    depth_info.depthBoundsTestEnable = VK_FALSE;
+    depth_info.stencilTestEnable = VK_FALSE;
+    depth_info.front = {};
+    depth_info.back = {};
+    depth_info.minDepthBounds = 0.f;
+    depth_info.maxDepthBounds = 1.f;
     //------------------
 
     //color blend stuff
@@ -363,6 +372,13 @@ VkPipeline yk_create_raster_pipeline(VkDevice device, const char* vert_path, con
     VkResultAssert(vkCreatePipelineLayout(device, layout_info, 0, layout), "pipeline layout creation")
     //------------------
 
+    VkPipelineRenderingCreateInfo render_info = {};
+    render_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+    render_info.colorAttachmentCount = 1;
+    render_info.pColorAttachmentFormats = &cformat;
+    render_info.depthAttachmentFormat = dformat;
+    render_info.stencilAttachmentFormat = VK_FORMAT_UNDEFINED;
+
     gfx_pl_info.stageCount = shader_stages_count;
     gfx_pl_info.pStages = shader_stages;
     gfx_pl_info.pVertexInputState = &vert_input;
@@ -371,10 +387,11 @@ VkPipeline yk_create_raster_pipeline(VkDevice device, const char* vert_path, con
     gfx_pl_info.pViewportState = &viewport_state;
     gfx_pl_info.pRasterizationState = &rasterizer;
     gfx_pl_info.pMultisampleState = &multisampling;
-    gfx_pl_info.pDepthStencilState = 0;
+    gfx_pl_info.pDepthStencilState = &depth_info;
     gfx_pl_info.pColorBlendState = &color_blending;
     gfx_pl_info.pDynamicState = &dyn_state_create_info;
     gfx_pl_info.layout = *layout;
+    gfx_pl_info.pNext = &render_info;
 
     VkPipeline out = {};
     vkCreateGraphicsPipelines(device, 0, 1, &gfx_pl_info, 0, &out);
@@ -459,14 +476,14 @@ void triangle_pipeline(YkRenderer* renderer)
 {
     VkPipelineLayoutCreateInfo layout_info = {};
     layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    renderer->triangle_pl = yk_create_raster_pipeline(renderer->device, "res/default.vert.spv", "res/default.frag.spv", &renderer->triangle_pl_layout, &layout_info);
+    renderer->triangle_pl = yk_create_raster_pipeline(renderer->device, "res/default.vert.spv", "res/default.frag.spv", &renderer->triangle_pl_layout, &layout_info, renderer->draw_image.imageFormat, VK_FORMAT_UNDEFINED);
 }
 
 void mesh_pipeline(YkRenderer* renderer)
 {
     VkPipelineLayoutCreateInfo layout_info = {};
     layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    
+
     VkPushConstantRange range = {};
     range.offset = 0;
     range.size = sizeof(YkDrawPushConstants);
@@ -475,13 +492,13 @@ void mesh_pipeline(YkRenderer* renderer)
     layout_info.pushConstantRangeCount = 1;
     layout_info.pPushConstantRanges = &range;
 
-    renderer->mesh_pl = yk_create_raster_pipeline(renderer->device, "res/mesh.vert.spv", "res/default.frag.spv", &renderer->mesh_pl_layout, &layout_info);
+    renderer->mesh_pl = yk_create_raster_pipeline(renderer->device, "res/mesh.vert.spv", "res/default.frag.spv", &renderer->mesh_pl_layout, &layout_info, renderer->draw_image.imageFormat, renderer->depth_image.imageFormat);
 }
 
 void pipeline_innit(YkRenderer* renderer)
 {
     gradient_pipeline(renderer);
-    triangle_pipeline(renderer);
+    //triangle_pipeline(renderer);
     mesh_pipeline(renderer);
 }
 
@@ -521,8 +538,13 @@ void yk_renderer_draw_bg(YkRenderer* renderer, VkCommandBuffer cmd)
    vkCmdDispatch(cmd, renderer->draw_image.imageExtent.width / 16.0 , renderer->draw_image.imageExtent.height / 16.0, 1);
 }
 
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
 {
+    //glm::mat4 myMatrix = glm::mat4(1.0f);
+   // glmc_mat4_identity(&aa);
     PFN_vkCmdBeginRenderingKHR vkCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(renderer->device, "vkCmdBeginRenderingKHR");
     PFN_vkCmdEndRenderingKHR vkCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)vkGetDeviceProcAddr(renderer->device, "vkCmdEndRenderingKHR");
 
@@ -534,6 +556,15 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
     vk_color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     vk_color_attachment.clearValue.color = VkClearColorValue{ 1.0f, 0.0f, 0.0f, 1.0f };
 
+    VkRenderingAttachmentInfoKHR vk_depth_attachment = {};
+    vk_depth_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
+    vk_depth_attachment.imageView = renderer->depth_image.imageView;
+    vk_depth_attachment.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+    vk_depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    vk_depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    vk_depth_attachment.clearValue.depthStencil.depth = 1.f;
+    
+
     VkRenderingInfoKHR vk_rendering_info = { };
     vk_rendering_info.sType = VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
     vk_rendering_info.pNext = 0;
@@ -543,31 +574,89 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
     vk_rendering_info.viewMask = 0;
     vk_rendering_info.colorAttachmentCount = 1;
     vk_rendering_info.pColorAttachments = &vk_color_attachment;
-    vk_rendering_info.pDepthAttachment = VK_NULL_HANDLE; //&vk_depth_attachment;
+    vk_rendering_info.pDepthAttachment = &vk_depth_attachment;
     vk_rendering_info.pStencilAttachment = VK_NULL_HANDLE; //&vk_stencil_attachment;
 
 
     // -----------begin rendering -----------//
     vkCmdBeginRenderingKHR(cmd, &vk_rendering_info);
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->triangle_pl);
 
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl);
     vkCmdSetViewport(cmd, 0, 1, &renderer->viewport);
     vkCmdSetScissor(cmd, 0, 1, &renderer->scissor);
 
-    // -------------triangle----------------//
-    vkCmdDraw(cmd, 3, 1, 0, 0);
-    // -------------triangle----------------//
-
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl);
-
     YkDrawPushConstants push_constants;
-    push_constants.world_matrix = yk_m4_identity();
+    push_constants.world_matrix = glm::mat4(1.f);
     push_constants.v_buffer = renderer->rectangle.v_address;
 
-    vkCmdPushConstants(cmd, renderer->mesh_pl_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(YkDrawPushConstants), &push_constants);
-    vkCmdBindIndexBuffer(cmd, renderer->rectangle.i_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+    clock_t current_time = clock();
 
-    vkCmdDrawIndexed(cmd, 6, 1, 0, 0, 0);
+    {
+        f32 time = (f32)(current_time - renderer->clock) / CLOCKS_PER_SEC;
+
+        glm::mat4 model = glm::mat4(1.f);
+        
+        model = glm::translate(model, glm::vec3(-0.5f, 0, -2));
+
+        model = glm::rotate(model, time * 2.f, glm::vec3(0, 1, 0));
+
+        model = glm::scale(model, glm::vec3(0.2, 0.2, 0.2));
+
+        glm::mat4 view = glm::lookAt(glm::vec3(0, 0, 1), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0));
+        glm::mat4 proj = glm::perspective(DEG_TO_RAD * 45.f, renderer->sc_extent.width / (f32)renderer->sc_extent.height, 0.1f, 10.f);
+
+        // +z is back. +y is up , +x is right
+
+        proj[1][1] *= -1;
+
+        glm::mat4 mvp = proj * view * model;
+
+        push_constants.world_matrix = mvp;
+
+        push_constants.v_buffer = renderer->test_meshes[0].buffer.v_address;
+        vkCmdPushConstants(cmd, renderer->mesh_pl_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(YkDrawPushConstants), &push_constants);
+        vkCmdBindIndexBuffer(cmd, renderer->test_meshes[0].buffer.i_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+        vkCmdDrawIndexed(cmd, renderer->test_meshes[0].surfaces[0].count, 1, renderer->test_meshes[0].surfaces[0].start, 0, 0);
+    }
+    
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl);
+    vkCmdSetViewport(cmd, 0, 1, &renderer->viewport);
+    vkCmdSetScissor(cmd, 0, 1, &renderer->scissor);
+    {
+
+        f32 time = (f32)(current_time - renderer->clock) / CLOCKS_PER_SEC;
+
+        glm::mat4 model = glm::mat4(1.f);
+
+        model = glm::translate(model, glm::vec3(0.5f, 0, -2));
+
+        model = glm::rotate(model, time * 2.f, glm::vec3(1, 0, 0));
+        model = glm::rotate(model, glm::radians(180.f), glm::vec3(0, 1, 0));
+
+        model = glm::scale(model, glm::vec3(0.2, 0.2, 0.2));
+
+        glm::mat4 view = glm::lookAt(glm::vec3(0, 0, 1), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0));
+        glm::mat4 proj = glm::perspective(DEG_TO_RAD * 45.f, renderer->sc_extent.width / (f32)renderer->sc_extent.height, 0.1f, 10.f);
+
+        // +z is back. +y is up , +x is right
+
+        proj[1][1] *= -1;
+
+        glm::mat4 mvp = proj * view * model;
+
+        push_constants.world_matrix = mvp;
+
+        push_constants.v_buffer = renderer->test_meshes[0].buffer.v_address;
+        vkCmdPushConstants(cmd, renderer->mesh_pl_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(YkDrawPushConstants), &push_constants);
+        vkCmdBindIndexBuffer(cmd, renderer->test_meshes[0].buffer.i_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+        vkCmdDrawIndexed(cmd, renderer->test_meshes[0].surfaces[0].count, 1, renderer->test_meshes[0].surfaces[0].start, 0, 0);
+    }
+    
+    
+
+
 
     vkCmdEndRendering(cmd);
 
@@ -639,8 +728,13 @@ void yk_free_renderer(YkRenderer* renderer)
     vkDestroyCommandPool(renderer->device, renderer->imm_cmdpool, 0);
     vkDestroyFence(renderer->device, renderer->imm_fence, 0);
     
+    //ToDo(facts): For the love of god, make a function to destroy all buffers
+
     vmaDestroyBuffer(renderer->vma_allocator, renderer->rectangle.v_buffer.buffer, renderer->rectangle.v_buffer.alloc);
     vmaDestroyBuffer(renderer->vma_allocator, renderer->rectangle.i_buffer.buffer, renderer->rectangle.i_buffer.alloc);
+
+    vmaDestroyBuffer(renderer->vma_allocator, renderer->test_meshes->buffer.v_buffer.buffer, renderer->test_meshes->buffer.v_buffer.alloc);
+    vmaDestroyBuffer(renderer->vma_allocator, renderer->test_meshes->buffer.i_buffer.buffer, renderer->test_meshes->buffer.i_buffer.alloc);
 
   //  vkDestroyPipeline(renderer->device, renderer->r_pipeline, 0);
   //  vkDestroyPipelineLayout(renderer->device, renderer->r_pipeline_layout, 0);
@@ -818,6 +912,8 @@ void yk_renderer_draw(YkRenderer* renderer, YkWindow* win)
     yk_renderer_draw_bg(renderer, current_frame->cmd_buffers);
 
     transition_image(current_frame->cmd_buffers, renderer->draw_image.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    transition_image(current_frame->cmd_buffers, renderer->depth_image.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+
     yk_renderer_draw_triangle(renderer, current_frame->cmd_buffers);
 
     transition_image(current_frame->cmd_buffers, renderer->draw_image.image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);

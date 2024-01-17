@@ -168,8 +168,20 @@ inline m4 yk_m4_rotate(const m4 mat, const f32 angle, const v3 axis)
 	return out;
 }
 
+inline m4 yk_m4_scale(const m4 mat, const v3 scale)
+{
+	m4 out = mat;
 
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 4; j++)
+		{
+			out.e[i][j] *= scale.e[i];
+		}
+	}
 
+	return out;
+}
 
 inline m4 yk_m4_look_at(const v3 eye, const v3 target, const v3 up)
 {
@@ -221,9 +233,31 @@ inline m4 yk_m4_perspective(const f32 fov_degrees, const f32 aspect_ratio, const
 
 }
 
+inline m4 yk_m4_multiply(const m4 a, const m4 b)
+{
+	m4 out = { 0 };
+
+	for (int i = 0; i < 4; ++i)
+	{
+		for (int j = 0; j < 4; ++j)
+		{
+			for (int k = 0; k < 4; ++k)
+			{
+				out.e[i][j] += a.e[i][k] * b.e[k][j];
+			}
+		}
+	}
+
+	return out;
+}
+
  inline int yk_clamp(int value, int min, int max) {
 	return value < min ? min : (value > max ? max : value);
 }
 
+inline void ykm_print_v3(v3 v3)
+{
+	printf("[ %f , %f , %f ]\n", v3.x, v3.y, v3.z);
+}
 
 #endif // !YK_MATH

@@ -117,26 +117,19 @@
 // ToDo(facts):              Set up imgui
 // 
 //
-
+// ToDo(facts): Make a 3d debug camera
+// ToDo(facts): Abstract making pipelines.
+//  
 
 
 #include <yk_debug_app.h>
+#include <yk_memory.h>
 
-struct YkMemory
-{
-    int is_initialized;
-    u64 perm_storage_size;
-    void *perm_storage;
-    u64 temp_storage_size;
-    void *temp_storage;
-};
-
-typedef struct YkMemory YkMemory;
 
 #if DEBUG
-    LPVOID base_address = (LPVOID)Terabytes(2);
+LPVOID base_address = (LPVOID)Terabytes(2);
 #else
-    LPVOID base_address = 0;
+LPVOID base_address = 0;
 #endif
 
 
@@ -145,17 +138,18 @@ int main(int argc, char *argv[])
 {
 
     //ToDo(facts): Actually make use of this lmao
-    YkMemory engine_memory = { };
-    engine_memory.perm_storage_size = Megabytes(64);
-    engine_memory.temp_storage_size = Megabytes(64);
+    
 
-    u64 total_size = engine_memory.perm_storage_size + engine_memory.temp_storage_size;
-
-    engine_memory.perm_storage = VirtualAlloc(base_address, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-    engine_memory.temp_storage = (u8*)engine_memory.perm_storage + engine_memory.perm_storage_size;
-   
     struct YkDebugAppState state = { };
     reload_dll(&state);
+
+    state.engine_memory.perm_storage_size = Megabytes(64);
+    state.engine_memory.temp_storage_size = Megabytes(64);
+
+    u64 total_size = state.engine_memory.perm_storage_size + state.engine_memory.temp_storage_size;
+
+    state.engine_memory.perm_storage = VirtualAlloc(base_address, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    state.engine_memory.temp_storage = (u8*)state.engine_memory.perm_storage + state.engine_memory.perm_storage_size;
 
     state.ren.clock = clock();
 
