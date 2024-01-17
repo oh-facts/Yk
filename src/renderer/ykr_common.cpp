@@ -242,7 +242,7 @@ mesh_asset* yk_load_mesh(YkRenderer* renderer, const char* filepath, void* memor
                 for (size_t k = 0; k < vertex_num; k++)
                 {
                     vertices[k].color = v4{ vertices[k].normal.x, vertices[k].normal.y , vertices[k].normal.z ,  1 };
-                    vertices[k].color = v4{ 1,0,0 , 1 };
+                    //vertices[k].color = v4{ 1,0,0 , 1 };
                 }
 
                 new_mesh.surfaces[j] = surface;
