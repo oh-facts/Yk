@@ -36,7 +36,7 @@ void yk_show_cursor(b8 flag)
     }
     else
     {
-        ShowCursor(true);
+        while(ShowCursor(true) < 0);
     }
     
 }

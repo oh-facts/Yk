@@ -22,7 +22,11 @@ glm::mat4 ykr_camera_get_rot_matrix(YkDebugCamera* self)
 void ykr_camera_update(YkDebugCamera* self, f32 delta)
 {
 	glm::mat4 cam_rot = ykr_camera_get_rot_matrix(self);
-	self->pos += glm::vec3(cam_rot * glm::vec4(self->_vel * delta, 0.f));
+	self->pos += glm::vec3(cam_rot * glm::vec4(self->_vel * cam_speed * delta, 0.f));
+
+	self->yaw += self->_rot.x * delta * cam_sens;
+	self->pitch += self->_rot.y * delta * cam_sens;
+
 	self->_vel = glm::vec3(0.f);
 }
 
@@ -50,7 +54,6 @@ void ykr_camera_input(YkDebugCamera* self, struct YkWindow* window)
 		//printf("d");
 	}
 
-
-	self->yaw += (f32)yk_input_mouse_mv(&window->mouse_pos).x / 100.f;
-	self->pitch += (f32)yk_input_mouse_mv(&window->mouse_pos).y / 100.f;
+	self->_rot.x = (f32)yk_input_mouse_mv(&window->mouse_pos).x;
+	self->_rot.y = (f32)yk_input_mouse_mv(&window->mouse_pos).y;
 }

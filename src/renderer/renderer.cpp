@@ -577,8 +577,6 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
     vk_rendering_info.pDepthAttachment = &vk_depth_attachment;
     vk_rendering_info.pStencilAttachment = VK_NULL_HANDLE; //&vk_stencil_attachment;
 
-    ykr_camera_update(&renderer->cam, 0.005f);
-
     // -----------begin rendering -----------//
     vkCmdBeginRenderingKHR(cmd, &vk_rendering_info);
 
@@ -854,8 +852,11 @@ void yk_create_sync_objs(YkRenderer* renderer)
 
 b8 move_cam = false;
 
-void yk_renderer_draw(YkRenderer* renderer, YkWindow* win)
+void yk_renderer_draw(YkRenderer* renderer, YkWindow* win, f64 dt)
 {
+    //camera stuff -----------
+    ykr_camera_update(&renderer->cam, dt);
+
     if (yk_input_is_key_tapped(&win->keys, 'Q'))
     {
         yk_show_cursor(move_cam);
@@ -867,6 +868,7 @@ void yk_renderer_draw(YkRenderer* renderer, YkWindow* win)
     {
         ykr_camera_input(&renderer->cam, win);
     }
+    //----------camera stuff
 
     yk_frame_data* current_frame = &renderer->frame_data[renderer->current_frame];
 

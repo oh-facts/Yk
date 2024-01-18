@@ -170,6 +170,8 @@ int main(int argc, char *argv[])
     f64 total_time_elapsed = 0;
 
     f32 time_since_print = 0;
+
+    f64 dt = 0;
     
     constexpr u32 print_stats_time = 1;
 
@@ -182,7 +184,7 @@ int main(int argc, char *argv[])
         //game loop start--------
         if (!state.window.win_data.is_minimized)
         {
-            state.update(&state);
+            state.update(&state, dt);
 
             if (yk_input_is_key_tapped(&state.window.keys,'P')) {
                 state.shutdown(&state);
@@ -194,7 +196,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        
+      //testing input
 #if 0    
         if (yk_input_is_key_tapped(&state.window.keys, 'A'))
         {
@@ -223,15 +225,19 @@ int main(int argc, char *argv[])
         }
 #endif
         //-------game loop end
-#if 0
+
+       
         LARGE_INTEGER end_counter = {};
         QueryPerformanceCounter(&end_counter);
 
         i64 counter_elapsed = end_counter.QuadPart - start_counter.QuadPart;
         total_time_elapsed = (1.f * counter_elapsed) / counter_freq;
         
-        f64 difference = total_time_elapsed - last_time_elapsed;
-        time_since_print += difference;
+        dt = total_time_elapsed - last_time_elapsed;
+
+        //perf stats
+#if 0
+        time_since_print += dt;
 
         if (time_since_print > print_stats_time)
         {

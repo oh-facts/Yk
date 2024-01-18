@@ -14,9 +14,9 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
     self->ren.test_mesh_count = 1;
 }
 
-YK_API void _debug_app_update(struct YkDebugAppState* self)
+YK_API void _debug_app_update(struct YkDebugAppState* self, f64 dt)
 {
-    yk_renderer_draw(&self->ren, &self->window);
+    yk_renderer_draw(&self->ren, &self->window, dt);
 }
 
 YK_API int _debug_app_is_running(struct YkDebugAppState* self)

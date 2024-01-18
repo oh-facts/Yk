@@ -4,14 +4,21 @@
 #include <defines.h>
 
 
-#define cam_speed 1.f
-
+#define cam_speed 10.f
+#define cam_sens 4.f
 struct YkDebugCamera
 {
+	/*
+		Input data
+		_rot.x = yaw
+		_rot.y = pitch
+	*/
 	glm::vec3 _vel;
+	glm::vec2 _rot;
+
 	glm::vec3 pos;
-	f32 pitch;
 	f32 yaw;
+	f32 pitch;
 };
 
 glm::mat4 ykr_camera_get_view_matrix(YkDebugCamera* self);

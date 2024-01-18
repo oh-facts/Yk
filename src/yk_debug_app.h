@@ -5,7 +5,7 @@
 #include <yk_api.h>
 #include <Windows.h>
 typedef void (*debug_app_start_fn)(struct YkDebugAppState* state);
-typedef void (*debug_app_update_fn)(struct YkDebugAppState* state);
+typedef void (*debug_app_update_fn)(struct YkDebugAppState* state, f64 dt);
 typedef int (*debug_app_is_running_fn)(struct YkDebugAppState* state);
 typedef void (*debug_app_update_ref_fn)(struct YkDebugAppState* state);
 typedef void (*debug_app_shutdown_fn)(struct YkDebugAppState* state);
