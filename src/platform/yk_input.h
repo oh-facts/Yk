@@ -12,6 +12,7 @@ enum YK_KEY
 	*/
 	YK_KEY_LSHIFT = 0xA0,
 	YK_KEY_LCTRL = 0xA2,
+	YK_KEY_ESC = 0x1B,
 };
 
 struct YkKeyState

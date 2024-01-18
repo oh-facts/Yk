@@ -186,7 +186,7 @@ int main(int argc, char *argv[])
         {
             state.update(&state, dt);
 
-            if (yk_input_is_key_tapped(&state.window.keys,'P')) {
+            if (yk_input_is_key_tapped(&state.window.keys,YK_KEY_ESC)) {
                 state.shutdown(&state);
 
                 FreeLibrary(state.hModule);
