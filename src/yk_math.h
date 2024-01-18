@@ -251,13 +251,18 @@ inline m4 yk_m4_multiply(const m4 a, const m4 b)
 	return out;
 }
 
- inline int yk_clamp(int value, int min, int max) {
+inline int yk_clamp(int value, int min, int max) {
 	return value < min ? min : (value > max ? max : value);
 }
 
 inline void ykm_print_v3(v3 v3)
 {
 	printf("[ %f , %f , %f ]\n", v3.x, v3.y, v3.z);
+}
+
+inline void ykm_print_v2(v2 v2)
+{
+	printf("[ %f , %f]\n", v2.x, v2.y);
 }
 
 #endif // !YK_MATH

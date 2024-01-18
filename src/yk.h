@@ -6,7 +6,7 @@
 #include <defines.h>
 #include <yk_math.h>
 #include <yk_file_reader.h>
-#include <yk_window.h>
+#include <platform/yk_window.h>
 #include <renderer/yk_renderer.h>
 #include <time.h>
 

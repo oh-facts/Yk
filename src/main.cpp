@@ -177,15 +177,14 @@ int main(int argc, char *argv[])
     {
         f64 last_time_elapsed = total_time_elapsed;
 
-        yk_window_poll();
+
         
-        //game loop--------
+        //game loop start--------
         if (!state.window.win_data.is_minimized)
         {
             state.update(&state);
 
-            if (state.window.test == 1) {
-                state.window.test = 0;
+            if (yk_input_is_key_tapped(&state.window.keys,'P')) {
                 state.shutdown(&state);
 
                 FreeLibrary(state.hModule);
@@ -194,8 +193,37 @@ int main(int argc, char *argv[])
                 state.start(&state);
             }
         }
-        //-------game loop
 
+        
+        
+        if (yk_input_is_key_tapped(&state.window.keys, 'A'))
+        {
+            printf("A tapped");
+        }
+
+
+        if (yk_input_is_key_held(&state.window.keys, 'A'))
+        {
+            printf("A held");
+        }
+
+        if (yk_input_is_key_released(&state.window.keys, 'A'))
+        {
+            printf("A released");
+        }
+
+        if (yk_input_is_key_released(&state.window.keys, 'V'))
+        {
+            printf("V released");
+        }
+
+        if (yk_input_is_click(&state.window.clicks, YK_MOUSE_BUTTON_RIGHT))
+        {
+            printf("right Clicked");
+        }
+
+        //-------game loop end
+#if 0
         LARGE_INTEGER end_counter = {};
         QueryPerformanceCounter(&end_counter);
 
@@ -217,8 +245,12 @@ int main(int argc, char *argv[])
 
             time_since_print = 0;
         }
-     
+#endif    
+        yk_window_update(&state.window);
+        yk_window_poll();
+
     }
+
     state.shutdown(&state);
     yk_free_window(&state.window);
 

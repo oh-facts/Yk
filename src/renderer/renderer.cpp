@@ -596,11 +596,11 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
 
         glm::mat4 model = glm::mat4(1.f);
         
-        model = glm::translate(model, glm::vec3(-0.5f, 0, -2));
+        model = glm::translate(model, glm::vec3(0.f, -1.5f, -7));
 
         model = glm::rotate(model, time * 2.f, glm::vec3(0, 1, 0));
 
-        model = glm::scale(model, glm::vec3(0.2, 0.2, 0.2));
+        model = glm::scale(model, glm::vec3(0.02, 0.02, 0.02));
 
         glm::mat4 view = glm::lookAt(glm::vec3(0, 0, 1), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0));
         glm::mat4 proj = glm::perspective(DEG_TO_RAD * 45.f, renderer->sc_extent.width / (f32)renderer->sc_extent.height, 0.1f, 10.f);
@@ -620,43 +620,6 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
         vkCmdDrawIndexed(cmd, renderer->test_meshes[0].surfaces[0].count, 1, renderer->test_meshes[0].surfaces[0].start, 0, 0);
     }
     
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl);
-    vkCmdSetViewport(cmd, 0, 1, &renderer->viewport);
-    vkCmdSetScissor(cmd, 0, 1, &renderer->scissor);
-    {
-
-        f32 time = (f32)(current_time - renderer->clock) / CLOCKS_PER_SEC;
-
-        glm::mat4 model = glm::mat4(1.f);
-
-        model = glm::translate(model, glm::vec3(0.5f, 0, -2));
-
-        model = glm::rotate(model, time * 2.f, glm::vec3(1, 0, 0));
-        model = glm::rotate(model, glm::radians(180.f), glm::vec3(0, 1, 0));
-
-        model = glm::scale(model, glm::vec3(0.2, 0.2, 0.2));
-
-        glm::mat4 view = glm::lookAt(glm::vec3(0, 0, 1), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0));
-        glm::mat4 proj = glm::perspective(DEG_TO_RAD * 45.f, renderer->sc_extent.width / (f32)renderer->sc_extent.height, 0.1f, 10.f);
-
-        // +z is back. +y is up , +x is right
-
-        proj[1][1] *= -1;
-
-        glm::mat4 mvp = proj * view * model;
-
-        push_constants.world_matrix = mvp;
-
-        push_constants.v_buffer = renderer->test_meshes[0].buffer.v_address;
-        vkCmdPushConstants(cmd, renderer->mesh_pl_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(YkDrawPushConstants), &push_constants);
-        vkCmdBindIndexBuffer(cmd, renderer->test_meshes[0].buffer.i_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-
-        vkCmdDrawIndexed(cmd, renderer->test_meshes[0].surfaces[0].count, 1, renderer->test_meshes[0].surfaces[0].start, 0, 0);
-    }
-    
-    
-
-
 
     vkCmdEndRendering(cmd);
 
@@ -976,7 +939,6 @@ void yk_renderer_wait(YkRenderer* renderer)
 
 b8 yk_recreate_swapchain(YkRenderer* renderer, YkWindow* win)
 {
-    printf("w");
     if (!win->win_data.is_running)
     {
         return false;

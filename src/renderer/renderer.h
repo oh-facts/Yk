@@ -10,7 +10,7 @@
 
 #include <vma/vk_mem_alloc.h>
 #include <time.h>
-#include <yk_window.h>
+#include <platform/yk_window.h>
 
 struct ComputePushConstants {
 	v4 data1;

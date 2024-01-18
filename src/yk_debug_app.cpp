@@ -10,7 +10,7 @@
 YK_API void _debug_app_start(struct YkDebugAppState* self)
 {
     yk_renderer_innit(&self->ren, &self->window);
-    self->ren.test_meshes = yk_load_mesh(&self->ren, "res/models/boxer.gltf", self->engine_memory.temp_storage, Megabytes(1));
+    self->ren.test_meshes = yk_load_mesh(&self->ren, "res/models/Duck.gltf", self->engine_memory.temp_storage, Megabytes(1));
     self->ren.test_mesh_count = 1;
 }
 
