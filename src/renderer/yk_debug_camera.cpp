@@ -54,6 +54,16 @@ void ykr_camera_input(YkDebugCamera* self, struct YkWindow* window)
 		//printf("d");
 	}
 
+	if (yk_input_is_key_held(&window->keys, YK_KEY_LSHIFT))
+	{
+		self->_vel.y = 1;
+	}
+
+	if (yk_input_is_key_held(&window->keys, YK_KEY_LCTRL))
+	{
+		self->_vel.y = -1;
+	}
+
 	self->_rot.x = (f32)yk_input_mouse_mv(&window->mouse_pos).x;
 	self->_rot.y = (f32)yk_input_mouse_mv(&window->mouse_pos).y;
 }

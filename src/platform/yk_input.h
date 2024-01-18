@@ -10,9 +10,8 @@ enum YK_KEY
 	/*
 		ignore
 	*/
-	YK_KEY_A,
-	YK_KEY_B,
-	YK_KEY_C,
+	YK_KEY_LSHIFT = 0xA0,
+	YK_KEY_LCTRL = 0xA2,
 };
 
 struct YkKeyState

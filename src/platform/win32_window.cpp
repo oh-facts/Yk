@@ -65,9 +65,9 @@ YK_API LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
                 // right-hand CONTROL and ALT have their e0 bit set
             case VK_CONTROL:
                 if (isE0)
-                    virtualKey = VK_LCONTROL;
-                else
                     virtualKey = VK_RCONTROL;
+                else
+                    virtualKey = VK_LCONTROL;
                 break;
             case VK_MENU:
                 if (isE0)
@@ -149,8 +149,8 @@ YK_API LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
             win->keys._cur[virtualKey] = !wasUp;
 
-            // getting a human-readable string
 
+            // getting a human-readable string
 #if 0
             UINT key = (scanCode << 16) | (isE0 << 24);
             char buffer[512] = {};
