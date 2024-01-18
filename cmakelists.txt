@@ -32,9 +32,9 @@ include_directories(
 
 set(yk_src "src/yk.cpp" "vendor/vma/src/vk_mem_alloc.cpp" "src/renderer/renderer.cpp" "src/yk_debug_app.cpp" 
             "src/renderer/descriptors.cpp" "src/yk_memory.cpp"
-            "src/renderer/ykr_debug_util.cpp" "src/renderer/ykr_common.cpp" "src/renderer/ykr_instance.cpp")
+            "src/renderer/ykr_debug_util.cpp" "src/renderer/ykr_common.cpp" "src/renderer/ykr_instance.cpp" "src/renderer/yk_debug_camera.cpp" "src/platform/yk_input.cpp" )
 
-set(yk_platform_layer  "src/platform/win32_window.cpp")
+set(yk_platform_layer  "src/platform/win32_window.cpp" "src/platform/yk_input.cpp")
 
 add_library(platform STATIC ${yk_platform_layer} )
 

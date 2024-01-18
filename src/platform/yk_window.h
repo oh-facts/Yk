@@ -4,9 +4,8 @@
 #include<yk.h>
 #include <yk_api.h>
 #include <platform/yk_input.h>
-typedef struct YkWindow YkWindow;
 
-typedef struct win_data
+struct win_data
 {
 	//ToDo(facts) 12/31 0548: Make these flags a bitmask 
 	//			  1/17: I hate this struct I made. I hate it I hate it. 
@@ -17,7 +16,7 @@ typedef struct win_data
 	b8 is_running;
 	i32 size_x;
 	i32 size_y;
-}win_data;
+};
 
 struct YkWindow
 {

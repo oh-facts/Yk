@@ -11,6 +11,7 @@
 #include <vma/vk_mem_alloc.h>
 #include <time.h>
 #include <platform/yk_window.h>
+#include <renderer/yk_debug_camera.h>
 
 struct ComputePushConstants {
 	v4 data1;
@@ -90,6 +91,10 @@ struct YkRenderer
 	VkFence imm_fence;
 	VkCommandPool imm_cmdpool;
 	VkCommandBuffer imm_cmd;
+
+
+	YkDebugCamera cam;
+
 
 
 #if VK_USE_VALIDATION_LAYERS

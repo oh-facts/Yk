@@ -173,12 +173,16 @@ YK_API LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
             if (raw->data.mouse.usButtonFlags == RI_MOUSE_RIGHT_BUTTON_DOWN)
             {
                 win->clicks._cur[YK_MOUSE_BUTTON_RIGHT] = 1;
+
             }
             else if (raw->data.mouse.usButtonFlags == RI_MOUSE_RIGHT_BUTTON_UP)
             {
                 win->clicks._cur[YK_MOUSE_BUTTON_RIGHT] = 0;
             }
 
+            win->mouse_pos.rel = v2{ (f32)raw->data.mouse.lLastX , (f32)raw->data.mouse.lLastY };
+
+           // printf("%ld\n", raw->data.mouse.lLastX);
 
         }
 
@@ -190,8 +194,13 @@ YK_API LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         i32 y_pos = GET_Y_LPARAM(lParam);
 
         win->mouse_pos.cur.x = yk_clamp(x_pos, 0, win->win_data.size_x);
-        win->mouse_pos.cur.y = yk_clamp(y_pos, 0, win->win_data.size_y);;
+        win->mouse_pos.cur.y = yk_clamp(y_pos, 0, win->win_data.size_y);
+        /*
+        POINT point = { (LONG)(win->win_data.size_x / 2.f),(LONG)(win->win_data.size_y / 2.f) };
 
+        ClientToScreen((HWND)win->win_handle, &point);
+        SetCursorPos(point.x, point.y);
+        */
         //ykm_print_v2(yk_input_mouse_mv(&win->mouse_pos));
     }break;
     /*
@@ -307,6 +316,26 @@ void yk_innit_window(YkWindow* window)
 
     ShowWindow((HWND)window->win_handle, SW_SHOWNORMAL);
     UpdateWindow((HWND)window->win_handle);
+
+
+   /*
+   * Clip cursor to window
+    RECT rect;
+    GetClientRect((HWND)window->win_handle, &rect);
+       
+    ClientToScreen((HWND)window->win_handle, (POINT*)&rect.left);
+    ClientToScreen((HWND)window->win_handle, (POINT*)&rect.right);
+    ClipCursor(&rect);
+
+   */
+   
+    //set cursor positon to centre of the screen
+    POINT point = { (LONG)(window->win_data.size_x / 2.f),(LONG)(window->win_data.size_y / 2.f) };
+
+    ClientToScreen((HWND)window->win_handle, &point);
+    SetCursorPos(point.x, point.y);
+   // printf("%d %d\n", point.x, point.y);
+
 }
 
 void yk_window_poll()
@@ -332,6 +361,10 @@ void yk_window_update(YkWindow* window)
     }
 
     window->mouse_pos.old = window->mouse_pos.cur;
+   
+    window->mouse_pos.rel = v2{ 0,0 };
+
+    // SetCursorPos(window->win_data.size_x / 2.f, window->win_data.size_y / 2.f);
 
     /*
     POINT point;
@@ -366,30 +399,3 @@ void yk_get_framebuffer_size(YkWindow* win, u32* width, u32* height)
     *height = (u32)clientRect.bottom - clientRect.top;
 }
 */
-
-b8 yk_input_is_key_tapped(YkKeyState* state, u32 key)
-{
-    return state->_cur[key] && !state->_old[key];   
-}
-
-b8 yk_input_is_key_held(YkKeyState* state, u32 key)
-{
-    return state->_cur[key];
-}
-
-b8 yk_input_is_key_released(YkKeyState* state, u32 key)
-{
-    return !state->_cur[key] && state->_old[key];
-}
-
-b8 yk_input_is_click(YkMouseClickState* state, YK_MOUSE_BUTTON button)
-{
-    return state->_cur[button] && !state->_old[button];
-}
-
-v2 yk_input_mouse_mv(YkMousePosState* state)
-{
-    //signs reversed for y because I want +y to be up and -y to be down, and by default, the origin of
-    //a window is top left corner (so window is in the "4th quadrant", but I want "1st quadrant" behaviour)
-    return v2{ state->cur.x - state->old.x , - state->cur.y + state->old.y};
-}

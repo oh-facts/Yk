@@ -195,7 +195,7 @@ int main(int argc, char *argv[])
         }
 
         
-        
+#if 0    
         if (yk_input_is_key_tapped(&state.window.keys, 'A'))
         {
             printf("A tapped");
@@ -221,7 +221,7 @@ int main(int argc, char *argv[])
         {
             printf("right Clicked");
         }
-
+#endif
         //-------game loop end
 #if 0
         LARGE_INTEGER end_counter = {};

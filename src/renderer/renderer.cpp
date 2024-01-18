@@ -577,6 +577,7 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
     vk_rendering_info.pDepthAttachment = &vk_depth_attachment;
     vk_rendering_info.pStencilAttachment = VK_NULL_HANDLE; //&vk_stencil_attachment;
 
+    ykr_camera_update(&renderer->cam, 0.005f);
 
     // -----------begin rendering -----------//
     vkCmdBeginRenderingKHR(cmd, &vk_rendering_info);
@@ -602,7 +603,9 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
 
         model = glm::scale(model, glm::vec3(0.02, 0.02, 0.02));
 
-        glm::mat4 view = glm::lookAt(glm::vec3(0, 0, 1), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0));
+       // glm::mat4 view = glm::lookAt(glm::vec3(0, 0, 1), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0));
+
+        glm::mat4 view = ykr_camera_get_view_matrix(&renderer->cam);
         glm::mat4 proj = glm::perspective(DEG_TO_RAD * 45.f, renderer->sc_extent.width / (f32)renderer->sc_extent.height, 0.1f, 10.f);
 
         // +z is back. +y is up , +x is right
@@ -628,6 +631,7 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
 void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
 {
 
+    renderer->cam.pos = glm::vec3{ 0.f,0.f,0.f };
 
     renderer->current_frame = 0;
     //---pure boiler plate ---//
@@ -848,8 +852,22 @@ void yk_create_sync_objs(YkRenderer* renderer)
 
 }
 
+b8 move_cam = false;
+
 void yk_renderer_draw(YkRenderer* renderer, YkWindow* win)
 {
+    if (yk_input_is_key_tapped(&win->keys, 'Q'))
+    {
+        yk_show_cursor(move_cam);
+        yk_clip_cusor(win->win_handle, !move_cam);
+        move_cam = !move_cam;
+    }
+
+    if (move_cam)
+    {
+        ykr_camera_input(&renderer->cam, win);
+    }
+
     yk_frame_data* current_frame = &renderer->frame_data[renderer->current_frame];
 
     VkResultAssert(vkWaitForFences(renderer->device, 1, &current_frame->in_flight_fence, VK_TRUE, UINT64_MAX), "Wait for fences")
