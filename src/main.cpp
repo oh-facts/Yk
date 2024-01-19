@@ -117,9 +117,19 @@
 // ToDo(facts):              Set up imgui
 // 
 //
-// ToDo(facts): Make a 3d debug camera
+// ToDo(facts): Make a 3d debug camera (done)
 // ToDo(facts): Abstract making pipelines.
+// 
+// ToDo(facts): Complete multiple mesh loading (done)
+// 
+// ToDo(facts 1143 1/19/24): Work on texturing. I feel incredibly sick. Classes start this monday (today is friday).
+// 
+// ToDo(facts): Sponza crashes. My guess is that it has to do with primitives since I haven't tested loading more than 1 primitive (Individual meshes have been whole primitives)
+//              I want to load textured shinchan first. So I will work on texturing if I feel better later. Also gltf models can be massive so I need a way to store them. I don't
+//              want them on my git.                                              
+//
 //  
+
 
 
 #include <yk_debug_app.h>
@@ -144,7 +154,7 @@ int main(int argc, char *argv[])
     reload_dll(&state);
 
     state.engine_memory.perm_storage_size = Megabytes(64);
-    state.engine_memory.temp_storage_size = Megabytes(64);
+    state.engine_memory.temp_storage_size = Gigabytes(4);
 
     u64 total_size = state.engine_memory.perm_storage_size + state.engine_memory.temp_storage_size;
 

@@ -136,46 +136,201 @@ void ykr_imm_submit(VkDevice device, VkCommandBuffer cmd, VkFence fence, void (*
 //             better.
 
 #include <renderer/yk_renderer.h>
-mesh_asset* yk_load_mesh(YkRenderer* renderer, const char* filepath, void* memory, size_t size)
+
+//dear lawd, pwease forgive me
+u32 mesh_index = 0;
+size_t index_num = 0;
+size_t vertex_num = 0;
+
+u32* indices = {  }; 
+YkVertex* vertices = { };
+
+mesh_asset* out = 0;
+YkRenderer* _renderer = {};
+
+void traverse_node(cgltf_node* _node)
 {
-    mesh_asset* out = (mesh_asset*)malloc(sizeof(mesh_asset));
+    if (_node->mesh)
+    {
+            
+        cgltf_mesh* mesh = _node->mesh;
+
+
+        mesh_asset asset = {};
+        asset.name = mesh->name;
+        asset.surfaces = (geo_surface*)malloc(sizeof(geo_surface) * mesh->primitives_count);
+
+
+        index_num = 0;
+        vertex_num = 0;
+        for (u32 j = 0; j < mesh->primitives_count; j++)
+        {
+            cgltf_primitive* p = &mesh->primitives[j];
+            geo_surface surface = {};
+
+            cgltf_accessor* index_attrib = p->indices;
+
+            surface.start = index_num;
+            surface.count = index_attrib->count;
+
+            if (index_attrib->component_type == cgltf_component_type_r_16u)
+            {
+                index_num = index_attrib->count;
+                for (u32 k = 0; k < index_attrib->count; k++)
+                {
+                    size_t _index = cgltf_accessor_read_index(index_attrib, k);
+                    indices[k] = _index;
+                }
+            }
+
+            for (u32 k = 0; k < p->attributes_count; k++)
+            {
+                cgltf_attribute* attrib = &p->attributes[k];
+
+                if (attrib->type == cgltf_attribute_type_position)
+                {
+                    cgltf_accessor* vert_attrib = attrib->data;
+                    vertex_num = attrib->data->count;
+                    for (u32 l = 0; l < attrib->data->count; l++)
+                    {
+                        f32 _vertices[3] = {};
+                        cgltf_accessor_read_float(vert_attrib, l, _vertices, sizeof(f32));
+
+                        //bleh bleh bleh
+                        //     -vampires
+                        vertices[l].pos.x = _vertices[0];
+                        vertices[l].pos.y = _vertices[1];
+                        vertices[l].pos.z = _vertices[2];
+
+                    }
+                }
+
+                if (attrib->type == cgltf_attribute_type_normal)
+                {
+                    cgltf_accessor* norm_attrib = attrib->data;
+
+                    for (u32 l = 0; l < norm_attrib->count; l++)
+                    {
+                        f32 _norm[3] = {};
+                        cgltf_accessor_read_float(norm_attrib, l, _norm, sizeof(f32));
+
+                        //I don't say bleh bleh bleh
+                        //             -Adam Sandler
+                        vertices[l].normal.x = _norm[0];
+                        vertices[l].normal.y = _norm[1];
+                        vertices[l].normal.z = _norm[2];
+                        vertices[l].color = v4{ _norm[0],_norm[1],_norm[2],1 };
+                    }
+                }
+
+            }
+            
+            asset.surfaces[j] = surface;
+
+        }
+        f32 mat[16] = {};
+        cgltf_node_transform_world(_node, mat);
+
+        for (u32 i = 0; i < 4; i++)
+        {
+            for (u32 j = 0; j < 4; j++)
+            {
+                asset.model_mat[i][j] = mat[i * 4 + j];
+            }
+        }     
+
+        out[mesh_index] = asset;
+        out[mesh_index].buffer = ykr_upload_mesh(_renderer, vertices, vertex_num, indices, index_num);
+        mesh_index++;
+    }
+
+
+
+    for (u32 _node_index = 0; _node_index < _node->children_count; _node_index++)
+    {
+        cgltf_node* __node = _node->children[_node_index];
+        traverse_node(__node);
+    }
+
+
+}
+
+mesh_asset* yk_load_mesh(YkRenderer* renderer, const char* filepath, void* memory, size_t size, size_t* out_num_meshes)
+{
+
+    out = 0;
 
     YkMemoryArena index_arena;
     yk_memory_arena_innit(&index_arena, size / 2, memory);
 
     YkMemoryArena vertex_arena;
-    yk_memory_arena_innit(&vertex_arena, size / 2, (u8*)memory + size/2);
+    yk_memory_arena_innit(&vertex_arena, size / 2, (u8*)memory + size / 2);
 
-    size_t index_num = 0;
-    size_t vertex_num = 0;
+
 
     cgltf_options options = {};
     cgltf_data* data = NULL;
 
-    u32* indices = (u32*)index_arena.base;
-    YkVertex* vertices = (YkVertex*)vertex_arena.base;
+    indices = (u32*)index_arena.base;
+    vertices = (YkVertex*)vertex_arena.base;
 
-    if (cgltf_parse_file(&options, filepath, &data) == cgltf_result_success) 
+    _renderer = renderer;
+
+    if (cgltf_parse_file(&options, filepath, &data) == cgltf_result_success)
     {
 
-        if (cgltf_load_buffers(&options, data, filepath) != cgltf_result_success) 
+        if (cgltf_load_buffers(&options, data, filepath) != cgltf_result_success)
         {
-            // handle error
+            printf("Couldn't load buffers");
         }
 
 
+        out = (mesh_asset*)malloc(sizeof(mesh_asset) * data->meshes_count);
+        *out_num_meshes = data->meshes_count;
+
+        
+
+        for (u32 _scene_index = 0; _scene_index < data->scenes_count; _scene_index++)
+        {
+            
+            cgltf_scene* _scene = &data->scenes[_scene_index];
+
+            for (u32 _node_index = 0; _node_index < _scene->nodes_count; _node_index++)
+            {
+                cgltf_node* _node = _scene->nodes[_node_index];
+
+                traverse_node(_node);
+            }
+               
+           
+
+        }
+        
+
+    }
+
+    return out;
+}
+     
+      
+       /*
         for (u32 i = 0, mesh_index = 0; i < data->meshes_count; i++) 
         {
             cgltf_mesh mesh = data->meshes[i];
 
             mesh_asset new_mesh = {};
             new_mesh.name = mesh.name;
+            
+            index_num = 0;
+            vertex_num = 0;
+            
             new_mesh.num_surfaces = 0;
-            new_mesh.surfaces = (geo_surface*)malloc(sizeof(geo_surface));
+            new_mesh.surfaces = (geo_surface*)malloc(sizeof(geo_surface) * data->meshes[i].primitives_count);
 
             for (u32 j = 0; j < data->meshes[i].primitives_count; j++) 
             {
                 cgltf_primitive* p = &mesh.primitives[j];
+
                 if (p->type != cgltf_primitive_type_triangles) continue;
 
                 cgltf_accessor* index_attrib = data->meshes[i].primitives[j].indices;
@@ -183,14 +338,17 @@ mesh_asset* yk_load_mesh(YkRenderer* renderer, const char* filepath, void* memor
                 geo_surface surface;
                 surface.start = index_num;
                 surface.count = index_attrib->count;
-                      
+
+                size_t initial_vtx = vertex_num;
+                
+                //load indices  
                 if (index_attrib->component_type == cgltf_component_type_r_16u) 
                 {
                     cgltf_size index;
                     for (size_t k = 0; k < index_attrib->count; ++k) 
                     {
                         index = cgltf_accessor_read_index(index_attrib, k);
-                        indices[k] = index;
+                        indices[k] = index + initial_vtx;
                         //yk_memory_arena_push(&index_arena, sizeof(cgltf_size), &index);
                         index_num++;
                         
@@ -205,12 +363,12 @@ mesh_asset* yk_load_mesh(YkRenderer* renderer, const char* filepath, void* memor
 
                         if ((attribute->component_type == cgltf_component_type_r_32f) && (attribute->type == cgltf_type_vec3))
                         {
-                            for (size_t k = 0; k < attribute->count; ++k) 
+                            for (size_t l = 0; l < attribute->count; ++l) 
                             {
-                                float* values = (float*)attribute->buffer_view->buffer->data + attribute->offset / sizeof(float) + k * 3;
-                                vertices[k].pos.x = values[0];
-                                vertices[k].pos.y = values[1];
-                                vertices[k].pos.z = values[2];
+                                float* values = (float*)attribute->buffer_view->buffer->data + attribute->offset / sizeof(float) + l * 3;
+                                vertices[l + initial_vtx].pos.x = values[0];
+                                vertices[l + initial_vtx].pos.y = values[1];
+                                vertices[l + initial_vtx].pos.z = values[2];
                                 
 
                                // yk_memory_arena_push(&vertex_arena, sizeof(YkVertex), values);
@@ -225,12 +383,12 @@ mesh_asset* yk_load_mesh(YkRenderer* renderer, const char* filepath, void* memor
                     {
                         cgltf_accessor* attribute = p->attributes[k].data;
                         
-                        for (size_t k = 0; k < attribute->count; ++k)
+                        for (size_t l = 0; l < attribute->count; ++l)
                         {
-                            float* values = (float*)attribute->buffer_view->buffer->data + attribute->offset / sizeof(float) + k * 3;
-                            vertices[k].normal.x = values[0];
-                            vertices[k].normal.y = values[1];
-                            vertices[k].normal.z = values[2];
+                            float* values = (float*)attribute->buffer_view->buffer->data + attribute->offset / sizeof(float) + l * 3;
+                            vertices[l + initial_vtx].normal.x = values[0];
+                            vertices[l + initial_vtx].normal.y = values[1];
+                            vertices[l + initial_vtx].normal.z = values[2];
                         }
 
                     }
@@ -250,15 +408,29 @@ mesh_asset* yk_load_mesh(YkRenderer* renderer, const char* filepath, void* memor
             }
 
             new_mesh.buffer = ykr_upload_mesh(renderer, vertices, vertex_num, indices, index_num);
-            out[0] = new_mesh;
+            out[i] = new_mesh;
+            printf("Mesh %u: Name: %s, Num Surfaces: %zu\n", i, new_mesh.name, new_mesh.num_surfaces);
 
         }
        
-       
+       */
 
+/*
     }
-    return out;
-   /*
+    else
+    {
+        printf("couldn't parse file");
+    }
+    printf("out data\n");
+
+    for (u32 i = 0; i < *out_num_meshes; i++)
+    {
+        mesh_asset* mesh = &out[i];
+        printf("Mesh %u: Name: %s, Num Surfaces: %zu\n", i, mesh->name ,mesh->num_surfaces);
+    }
+
+    
+
     for (size_t i = 0; i < index_num; i++)
     {
         printf("index %zu: %zu\n", i, indices[i]);
@@ -268,5 +440,4 @@ mesh_asset* yk_load_mesh(YkRenderer* renderer, const char* filepath, void* memor
     {
         ykm_print_v3(vertices[i].pos);
     }
-   */
-}
+*/

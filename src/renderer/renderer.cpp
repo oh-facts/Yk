@@ -580,10 +580,6 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
     // -----------begin rendering -----------//
     vkCmdBeginRenderingKHR(cmd, &vk_rendering_info);
 
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl);
-    vkCmdSetViewport(cmd, 0, 1, &renderer->viewport);
-    vkCmdSetScissor(cmd, 0, 1, &renderer->scissor);
-
     YkDrawPushConstants push_constants;
     push_constants.world_matrix = glm::mat4(1.f);
     push_constants.v_buffer = renderer->rectangle.v_address;
@@ -593,32 +589,50 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
     {
         f32 time = (f32)(current_time - renderer->clock) / CLOCKS_PER_SEC;
 
-        glm::mat4 model = glm::mat4(1.f);
-        
-        model = glm::translate(model, glm::vec3(0.f, -1.5f, -7));
+       
 
-        model = glm::rotate(model, time * 2.f, glm::vec3(0, 1, 0));
+        //model = glm::rotate(model, time * 2.f, glm::vec3(0, 1, 0));
 
-        model = glm::scale(model, glm::vec3(0.02, 0.02, 0.02));
+        //model = glm::scale(model, glm::vec3(0.02, 0.02, 0.02));
 
        // glm::mat4 view = glm::lookAt(glm::vec3(0, 0, 1), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0));
 
         glm::mat4 view = ykr_camera_get_view_matrix(&renderer->cam);
-        glm::mat4 proj = glm::perspective(DEG_TO_RAD * 45.f, renderer->sc_extent.width / (f32)renderer->sc_extent.height, 0.1f, 10.f);
+        glm::mat4 proj = glm::perspective(DEG_TO_RAD * 45.f, renderer->sc_extent.width / (f32)renderer->sc_extent.height, 0.1f, 1000.f);
 
         // +z is back. +y is up , +x is right
 
         proj[1][1] *= -1;
 
-        glm::mat4 mvp = proj * view * model;
+        
 
-        push_constants.world_matrix = mvp;
+        for (size_t i = 0; i < renderer->test_mesh_count; i++)
+        {
+            mesh_asset* mesh = &renderer->test_meshes[i];
 
-        push_constants.v_buffer = renderer->test_meshes[0].buffer.v_address;
-        vkCmdPushConstants(cmd, renderer->mesh_pl_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(YkDrawPushConstants), &push_constants);
-        vkCmdBindIndexBuffer(cmd, renderer->test_meshes[0].buffer.i_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+            glm::mat4 model = mesh->model_mat;
 
-        vkCmdDrawIndexed(cmd, renderer->test_meshes[0].surfaces[0].count, 1, renderer->test_meshes[0].surfaces[0].start, 0, 0);
+         //   model = glm::translate(model, mesh->trans);
+         //   model = glm::rotate(model, mesh->rot.x, glm::vec3(1,0,0));
+         //   model = glm::rotate(model, mesh->rot.y, glm::vec3(0, 1, 0));
+         //   model = glm::rotate(model, mesh->rot.z, glm::vec3(0, 0, 1));
+         //   model = glm::scale(model, mesh->scale);
+
+            glm::mat4 mvp = proj * view * model;
+
+            push_constants.world_matrix = mvp;
+
+            push_constants.v_buffer = mesh->buffer.v_address;
+
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl);
+            vkCmdSetViewport(cmd, 0, 1, &renderer->viewport);
+            vkCmdSetScissor(cmd, 0, 1, &renderer->scissor);
+            vkCmdPushConstants(cmd, renderer->mesh_pl_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(YkDrawPushConstants), &push_constants);
+
+            vkCmdBindIndexBuffer(cmd, mesh->buffer.i_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+            vkCmdDrawIndexed(cmd, mesh->surfaces[0].count, 1, mesh->surfaces[0].start, 0, 0);
+        }
+     
     }
     
 
@@ -698,9 +712,15 @@ void yk_free_renderer(YkRenderer* renderer)
     vmaDestroyBuffer(renderer->vma_allocator, renderer->rectangle.v_buffer.buffer, renderer->rectangle.v_buffer.alloc);
     vmaDestroyBuffer(renderer->vma_allocator, renderer->rectangle.i_buffer.buffer, renderer->rectangle.i_buffer.alloc);
 
-    vmaDestroyBuffer(renderer->vma_allocator, renderer->test_meshes->buffer.v_buffer.buffer, renderer->test_meshes->buffer.v_buffer.alloc);
-    vmaDestroyBuffer(renderer->vma_allocator, renderer->test_meshes->buffer.i_buffer.buffer, renderer->test_meshes->buffer.i_buffer.alloc);
+    for (u32 i = 0; i < renderer->test_mesh_count; i++)
+    {
+        YkMeshBuffer* buff = &renderer->test_meshes[i].buffer;
 
+        vmaDestroyBuffer(renderer->vma_allocator, buff->v_buffer.buffer, buff->v_buffer.alloc);
+        vmaDestroyBuffer(renderer->vma_allocator, buff->i_buffer.buffer, buff->i_buffer.alloc);
+
+    }
+  
   //  vkDestroyPipeline(renderer->device, renderer->r_pipeline, 0);
   //  vkDestroyPipelineLayout(renderer->device, renderer->r_pipeline_layout, 0);
 
