@@ -272,7 +272,7 @@ void yk_create_device(YkRenderer* renderer)
 void yk_find_queues(YkRenderer* renderer)
 {
     //Nvidia 4090 has 5. I only intend to use 3. 99% chance are they all refer to the same queue.
-#define max_queues 5
+#define max_queues 7
     u32 queues = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(renderer->phys_device, &queues, 0);
 

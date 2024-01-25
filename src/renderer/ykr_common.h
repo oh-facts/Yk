@@ -89,4 +89,7 @@ typedef void (*imm_submit_fn)(VkCommandBuffer cmd);
 void ykr_imm_submit(VkDevice device, VkCommandBuffer cmd, VkFence fence, void (*fn)(VkCommandBuffer, void*), void* data, VkQueue queue);
 
 mesh_asset* yk_load_mesh(YkRenderer* renderer, const char* filepath, void* memory, size_t size, size_t* out_num_meshes);
+
+
+
 #endif // !YKR_COMMON_H

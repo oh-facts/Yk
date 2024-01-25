@@ -454,7 +454,7 @@ void gradient_pipeline(YkRenderer* renderer)
     VkResultAssert(vkCreatePipelineLayout(renderer->device, &compute_layout, 0, &renderer->gradient_pp_layouts), "w");
 
     VkShaderModule compute_module = {};
-    shader_module_innit(renderer->device, "res/gradient.comp.spv",&compute_module);
+    shader_module_innit(renderer->device, "res/shaders/gradient.comp.spv",&compute_module);
 
     VkPipelineShaderStageCreateInfo comp_shader_stage_info = {};
     comp_shader_stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -476,7 +476,7 @@ void triangle_pipeline(YkRenderer* renderer)
 {
     VkPipelineLayoutCreateInfo layout_info = {};
     layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    renderer->triangle_pl = yk_create_raster_pipeline(renderer->device, "res/default.vert.spv", "res/default.frag.spv", &renderer->triangle_pl_layout, &layout_info, renderer->draw_image.imageFormat, VK_FORMAT_UNDEFINED);
+    renderer->triangle_pl = yk_create_raster_pipeline(renderer->device, "res/shaders/default.vert.spv", "res/shaders/default.frag.spv", &renderer->triangle_pl_layout, &layout_info, renderer->draw_image.imageFormat, VK_FORMAT_UNDEFINED);
 }
 
 void mesh_pipeline(YkRenderer* renderer)
@@ -492,7 +492,7 @@ void mesh_pipeline(YkRenderer* renderer)
     layout_info.pushConstantRangeCount = 1;
     layout_info.pPushConstantRanges = &range;
 
-    renderer->mesh_pl = yk_create_raster_pipeline(renderer->device, "res/mesh.vert.spv", "res/default.frag.spv", &renderer->mesh_pl_layout, &layout_info, renderer->draw_image.imageFormat, renderer->depth_image.imageFormat);
+    renderer->mesh_pl = yk_create_raster_pipeline(renderer->device, "res/shaders/mesh.vert.spv", "res/shaders/default.frag.spv", &renderer->mesh_pl_layout, &layout_info, renderer->draw_image.imageFormat, renderer->depth_image.imageFormat);
 }
 
 void pipeline_innit(YkRenderer* renderer)
@@ -610,27 +610,31 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
         {
             mesh_asset* mesh = &renderer->test_meshes[i];
 
-            glm::mat4 model = mesh->model_mat;
+            for (size_t j = 0; j < mesh->num_surfaces; j++)
+            {
+                glm::mat4 model = mesh->model_mat;
+               // glm::mat4 model = glm::identity<glm::mat4>();
+                //   model = glm::translate(model, mesh->trans);
+                //   model = glm::rotate(model, time * 2.f, glm::vec3(1,0,0));
+                //   model = glm::rotate(model, mesh->rot.y, glm::vec3(0, 1, 0));
+                //   model = glm::rotate(model, mesh->rot.z, glm::vec3(0, 0, 1));
+                model = glm::scale(model, glm::vec3(2));
 
-         //   model = glm::translate(model, mesh->trans);
-         //   model = glm::rotate(model, mesh->rot.x, glm::vec3(1,0,0));
-         //   model = glm::rotate(model, mesh->rot.y, glm::vec3(0, 1, 0));
-         //   model = glm::rotate(model, mesh->rot.z, glm::vec3(0, 0, 1));
-         //   model = glm::scale(model, mesh->scale);
+                glm::mat4 mvp = proj * view * model;
 
-            glm::mat4 mvp = proj * view * model;
+                push_constants.world_matrix = mvp;
 
-            push_constants.world_matrix = mvp;
+                push_constants.v_buffer = mesh->buffer.v_address;
 
-            push_constants.v_buffer = mesh->buffer.v_address;
+                vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl);
+                vkCmdSetViewport(cmd, 0, 1, &renderer->viewport);
+                vkCmdSetScissor(cmd, 0, 1, &renderer->scissor);
+                vkCmdPushConstants(cmd, renderer->mesh_pl_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(YkDrawPushConstants), &push_constants);
 
-            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl);
-            vkCmdSetViewport(cmd, 0, 1, &renderer->viewport);
-            vkCmdSetScissor(cmd, 0, 1, &renderer->scissor);
-            vkCmdPushConstants(cmd, renderer->mesh_pl_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(YkDrawPushConstants), &push_constants);
-
-            vkCmdBindIndexBuffer(cmd, mesh->buffer.i_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-            vkCmdDrawIndexed(cmd, mesh->surfaces[0].count, 1, mesh->surfaces[0].start, 0, 0);
+                vkCmdBindIndexBuffer(cmd, mesh->buffer.i_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+                vkCmdDrawIndexed(cmd, mesh->surfaces[j].count, 1, mesh->surfaces[j].start, 0, 0);
+            }
+           
         }
      
     }
@@ -1057,4 +1061,65 @@ YkMeshBuffer ykr_upload_mesh(YkRenderer* renderer, YkVertex vertices[], u32 num_
 
     return out;
 
+}
+
+struct img_copy_data
+{
+    AllocatedImage dst_img;
+    VkExtent3D extent;
+    YkBuffer copy_buffer;
+};
+
+void _copy_img_data(VkCommandBuffer cmd, void* _img_copy_data)
+{
+    img_copy_data* data = (img_copy_data*)_img_copy_data;
+
+    transition_image(cmd, data->dst_img.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    VkBufferImageCopy copyRegion = {};
+    copyRegion.bufferOffset = 0;
+    copyRegion.bufferRowLength = 0;
+    copyRegion.bufferImageHeight = 0;
+
+    copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.imageSubresource.mipLevel = 0;
+    copyRegion.imageSubresource.baseArrayLayer = 0;
+    copyRegion.imageSubresource.layerCount = 1;
+    copyRegion.imageExtent = data->extent;
+
+    vkCmdCopyBufferToImage(cmd, data->copy_buffer.buffer, data->dst_img.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+
+    transition_image(cmd, data->dst_img.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+}
+
+AllocatedImage ykr_create_image_from_data(YkRenderer* renderer, void* data, VkExtent3D extent, VkFormat format, VkImageUsageFlags usage)
+{
+    AllocatedImage out = {};
+
+
+    VmaAllocationCreateInfo alloc_info = {};
+    alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    alloc_info.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+    VkImageCreateInfo img_info = image_create_info(format, usage, extent);
+
+
+    vmaCreateImage(renderer->vma_allocator, &img_info, &alloc_info, &out.image, &out.allocation, 0);
+
+    
+    VkImageViewCreateInfo view_info = image_view_create_info(format, out.image, VK_IMAGE_ASPECT_COLOR_BIT);
+    vkCreateImageView(renderer->device, &view_info, 0, &out.imageView);
+
+
+    size_t data_size = (size_t)extent.width * extent.height * extent.depth * 4;
+    
+    img_copy_data copy_data = {};
+    copy_data.copy_buffer = ykr_create_buffer(renderer->vma_allocator, data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+    memcpy(copy_data.copy_buffer.alloc, data, data_size);
+
+    ykr_imm_submit(renderer->device, renderer->imm_cmd, renderer->imm_fence, _copy_img_data, (void*)(&copy_data), renderer->gfx_q);
+
+    ykr_destroy_buffer(renderer->vma_allocator, &copy_data.copy_buffer);
+
+    return out;
 }

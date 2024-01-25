@@ -29,7 +29,6 @@ include_directories(
 )
 
 
-
 set(yk_src "src/yk.cpp" "vendor/vma/src/vk_mem_alloc.cpp" "src/renderer/renderer.cpp" "src/yk_debug_app.cpp" 
             "src/renderer/descriptors.cpp" "src/yk_memory.cpp"
             "src/renderer/ykr_debug_util.cpp" "src/renderer/ykr_common.cpp" "src/renderer/ykr_instance.cpp" "src/renderer/yk_debug_camera.cpp" "src/platform/yk_input.cpp" )
@@ -59,38 +58,19 @@ target_link_libraries(yk_test yk platform)
 
 #---------------------#
 
+set(SOURCE_DIR "${CMAKE_SOURCE_DIR}")
+set(BUILD_DIR "${CMAKE_BINARY_DIR}")
+
+add_custom_command(
+    TARGET yk_test POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+    ${SOURCE_DIR}/res ${BUILD_DIR}/res
+    COMMENT "Creating symbolic link to res folder"
+)
+
+
 
 #----------copy files----------#
-
-set(files_copied FALSE)
-
-function(copy_directory_if_changed source_dir destination_dir)
-    file(GLOB_RECURSE source_files "${source_dir}/*")
-    foreach(source_file IN LISTS source_files)
-        file(RELATIVE_PATH relative_path "${source_dir}" "${source_file}")
-        set(destination_file "${destination_dir}/${relative_path}")
-
-        execute_process(
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${source_file}" "${destination_file}"
-            RESULT_VARIABLE copy_result
-        )
-
-        if(NOT copy_result EQUAL 0)
-            message(FATAL_ERROR "Error copying file: ${source_file}")
-        else()
-            set(files_copied TRUE)
-        endif()
-    endforeach()
-endfunction()
-
-copy_directory_if_changed(${CMAKE_CURRENT_SOURCE_DIR}/res ${CMAKE_CURRENT_BINARY_DIR}/res)
-
-if (NOT files_copied)
-    message("No files were copied.")
-else()
-    message("files were copied")
-endif()
-
 
 #|---compile-commands-|
 

@@ -121,14 +121,46 @@
 // ToDo(facts): Abstract making pipelines.
 // 
 // ToDo(facts): Complete multiple mesh loading (done)
-// 
+//              
 // ToDo(facts 1143 1/19/24): Work on texturing. I feel incredibly sick. Classes start this monday (today is friday).
 // 
-// ToDo(facts): Sponza crashes. My guess is that it has to do with primitives since I haven't tested loading more than 1 primitive (Individual meshes have been whole primitives)
+// ToDo(facts): Sponza (doesn't) crashes. My guess is that it has to do with primitives since I haven't tested loading more than 1 primitive (Individual meshes have been whole primitives)
 //              I want to load textured shinchan first. So I will work on texturing if I feel better later. Also gltf models can be massive so I need a way to store them. I don't
 //              want them on my git.                                              
 //
-//  
+//              1/22/24: Tried loading a model, crashed. Stepped through debugger, its because sometimes I create buffers with 0 indices (all vertices because everything is unique)
+//                       and that causes crashes because vma uses asserts to prevent this. Probably unrelated to Sponza, since Sponza doesn't crash. It actually shits my validation
+//                       layers and displays as one big black box (sponza kinda even looks like that if you open it in blender)
+// 
+//                       Best way to approach this is to go to gltf sample model testing page. Try to render each example in ascending order of features and see what breaks.
+// 
+//                       VS debugger disappoints me more than ever. I was getting null ptr issues even though I don't do that shit. Outside of VS, I didn't get those problems.
+//                       This led me to a very tiring wild goose chase. Anyways, I am sure sponza crash happens because of primitives thing. Sponza has meshes with 100+ primitives.
+//                       I don't acct for them. I will work on that now.                     
+//                       
+//                       Ok. I account for primitives now. Sponza doesn't crash anymore. Fire in the sky shows almost completely, except for some walls. I am still missing
+//                       something. I don't know what, I don't know why. U am not reading something. Sponza doesn't crash but a lot of things don't render. I am skipping out on some
+//                       important data. I also think that maybe not all meshes have index data. Maybe some are meant to be drawn with vkcmddraw. But that doesn't make sense
+//                       because my validation errors would be shitting themselves if I binded invalid index buffers.
+// 
+//                       Resolved
+//                       
+// ToDo(facts): Symbolic link with res folder since the size is non trivial and I can't copy around assets and even cmake grunts when I ask her. Yes cmake is woman. 
+//              Also, put resources on gdrive and unlink all ref with git. Update readme with link to drive. drive? I am driving. There's something about you. Its hard to explain ...
+//              They're talking about you boy .... but you're still the same. I am Ryan Gosling.
+// 
+//              fire_in_the_sky loads without problems. Sponza doesn't. What I mentioned before is what the problem probably is. I'll look at the gltf spec and their github
+//              tutorial to understand it better.
+//              
+//              So, umm, weirdly. Other sponza models from sketchfab work properly. I have absolutely no idea why. I am too tired to investigate. I will clean up code
+//              and repo then move on to textures.
+// 
+//             AAHHHHHHHHHH it works NOWW. I doubted everyone. When the real culprit was my yee yaw engine memory. u32 and YkVertex were overwritten. It works
+//             with std::vector. I allocate more than enough memory. I will use malloc like a sane person. I am only doing this allocation once
+// 
+// ToDo(facts): Use a memory arena for engine memory too. Allocate carefully.
+// 
+//
 
 
 
@@ -154,7 +186,7 @@ int main(int argc, char *argv[])
     reload_dll(&state);
 
     state.engine_memory.perm_storage_size = Megabytes(64);
-    state.engine_memory.temp_storage_size = Gigabytes(4);
+    state.engine_memory.temp_storage_size = Gigabytes(2);
 
     u64 total_size = state.engine_memory.perm_storage_size + state.engine_memory.temp_storage_size;
 

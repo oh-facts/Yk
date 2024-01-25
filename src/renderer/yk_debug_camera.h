@@ -4,7 +4,7 @@
 #include <defines.h>
 
 
-#define cam_speed 10.f
+#define cam_speed 2.f
 #define cam_sens 4.f
 struct YkDebugCamera
 {

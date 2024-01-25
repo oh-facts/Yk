@@ -136,53 +136,80 @@ void ykr_imm_submit(VkDevice device, VkCommandBuffer cmd, VkFence fence, void (*
 //             better.
 
 #include <renderer/yk_renderer.h>
-
+#include <vector>
 //dear lawd, pwease forgive me
 u32 mesh_index = 0;
-size_t index_num = 0;
-size_t vertex_num = 0;
 
-u32* indices = {  }; 
-YkVertex* vertices = { };
+std::vector<u32> indices;
+std::vector<YkVertex> vertices = { };
 
 mesh_asset* out = 0;
 YkRenderer* _renderer = {};
 
+constexpr b8 debug_color = true;
+
 void traverse_node(cgltf_node* _node)
 {
+    
     if (_node->mesh)
     {
             
         cgltf_mesh* mesh = _node->mesh;
-
-
         mesh_asset asset = {};
         asset.name = mesh->name;
         asset.surfaces = (geo_surface*)malloc(sizeof(geo_surface) * mesh->primitives_count);
+        if (asset.surfaces == 0)
+        {
+            exit(2);
+        }
 
-
-        index_num = 0;
-        vertex_num = 0;
+        vertices.clear();
+        indices.clear();
+ 
         for (u32 j = 0; j < mesh->primitives_count; j++)
         {
             cgltf_primitive* p = &mesh->primitives[j];
+
+            if (p->type != cgltf_primitive_type_triangles)
+            {
+                printf("%d\n", p->type);
+            }
+
+            if (p->indices == 0)
+            {
+                printf("No indices");
+                exit(56);
+            }
+
+            
+
             geo_surface surface = {};
 
             cgltf_accessor* index_attrib = p->indices;
 
-            surface.start = index_num;
+
+            surface.start = indices.size();
             surface.count = index_attrib->count;
 
-            if (index_attrib->component_type == cgltf_component_type_r_16u)
+            size_t init_vtx = vertices.size();
+
+
+            //indices
+
             {
-                index_num = index_attrib->count;
+                //index_num += index_attrib->count;
                 for (u32 k = 0; k < index_attrib->count; k++)
                 {
                     size_t _index = cgltf_accessor_read_index(index_attrib, k);
-                    indices[k] = _index;
+                    indices.push_back(_index + init_vtx);
                 }
             }
+            
 
+            //attributes
+            //     1. Vertex
+            //     2. normals
+            //     3. colors
             for (u32 k = 0; k < p->attributes_count; k++)
             {
                 cgltf_attribute* attrib = &p->attributes[k];
@@ -190,17 +217,49 @@ void traverse_node(cgltf_node* _node)
                 if (attrib->type == cgltf_attribute_type_position)
                 {
                     cgltf_accessor* vert_attrib = attrib->data;
-                    vertex_num = attrib->data->count;
+                    //vertex_num += attrib->data->count;
+                   // vertices.reserve(attrib->data->count);
                     for (u32 l = 0; l < attrib->data->count; l++)
                     {
                         f32 _vertices[3] = {};
                         cgltf_accessor_read_float(vert_attrib, l, _vertices, sizeof(f32));
 
+                        if (vert_attrib->type != cgltf_type_vec3)
+                        {
+                            printf("q");
+                            exit(69);
+                        }
                         //bleh bleh bleh
                         //     -vampires
-                        vertices[l].pos.x = _vertices[0];
-                        vertices[l].pos.y = _vertices[1];
-                        vertices[l].pos.z = _vertices[2];
+                        
+
+                        YkVertex _v = {};
+                        _v.pos.x = _vertices[0];
+                        _v.pos.y = _vertices[1];
+                        _v.pos.z = _vertices[2];
+
+                        vertices.insert(vertices.begin() + l + init_vtx, _v);
+                        
+                        //Material colors
+#if 0
+                        if (p->material)
+                        {
+
+                            if (p->material->has_pbr_metallic_roughness)
+                            {
+                                cgltf_material* _mat = p->material;
+                                f32* base_color_factor = _mat->pbr_metallic_roughness.base_color_factor;
+                                f32 red = base_color_factor[0];
+                                f32 green = base_color_factor[1];
+                                f32 blue = base_color_factor[2];
+                                f32 alpha = base_color_factor[3];
+
+                                vertices[l + init_vtx].color = v4{ red,green,blue,alpha };
+                            }
+                        }
+                    
+#endif                       
+                       
 
                     }
                 }
@@ -216,15 +275,44 @@ void traverse_node(cgltf_node* _node)
 
                         //I don't say bleh bleh bleh
                         //             -Adam Sandler
-                        vertices[l].normal.x = _norm[0];
-                        vertices[l].normal.y = _norm[1];
-                        vertices[l].normal.z = _norm[2];
-                        vertices[l].color = v4{ _norm[0],_norm[1],_norm[2],1 };
+                        
+                       vertices[l + init_vtx].normal.x = _norm[0];
+                       vertices[l + init_vtx].normal.y = _norm[1];
+                        vertices[l + init_vtx].normal.z = _norm[2];
+
+                        if (debug_color)
+                        {
+                            vertices[l + init_vtx].color = v4{ _norm[0],_norm[1],_norm[2],1 };
+                        }
+                        
+                        
+                    }
+                }
+                if (!debug_color)
+                {
+                    if (attrib->type == cgltf_attribute_type_color)
+                    {
+                        cgltf_accessor* color_attrib = attrib->data;
+
+                        for (u32 l = 0; l < color_attrib->count; l++)
+                        {
+                            f32 _color[4] = {};
+                            cgltf_accessor_read_float(color_attrib, l, _color, sizeof(f32));
+                            f32 red = _color[0];
+                            f32 green = _color[1];
+                            f32 blue = _color[2];
+                            f32 alpha =_color[3];
+
+                           // vertices[l + init_vtx].color = v4{ red,green,blue,alpha };
+
+                        }
+
                     }
                 }
 
             }
-            
+
+            asset.num_surfaces++;
             asset.surfaces[j] = surface;
 
         }
@@ -240,10 +328,12 @@ void traverse_node(cgltf_node* _node)
         }     
 
         out[mesh_index] = asset;
-        out[mesh_index].buffer = ykr_upload_mesh(_renderer, vertices, vertex_num, indices, index_num);
+        out[mesh_index].buffer = ykr_upload_mesh(_renderer, vertices.data(), vertices.size(), indices.data(), indices.size());
         mesh_index++;
-    }
+        
 
+    }
+    
 
 
     for (u32 _node_index = 0; _node_index < _node->children_count; _node_index++)
@@ -266,16 +356,19 @@ mesh_asset* yk_load_mesh(YkRenderer* renderer, const char* filepath, void* memor
     YkMemoryArena vertex_arena;
     yk_memory_arena_innit(&vertex_arena, size / 2, (u8*)memory + size / 2);
 
-
+    vertices.resize(1000000);
+    indices.resize(10000000);
 
     cgltf_options options = {};
     cgltf_data* data = NULL;
 
-    indices = (u32*)index_arena.base;
-    vertices = (YkVertex*)vertex_arena.base;
+    indices = {};
+    vertices = {};
+    //indices = (u32*)index_arena.base;
+    //vertices = (YkVertex*)vertex_arena.base;
 
     _renderer = renderer;
-
+   
     if (cgltf_parse_file(&options, filepath, &data) == cgltf_result_success)
     {
 
@@ -285,10 +378,10 @@ mesh_asset* yk_load_mesh(YkRenderer* renderer, const char* filepath, void* memor
         }
 
 
+
         out = (mesh_asset*)malloc(sizeof(mesh_asset) * data->meshes_count);
         *out_num_meshes = data->meshes_count;
 
-        
 
         for (u32 _scene_index = 0; _scene_index < data->scenes_count; _scene_index++)
         {
@@ -301,11 +394,9 @@ mesh_asset* yk_load_mesh(YkRenderer* renderer, const char* filepath, void* memor
 
                 traverse_node(_node);
             }
-               
-           
+              
 
         }
-        
 
     }
 
@@ -440,4 +531,17 @@ mesh_asset* yk_load_mesh(YkRenderer* renderer, const char* filepath, void* memor
     {
         ykm_print_v3(vertices[i].pos);
     }
+*/
+
+/*
+
+            if (index_attrib->component_type == cgltf_component_type_r_32u)
+            {
+                index_num += index_attrib->count;
+                for (u32 k = 0; k < index_attrib->count; k++)
+                {
+                    size_t _index = cgltf_accessor_read_index(index_attrib, k);
+                    indices[k] = _index + init_vtx;
+                }
+            }
 */
