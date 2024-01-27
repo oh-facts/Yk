@@ -25,10 +25,18 @@ cd yk/scripts
 
 binaries are built in `out/`
 
+A symbolic link for `res/` is created inside `.out/`. Your OS may disallow this and throw an error. Allow this.
+
 look at `scripts/cmakec.bat` to see the cmake command being used. I leave it as a bat file for ease of writing this.
 
 `res` folder **must** be unzipped and placed in root directory.
 
+It should look like this
+```
+/Yk
+├── res
+│   ├── models
+```
   ## Note:
 
 - Only compiles on windows currently. Linux is next. Won't compile on mac ever unless Apple decides to get their shit together (Apple's NiH syndrome is worse than mine).
