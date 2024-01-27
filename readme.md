@@ -17,6 +17,7 @@ Unzip and put [this](https://drive.google.com/file/d/1_wDOjckuK_qV1lRnOYlEVdSzK3
 ```
 cd yk/scripts
 
+./innit.bat
 ./shaderc.bat
 ./cmakec.bat
 ./ninjac.bat
