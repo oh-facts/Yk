@@ -113,6 +113,17 @@ inline v4 yk_v4_sub(v4 a, v4 b)
 	return out;
 }
 
+inline v4 yk_v4_mul(v4 a, v4 b)
+{
+	v4 out = {};
+	out.x = a.x * b.x;
+	out.y = a.y * b.y;
+	out.z = a.z * b.z;
+	out.w = a.w * b.w;
+
+	return out;
+}
+
 inline m4 yk_m4_identity()
 {
 	m4 out =

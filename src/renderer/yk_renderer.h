@@ -13,5 +13,6 @@
 #include <renderer/descriptors.h>
 #include <renderer/renderer.h>
 #include <renderer/yk_texture.h>
+#include <renderer/ykr_model_loader.h>
 
 #endif

@@ -530,8 +530,8 @@ void yk_renderer_draw_bg(YkRenderer* renderer, VkCommandBuffer cmd)
    vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_COMPUTE,renderer->gradient_pp_layouts, 0, 1, &renderer->draw_image_desc,0,0);
 
    ComputePushConstants push = {};
-   push.data1 = v4{ 0.0,1.0, 1.0,1.0 };
-   push.data2 = v4{ 0.0,0.0, 1.0,1.0 };
+   push.data2 = v4{ 0.0, 1.0, 1.0, 1.0 };
+   push.data1 = v4{ 1.0, 0.0, 1.0, 1.0 };
 
    vkCmdPushConstants(cmd, renderer->gradient_pp_layouts, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push), &push);
    
@@ -615,7 +615,7 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
                 glm::mat4 model = mesh->model_mat;
                // glm::mat4 model = glm::identity<glm::mat4>();
                 //   model = glm::translate(model, mesh->trans);
-                //   model = glm::rotate(model, time * 2.f, glm::vec3(1,0,0));
+                model = glm::rotate(model, time * 0.5f, glm::vec3(0,0,1));
                 //   model = glm::rotate(model, mesh->rot.y, glm::vec3(0, 1, 0));
                 //   model = glm::rotate(model, mesh->rot.z, glm::vec3(0, 0, 1));
                 model = glm::scale(model, glm::vec3(2));

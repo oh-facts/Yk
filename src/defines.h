@@ -23,7 +23,8 @@ size is in bits
 #define Gigabytes(Value) (Megabytes(Value) * 1024)
 #define Terabytes(Value) (Gigabytes(Value) * 1024)
 
-
+#define yk_internal static
+#define yk_global static
 
 typedef uint8_t u8;
 typedef uint16_t u16;

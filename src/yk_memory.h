@@ -3,20 +3,7 @@
 
 #include <defines.h>
 #include <Windows.h>
-
-typedef struct YkMemoryArena YkMemoryArena;
-
-struct YkMemory
-{
-    int is_initialized;
-    u64 perm_storage_size;
-    void* perm_storage;
-    u64 temp_storage_size;
-    void* temp_storage;
-};
-
-typedef struct YkMemory YkMemory;
-
+#include <yk_api.h>
 
 struct YkMemoryArena
 {
@@ -25,7 +12,19 @@ struct YkMemoryArena
 	size_t used;
 };
 
-void yk_memory_arena_innit(YkMemoryArena* arena, size_t size, void* base);
-void yk_memory_arena_push(YkMemoryArena* arena, size_t size, void* data);
+struct YkMemory
+{
+    int is_initialized;
 
+    YkMemoryArena perm_storage;
+    YkMemoryArena temp_storage;
+};
+
+typedef struct YkMemory YkMemory;
+
+
+YK_API void yk_memory_arena_innit(YkMemoryArena* arena, size_t size, void* base);
+YK_API void yk_memory_arena_push(YkMemoryArena* arena, size_t size, void* data);
+YK_API void yk_memory_arena_zero(YkMemoryArena* arena);
+YK_API YkMemoryArena yk_memory_sub_arena(YkMemoryArena* arena, size_t size);
 #endif // !YK_MEMORY
