@@ -10,14 +10,16 @@ An attempt at a Vulkan renderer
 
 ```
 git clone https://github.com/oh-facts/Yk --recursive
-
 cd yk/scripts
 
 ./shaderc.bat
+./cmakec.bat
 ./ninjac.bat
 ```
 
 binaries are built in `out/`
+
+look at `scripts/cmakec.bat` to see the cmake command being used. I leave it as a bat file for ease of writing this.
 
 `res` folder **must** be unzipped and placed in root directory. Here is the [drive link](https://drive.google.com/file/d/1Xw25ORHTO86MLTrudOooCfAxHa2gG-ZH/view?usp=sharing)
 
