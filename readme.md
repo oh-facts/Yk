@@ -12,7 +12,7 @@ An attempt at a Vulkan renderer
 git clone https://github.com/oh-facts/Yk --recursive
 ```
 
-Unzip and put [this](https://drive.google.com/file/d/1Xw25ORHTO86MLTrudOooCfAxHa2gG-ZH/view?usp=sharing) (drive link) in the root directory. This is the `res/` folder.
+Unzip and put [this](https://drive.google.com/file/d/1UnDkYDAuW1sRS7bohFXYHuV40k6zGFyQ/view?usp=sharing) (drive link) in the root directory. This is the `res/` folder.
 
 ```
 cd yk/scripts
