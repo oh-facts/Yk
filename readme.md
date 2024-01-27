@@ -56,7 +56,9 @@ It should look like this
 - 21st century schizoid man
 
 
-## 3rd party libraries
+## credits
+
+- **[fire in the sky](https://sketchfab.com/3d-models/fire-in-the-sky-06d903f5dc5245699adf38192f77fbb6)**: model in the screenshot, made by Seo hyewon
 
 -  **[cgltf](https://github.com/jkuhlmann/cgltf/tree/master)**: gltf model parser
 
