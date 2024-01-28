@@ -28,6 +28,7 @@ void ykr_camera_update(YkDebugCamera* self, f32 delta)
 	self->pitch += self->_rot.y * delta * cam_sens;
 
 	self->_vel = glm::vec3(0.f);
+
 }
 
 void ykr_camera_input(YkDebugCamera* self, struct YkWindow* window)
@@ -66,4 +67,15 @@ void ykr_camera_input(YkDebugCamera* self, struct YkWindow* window)
 
 	self->_rot.x = (f32)yk_input_mouse_mv(&window->mouse_pos).x;
 	self->_rot.y = (f32)yk_input_mouse_mv(&window->mouse_pos).y;
+
+
+#if 1
+
+	if (yk_input_is_key_tapped(&window->keys, YK_KEY_F1))
+	{
+		printf("pos: %f, %f, %f\n", self->pos.x, self->pos.y, self->pos.z);
+		printf("rot: %f, %f\n", self->pitch, self->yaw);
+	}
+
+#endif
 }

@@ -17,7 +17,7 @@ yk_internal mesh_asset* out;
 yk_internal YkRenderer* _renderer;
 
 #define debug_color 0
-#define material_color 0
+#define material_color 1
 
 //perf reasons
 /*
@@ -43,6 +43,22 @@ yk_internal size_t total_vertices;
 yk_internal size_t total_indices;
 yk_internal size_t total_meshes;
 yk_internal size_t total_surfaces;
+
+void ykr_load_mesh_cleanup()
+{
+    mesh_index = 0;
+    vertices = 0;
+    indices = 0;
+    surfaces = 0;
+    index_num = 0;
+    vertex_num = 0;
+    out = 0;
+    _renderer = 0;
+    total_vertices = 0;
+    total_indices = 0;
+    total_meshes = 0;
+    total_surfaces = 0;
+}
 
 void traverse_node(cgltf_node* _node)
 {

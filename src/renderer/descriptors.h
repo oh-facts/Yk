@@ -3,5 +3,9 @@
 
 #include <renderer/ykr_common.h>
 
+struct YkDescriptorSet
+{
+	int temp;
+};
 
 #endif

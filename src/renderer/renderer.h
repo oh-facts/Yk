@@ -35,7 +35,9 @@ struct yk_frame_data
 
 	VkSemaphore image_available_semawhore;
 	VkSemaphore render_finished_semawhore;
-	
+	YkBuffer scene_ubo;
+	VkDescriptorSet scene_set;
+
 };
 
 struct YkRenderer
@@ -74,12 +76,11 @@ struct YkRenderer
 	VkPipeline gradient_pp;
 	VkPipelineLayout gradient_pp_layouts;
 
-	VkPipelineLayout triangle_pl_layout;
-	VkPipeline triangle_pl;
+	VkDescriptorPool scene_desc_pool;
+	VkDescriptorSetLayout scene_desc_layout;
 
 	VkPipelineLayout mesh_pl_layout;
 	VkPipeline mesh_pl;
-	YkMeshBuffer rectangle;
 
 	mesh_asset* test_meshes;
 	size_t test_mesh_count;

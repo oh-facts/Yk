@@ -13,6 +13,7 @@
 #define duck     "res/models/duck/Duck.gltf"
 #define msa      "res/models/mystery_shack_attic/mystery_shack_attic.glb"
 #define doppio   "res/models/doppio/scene.gltf"
+#define tr       "res/models/test_room/scene.glb"
 
 /*
     Note: shinchan needs material 1
@@ -23,6 +24,7 @@
 
 YK_API void _debug_app_start(struct YkDebugAppState* self)
 {
+
     yk_renderer_innit(&self->ren, &self->window);
 
     
@@ -32,9 +34,10 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
     size_t model_load_temp = Megabytes(5);
     YkMemoryArena perm_sub = yk_memory_sub_arena(&self->engine_memory.perm_storage, model_load_temp);
 
-    self->ren.test_meshes = ykr_load_mesh(&self->ren, fits, &scratch, &perm_sub, &self->ren.test_mesh_count);
+    self->ren.test_meshes = ykr_load_mesh(&self->ren, tr, &scratch, &perm_sub, &self->ren.test_mesh_count);
 
     yk_memory_arena_zero(&self->engine_memory.temp_storage);
+    ykr_load_mesh_cleanup();
 }
 
 YK_API void _debug_app_update(struct YkDebugAppState* self, f64 dt)
@@ -56,6 +59,7 @@ YK_API void _debug_app_update_references(struct YkDebugAppState* self)
 
 YK_API void _debug_app_shutdown(struct YkDebugAppState* self)
 {
+    
     yk_renderer_wait(&self->ren);
     yk_free_renderer(&self->ren);
 }

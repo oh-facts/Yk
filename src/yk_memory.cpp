@@ -30,6 +30,14 @@ void yk_memory_arena_zero(YkMemoryArena* arena)
 	memset(arena->base, 0, arena->used);
 }
 
+void yk_memory_arena_reset(YkMemoryArena* arena)
+{
+	memset(arena->base, 0, arena->used);
+	arena->size = 0;
+	arena->used = 0;
+	arena->base = 0;
+}
+
 YkMemoryArena yk_memory_sub_arena(YkMemoryArena* arena, size_t size)
 {
 	YkMemoryArena out = {};

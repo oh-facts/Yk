@@ -7,12 +7,22 @@
 
 enum YK_KEY
 {
-	/*
-		ignore
-	*/
-	YK_KEY_LSHIFT = 0xA0,
-	YK_KEY_LCTRL = 0xA2,
-	YK_KEY_ESC = 0x1B,
+	YK_KEY_LSHIFT	= 0xA0,
+	YK_KEY_LCTRL	= 0xA2,
+	YK_KEY_ESC		= 0x1B,
+
+	YK_KEY_F1		= 0x70,
+	YK_KEY_F2		= 0x71,
+	YK_KEY_F3		= 0x72,
+	YK_KEY_F4		= 0x73,
+	YK_KEY_F5		= 0x74,
+	YK_KEY_F6		= 0x75,
+	YK_KEY_F7		= 0x76,
+	YK_KEY_F8		= 0x77,
+	YK_KEY_F9		= 0x78,
+	YK_KEY_F10		= 0x79,
+	YK_KEY_F11		= 0x7A,
+	YK_KEY_F12		= 0x7B,
 };
 
 struct YkKeyState

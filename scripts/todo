@@ -166,3 +166,8 @@ ToDo(facts): compile vma as a dll so I don't have to compile it again
 
  ToDo(facts): Use a memory arena for engine memory too. Allocate carefully.
               Done
+
+ ToDo(facts): Material pipeline. I want to see all of the lights.
+ 
+ ToDo(facts): Scene global data. Like ambient light. I want to see some specular lights.
+              Ambient light is done.
