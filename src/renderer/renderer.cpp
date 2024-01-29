@@ -478,6 +478,9 @@ void scene_data_destroy(YkRenderer* renderer)
     }
 }
 
+/*
+    incomplete
+*/
 void mesh_desc_data_innit(YkRenderer* renderer)
 {
     desc_pool_innit(renderer->device, &renderer->mesh_desc_pool);

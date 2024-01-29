@@ -17,17 +17,21 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 
 void _print_device_details(VkPhysicalDeviceProperties* vk_phys_device_props)
 {
-    printf("\nSelected Gpu\n");
-    printf("----------\n");
-    printf("%s\n%u\n%s\n", vk_phys_device_props->deviceName, vk_phys_device_props->driverVersion, vk_phys_device_props->deviceType == 2 ? "Discrete GPU" : "Integreted probably");
-    printf("----------\n");
-}
+    printf("\nSelected GPU\n");
+    printf("-------------\n");
+    printf("Name: %s\n", vk_phys_device_props->deviceName);
+    printf("Driver Version: %u.%u.%u\n",
+        VK_VERSION_MAJOR(vk_phys_device_props->driverVersion),
+        VK_VERSION_MINOR(vk_phys_device_props->driverVersion),
+        VK_VERSION_PATCH(vk_phys_device_props->driverVersion));
+    printf("Api Version: %u.%u.%u\n",
+        VK_VERSION_MAJOR(vk_phys_device_props->apiVersion),
+        VK_VERSION_MINOR(vk_phys_device_props->apiVersion),
+        VK_VERSION_PATCH(vk_phys_device_props->apiVersion));
 
-#if LOG_DEVICE_DETAILS
-#define log_device(Expression) _print_device_details(Expression);
-#else
-#define log_device(Expession)
-#endif
+    printf("Type: %s\n", vk_phys_device_props->deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ? "Discrete GPU" : "Integrated GPU probably");
+    printf("-------------\n");
+}
 
 //ToDo(facts): Use transient memory instead of allocating it
 

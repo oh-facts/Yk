@@ -173,3 +173,14 @@ ToDo(facts): compile vma as a dll so I don't have to compile it again
               Ambient light is done.
 
  ToDo(facts): Desc related helper functions inside desc file.
+
+!! HIGH PRIORITY !!
+
+ ToDo(facts): All temp allocations on the scratch arena
+ ToDo(facts): Option to force integrated gpu
+ ToDo(facts): Modify game memory so I can hot reload like I used to (Basically stop destroying memory between recompilations)
+ ToDo(facts): Port to C and check compilation times. I saw a video of mine where I was compiling it in < half a second. It takes 3 - 8 seconds now.
+              Don't know if its this much because of all the new code or because of C++. Investigate this. Unlinking crt isn't viable
+              since I make use of dependencies and they definitely use them. glm is full of std::vector.
+
+!! ------------ !!

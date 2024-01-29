@@ -9,7 +9,7 @@ void desc_pool_innit(VkDevice device, VkDescriptorPool* pool)
 
     for (u32 i = 0; i < pool_size; i++)
     {
-        pool_sizes[i].descriptorCount = 1;
+        pool_sizes[i].descriptorCount = 1 * MAX_FRAMES_IN_FLIGHT;
         pool_sizes[i].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     }
 

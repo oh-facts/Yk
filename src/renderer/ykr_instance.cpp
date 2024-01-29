@@ -151,10 +151,15 @@ void yk_pick_physdevice(YkRenderer* renderer)
     //compulsory features are dynamic rendering, syncronization2, buffer device address and descriptor indexing
     bool compulsory_features[max_devices] = { false };
 
+    VkPhysicalDeviceProperties vk_phys_device_props[max_devices] = {};
+    u32 best_gpu_index = -1;
+    u32 other_gpu_index = -1;
+   
+
     for (i32 i = 0; i < devices; i++)
     {
-        VkPhysicalDeviceProperties vk_phys_device_props = { };
-        vkGetPhysicalDeviceProperties(device_list[i], &vk_phys_device_props);
+       
+        vkGetPhysicalDeviceProperties(device_list[i], &vk_phys_device_props[i]);
 
         VkPhysicalDeviceFeatures2 vk_phys_device_feat = { };
         vk_phys_device_feat.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
@@ -172,7 +177,7 @@ void yk_pick_physdevice(YkRenderer* renderer)
         vkGetPhysicalDeviceFeatures2(device_list[i], &vk_phys_device_feat);
 
 
-        if (vk_phys_device_props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+        if (vk_phys_device_props[i].deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
         {
             is_discrete[i] = true;
         }
@@ -184,25 +189,30 @@ void yk_pick_physdevice(YkRenderer* renderer)
 
         if (is_discrete[i] && compulsory_features[i])
         {
-            renderer->phys_device = device_list[i];
-            return;
+            best_gpu_index = i;
+            
         }
-    }
 
-    for (i32 i = 0; i < 3; i++)
-    {
-        if (compulsory_features[i])
+        if (!is_discrete[i] && compulsory_features[i])
         {
-            renderer->phys_device = device_list[i];
-            printf("You don't have a discrete gpu. But your gpu supports the features required");
-            return;
+            other_gpu_index = i;
         }
     }
 
-    //Control shouldn't come here
-    Assert(false, "Your gpu is trash lmao. It doesn't have basic (vulkan 1.2 and 1.3) features.");
 
-    //log_extention(check_device_extension_support(renderer->phys_device))
+    if (best_gpu_index == -1 && other_gpu_index == -1)
+    {
+        Assert(false, "Your gpu is trash lmao. It doesn't have basic (vulkan 1.3) features.");
+    }
+
+    #if FORCE_INTEGRATED
+        log_device(&vk_phys_device_props[other_gpu_index]);
+        renderer->phys_device = device_list[other_gpu_index];
+    #else
+        log_device(&vk_phys_device_props[best_gpu_index]);
+        renderer->phys_device = device_list[best_gpu_index];
+    #endif
+
 }
 
 
@@ -380,8 +390,8 @@ void yk_create_swapchain(YkRenderer* renderer, YkWindow* win)
 
 
     //ToDo(facts): Start doing this on the heap
-
-#define max_format_count 5
+    
+#define max_format_count 256
     u32 vk_format_count = 0;
     vkGetPhysicalDeviceSurfaceFormatsKHR(renderer->phys_device, renderer->surface, &vk_format_count, 0);
     Assert(vk_format_count > 0, "Format count less than 1")
