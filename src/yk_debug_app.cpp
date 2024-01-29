@@ -34,7 +34,7 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
     size_t model_load_temp = Megabytes(5);
     YkMemoryArena perm_sub = yk_memory_sub_arena(&self->engine_memory.perm_storage, model_load_temp);
 
-    self->ren.test_meshes = ykr_load_mesh(&self->ren, tr, &scratch, &perm_sub, &self->ren.test_mesh_count);
+    self->ren.test_meshes = ykr_load_mesh(&self->ren, fits, &scratch, &perm_sub, &self->ren.test_mesh_count);
 
     yk_memory_arena_zero(&self->engine_memory.temp_storage);
     ykr_load_mesh_cleanup();
