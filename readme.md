@@ -23,9 +23,10 @@ cd yk/scripts
 ./ninjac.bat
 ```
 
-binaries are built in `out/`
+binaries are built in `.out/`
 
-A symbolic link for `res/` is created inside `.out/`. Your OS may disallow this and throw an error. Allow this.
+A symbolic link for `res/` is created inside `.out/`. Your OS may disallow this and throw an error. Allow this. If you are on windows,
+enabling developer mode will fix this.
 
 look at `scripts/cmakec.bat` to see the cmake command being used. I leave it as a bat file for ease of writing this.
 
@@ -36,7 +37,19 @@ It should look like this
 /Yk
 ├── res
 │   ├── models
+├── src
+...
 ```
+
+All dependencies are inside `vendor/` so no need to download anything. However, the Vulkan SDK is required to compile the renderer
+
+Here is the cmake command incase you are interested
+```
+cmake .. -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE="Debug" -DYK_BUILD_SHARED=1 -G "Ninja"
+```
+
+`-DYK_BUILD_SHARED=1` is compulsory. Pick whatever toolchain you like. I test on msvc and clang + ninja.
+
   ## Note:
 
 - Only compiles on windows currently. Linux is next. Won't compile on mac ever unless Apple decides to get their shit together (Apple's NiH syndrome is worse than mine).
@@ -51,7 +64,7 @@ It should look like this
 
 - I will make a wiki to better explain design goals
 
--  engine is open source. games I make with it will be property of my studio, dear dear
+- engine is open source. games I make with it will be property of my studio, dear dear
 
 - 21st century schizoid man
 
