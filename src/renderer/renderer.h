@@ -12,6 +12,7 @@
 #include <time.h>
 #include <platform/yk_window.h>
 #include <renderer/yk_debug_camera.h>
+#include <renderer/descriptors.h>
 
 struct ComputePushConstants {
 	v4 data1;
@@ -35,9 +36,12 @@ struct yk_frame_data
 
 	VkSemaphore image_available_semawhore;
 	VkSemaphore render_finished_semawhore;
+	
 	YkBuffer scene_ubo;
 	VkDescriptorSet scene_set;
 
+	YkBuffer* mesh_buffers;
+	VkDescriptorSet* mesh_sets;
 };
 
 struct YkRenderer
@@ -84,6 +88,9 @@ struct YkRenderer
 
 	mesh_asset* test_meshes;
 	size_t test_mesh_count;
+	VkDescriptorPool mesh_desc_pool;
+	VkDescriptorSetLayout mesh_desc_layout;
+
 
 	VmaAllocator vma_allocator;
 

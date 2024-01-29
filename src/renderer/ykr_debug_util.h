@@ -9,7 +9,7 @@
 #include <vulkan/vulkan.h>
 
 void _print_device_details(VkPhysicalDeviceProperties* vk_phys_device_props);
-
+    
 #if LOG_DEVICE_DETAILS
 #define log_device(Expression) _print_device_details(Expression);
 #else

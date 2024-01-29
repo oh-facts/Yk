@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
         dt = total_time_elapsed - last_time_elapsed;
 
         //perf stats
-#if 0
+#if 1
         time_since_print += dt;
 
         if (time_since_print > print_stats_time)

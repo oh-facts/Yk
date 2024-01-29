@@ -3,10 +3,10 @@
 
 #define VkDEBUG 1
 
-#define VK_USE_VALIDATION_LAYERS 1
+#define VK_USE_VALIDATION_LAYERS 0
 #define VK_EXT_PRINT_DEBUG 0
 #define VK_PRINT_SUCCESS 0
-#define LOG_DEVICE_DETAILS 0
+#define LOG_DEVICE_DETAILS 1
 
 #include <vulkan/vulkan.h>
 #include <vma/vk_mem_alloc.h>
