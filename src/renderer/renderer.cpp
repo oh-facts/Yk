@@ -648,7 +648,7 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
         scene_data_ubo ubo = {};
         //f32 color = (sin(time * 3.f) + 1) / 2.f;
         //ubo.ambient_color = v4{ color, color ,color,1 };
-        ubo.ambient_color = v4{ 1.f,1.f,1.f,0.05f };
+        ubo.ambient_color = v4{ 0.2f, 0.2f,0.2f,0.f };
         ubo.ambient_pos = v4{ renderer->cam.pos.x, renderer->cam.pos.y, renderer->cam.pos.z };
         ubo_update(renderer->vma_allocator, &renderer->frame_data[renderer->current_frame].scene_ubo, &ubo ,sizeof(scene_data_ubo));
 
@@ -661,7 +661,7 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
                 glm::mat4 model = mesh->model_mat;
                // glm::mat4 model = glm::identity<glm::mat4>();
                 //   model = glm::translate(model, mesh->trans);
-              // model = glm::rotate(model, time * 0.5f, glm::vec3(0,1,0));
+               model = glm::rotate(model, time * 0.5f, glm::vec3(0,1,0));
                 //   model = glm::rotate(model, mesh->rot.y, glm::vec3(0, 1, 0));
                 //   model = glm::rotate(model, mesh->rot.z, glm::vec3(0, 0, 1));
                // model = glm::scale(model, glm::vec3(2));
