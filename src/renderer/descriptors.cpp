@@ -9,7 +9,7 @@ void desc_pool_innit(VkDevice device, VkDescriptorPool* pool)
 
     for (u32 i = 0; i < pool_size; i++)
     {
-        pool_sizes[i].descriptorCount = 1 * MAX_FRAMES_IN_FLIGHT;
+        pool_sizes[i].descriptorCount = 20 * MAX_FRAMES_IN_FLIGHT;
         pool_sizes[i].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     }
 
@@ -17,7 +17,7 @@ void desc_pool_innit(VkDevice device, VkDescriptorPool* pool)
     info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     info.pNext = 0;
     info.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
-    info.maxSets = 1 * MAX_FRAMES_IN_FLIGHT;
+    info.maxSets = 20 * MAX_FRAMES_IN_FLIGHT;
     info.poolSizeCount = pool_size;
     info.pPoolSizes = pool_sizes;
 
@@ -34,7 +34,7 @@ void desc_set_innit(VkDevice device, VkDescriptorSet* set, VkDescriptorPool pool
     info.descriptorSetCount = 1;
     info.pSetLayouts = layouts;
 
-    vkAllocateDescriptorSets(device, &info, set);
+    VkResultAssert(vkAllocateDescriptorSets(device, &info, set), "desc set alloc");
 
     VkDescriptorBufferInfo buffer_info = {};
     buffer_info.buffer = buffer->buffer;
@@ -53,13 +53,13 @@ void desc_set_innit(VkDevice device, VkDescriptorSet* set, VkDescriptorPool pool
     vkUpdateDescriptorSets(device, 1, &write, 0, 0);
 }
 
-void desc_layout_innit(VkDevice device, VkDescriptorSetLayout* layout)
+void desc_layout_innit(VkDevice device, VkDescriptorSetLayout* layout, VkShaderStageFlags flags)
 {
     VkDescriptorSetLayoutBinding binding = {};
     binding.binding = 0;
     binding.descriptorCount = 1;
     binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    binding.stageFlags = flags;
 
     VkDescriptorSetLayoutCreateInfo desc_layout_info = {};
     desc_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;

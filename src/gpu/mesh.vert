@@ -8,6 +8,8 @@
 layout (location = 0) out vec3 outColor;
 layout (location = 1) out vec2 outUV;
 layout (location = 2) out vec3 normal;
+layout (location = 3) out vec3 fragPos;
+
 
 struct Vertex {
 
@@ -39,4 +41,8 @@ void main()
 	outColor = v.color.xyz;
 	outUV.x = v.uv_x;
 	outUV.y = v.uv_y;
+	normal = mat3(transpose(inverse(model_mat))) * v.normal; 
+
+	fragPos = vec3((model_mat * vec4(v.position, 1.0f)));
+
 }

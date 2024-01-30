@@ -127,6 +127,8 @@ void yk_renderer_wait(YkRenderer* renderer);
 
 void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window);
 
+void yk_renderer_innit_scene(YkRenderer* renderer);
+
 void yk_renderer_draw(YkRenderer* renderer, YkWindow* win, f64 dt);
 
 b8 yk_recreate_swapchain(YkRenderer* renderer, struct YkWindow* win);

@@ -17,7 +17,7 @@ yk_internal mesh_asset* out;
 yk_internal YkRenderer* _renderer;
 
 #define debug_color 0
-#define material_color 0
+#define material_color 1
 
 //perf reasons
 /*

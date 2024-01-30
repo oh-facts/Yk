@@ -447,7 +447,7 @@ void gradient_pipeline(YkRenderer* renderer)
 struct scene_data_ubo
 {
     v4 ambient_color;
-    v4 ambient_dir;
+    v4 ambient_pos;
 };
 
 struct object_data_ubo
@@ -458,7 +458,7 @@ struct object_data_ubo
 void scene_data_innit(YkRenderer* renderer)
 {
     desc_pool_innit(renderer->device, &renderer->scene_desc_pool);
-    desc_layout_innit(renderer->device, &renderer->scene_desc_layout);
+    desc_layout_innit(renderer->device, &renderer->scene_desc_layout, VK_SHADER_STAGE_FRAGMENT_BIT);
 
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
@@ -484,24 +484,47 @@ void scene_data_destroy(YkRenderer* renderer)
 void mesh_desc_data_innit(YkRenderer* renderer)
 {
     desc_pool_innit(renderer->device, &renderer->mesh_desc_pool);
-    desc_layout_innit(renderer->device, &renderer->mesh_desc_layout);
+    desc_layout_innit(renderer->device, &renderer->mesh_desc_layout, VK_SHADER_STAGE_VERTEX_BIT);
+
+
+    for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        //do in arena
+        renderer->frame_data[i].mesh_buffers = (YkBuffer*)malloc(sizeof(YkBuffer) * renderer->test_mesh_count);
+        renderer->frame_data[i].mesh_sets = (VkDescriptorSet*)malloc(sizeof(VkDescriptorSet) * renderer->test_mesh_count);
+
+        for (u32 j = 0; j < renderer->test_mesh_count; j++)
+        {
+            renderer->frame_data[i].mesh_buffers[j] = ykr_create_buffer(renderer->vma_allocator, sizeof(object_data_ubo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+            desc_set_innit(renderer->device, &renderer->frame_data[i].mesh_sets[j], renderer->mesh_desc_pool, &renderer->mesh_desc_layout, &renderer->frame_data[i].mesh_buffers[j], sizeof(object_data_ubo));
+        }
+    }
+}
+
+void mesh_desc_data_destroy(YkRenderer* renderer)
+{
+    vkDestroyDescriptorPool(renderer->device, renderer->mesh_desc_pool, 0);
+    vkDestroyDescriptorSetLayout(renderer->device, renderer->mesh_desc_layout, 0);
 
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
         for (u32 j = 0; j < renderer->test_mesh_count; j++)
         {
-            renderer->frame_data[i].scene_ubo = ykr_create_buffer(renderer->vma_allocator, sizeof(scene_data_ubo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-            desc_set_innit(renderer->device, &renderer->frame_data[i].scene_set, renderer->scene_desc_pool, &renderer->scene_desc_layout, &renderer->frame_data[i].scene_ubo, sizeof(scene_data_ubo));
+            vmaDestroyBuffer(renderer->vma_allocator, renderer->frame_data[i].mesh_buffers[j].buffer, renderer->frame_data[i].mesh_buffers[j].alloc);
         }
+        free(renderer->frame_data[i].mesh_buffers);
+        free(renderer->frame_data[i].mesh_sets);
     }
 }
 
 void mesh_pipeline(YkRenderer* renderer)
-{    
+{   
+    VkDescriptorSetLayout layouts[2] = { renderer->scene_desc_layout, renderer->mesh_desc_layout };
+
     VkPipelineLayoutCreateInfo layout_info = {};
     layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    layout_info.pSetLayouts = &renderer->scene_desc_layout;
-    layout_info.setLayoutCount = 1;
+    layout_info.pSetLayouts = layouts;
+    layout_info.setLayoutCount = 2;
     
 
     VkPushConstantRange range = {};
@@ -623,11 +646,11 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
         proj[1][1] *= -1;
 
         scene_data_ubo ubo = {};
-        f32 color = (sin(time * 3.f) + 1) / 2.f;
-        ubo.ambient_color = v4{ color, color ,color,1 };
-        ubo.ambient_dir = v4{ 0,0,1,0 };
+        //f32 color = (sin(time * 3.f) + 1) / 2.f;
+        //ubo.ambient_color = v4{ color, color ,color,1 };
+        ubo.ambient_color = v4{ 1.f,1.f,1.f,0.05f };
+        ubo.ambient_pos = v4{ renderer->cam.pos.x, renderer->cam.pos.y, renderer->cam.pos.z };
         ubo_update(renderer->vma_allocator, &renderer->frame_data[renderer->current_frame].scene_ubo, &ubo ,sizeof(scene_data_ubo));
-
 
         for (size_t i = 0; i < renderer->test_mesh_count; i++)
         {
@@ -638,7 +661,7 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
                 glm::mat4 model = mesh->model_mat;
                // glm::mat4 model = glm::identity<glm::mat4>();
                 //   model = glm::translate(model, mesh->trans);
-               // model = glm::rotate(model, time * 0.5f, glm::vec3(0,0,1));
+              // model = glm::rotate(model, time * 0.5f, glm::vec3(0,1,0));
                 //   model = glm::rotate(model, mesh->rot.y, glm::vec3(0, 1, 0));
                 //   model = glm::rotate(model, mesh->rot.z, glm::vec3(0, 0, 1));
                // model = glm::scale(model, glm::vec3(2));
@@ -649,6 +672,11 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
 
                 push_constants.v_buffer = mesh->buffer.v_address;
 
+                object_data_ubo obj_ubo = {};
+                obj_ubo.model = model;
+                ubo_update(renderer->vma_allocator, &renderer->frame_data[renderer->current_frame].mesh_buffers[i], &obj_ubo, sizeof(object_data_ubo));
+
+
                 vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl);
                 vkCmdSetViewport(cmd, 0, 1, &renderer->viewport);
                 vkCmdSetScissor(cmd, 0, 1, &renderer->scissor);
@@ -656,6 +684,8 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
                 
 
                 vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl_layout, 0, 1, &renderer->frame_data[renderer->current_frame].scene_set, 0, 0);
+                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl_layout, 1, 1, &renderer->frame_data[renderer->current_frame].mesh_sets[i], 0, 0);
+
                 vkCmdBindIndexBuffer(cmd, mesh->buffer.i_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
                 vkCmdDrawIndexed(cmd, mesh->surfaces[j].count, 1, mesh->surfaces[j].start, 0, 0);
             }
@@ -667,6 +697,14 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
 
     vkCmdEndRendering(cmd);
 
+}
+
+void yk_renderer_innit_scene(YkRenderer* renderer)
+{
+    scene_data_innit(renderer);
+    mesh_desc_data_innit(renderer);
+
+    pipeline_innit(renderer);
 }
 
 void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
@@ -705,9 +743,7 @@ void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
     yk_create_sync_objs(renderer);
     yk_desc_innit(renderer);
 
-    scene_data_innit(renderer);
-
-    pipeline_innit(renderer);
+  
     //---can be optimized per object. But boilerplate for now --//
 
 
@@ -749,6 +785,7 @@ void yk_free_renderer(YkRenderer* renderer)
     }
 
     scene_data_destroy(renderer);
+    mesh_desc_data_destroy(renderer);
   
   //  vkDestroyPipeline(renderer->device, renderer->r_pipeline, 0);
   //  vkDestroyPipelineLayout(renderer->device, renderer->r_pipeline_layout, 0);
