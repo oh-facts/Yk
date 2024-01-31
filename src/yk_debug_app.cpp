@@ -24,9 +24,39 @@
 */
 
 
+#if DEBUG
+LPVOID base_address = (LPVOID)Terabytes(2);
+#else
+LPVOID base_address = 0;
+#endif
+
+void engine_memory_innit(YkMemory* engine_memory)
+{
+    size_t perm_storage_size = Megabytes(64);
+    size_t temp_storage_size = Gigabytes(1);
+
+    u64 total_size = perm_storage_size + temp_storage_size;
+
+    yk_memory_arena_innit(&engine_memory->perm_storage, perm_storage_size, VirtualAlloc(base_address, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+    yk_memory_arena_innit(&engine_memory->temp_storage, temp_storage_size, (u8*)engine_memory->perm_storage.base + perm_storage_size);
+
+    engine_memory->is_initialized = 1;
+}
+
+void engine_memory_cleanup(YkMemory* engine_memory)
+{
+    yk_memory_arena_clean_reset(&engine_memory->perm_storage);
+    yk_memory_arena_clean_reset(&engine_memory->temp_storage);
+    engine_memory->is_initialized = 0;
+    VirtualFree(base_address, 0, MEM_RELEASE);
+}
+
+
+
 YK_API void _debug_app_start(struct YkDebugAppState* self)
 {
-  
+
+    engine_memory_innit(&self->engine_memory);
     yk_renderer_innit(&self->ren, &self->window);
 
     
@@ -84,6 +114,7 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
 
 YK_API void _debug_app_update(struct YkDebugAppState* self, f64 dt)
 {
+    int temp = 2;
     yk_renderer_draw(&self->ren, &self->window, dt);
 }
 
@@ -101,7 +132,7 @@ YK_API void _debug_app_update_references(struct YkDebugAppState* self)
 
 YK_API void _debug_app_shutdown(struct YkDebugAppState* self)
 {
-    
     yk_renderer_wait(&self->ren);
     yk_free_renderer(&self->ren);
+    engine_memory_cleanup(&self->engine_memory);
 }

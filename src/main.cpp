@@ -2,43 +2,13 @@
 #include <yk_memory.h>
 
 
-#if DEBUG
-LPVOID base_address = (LPVOID)Terabytes(2);
-#else
-LPVOID base_address = 0;
-#endif
-
-void engine_memory_innit(YkMemory* engine_memory)
-{
-    size_t perm_storage_size = Megabytes(64);
-    size_t temp_storage_size = Gigabytes(1);
-
-    int temp = 0;
-    int ppo = 0;
-
-    u64 total_size = perm_storage_size + temp_storage_size;
-
-    yk_memory_arena_innit(&engine_memory->perm_storage, perm_storage_size, VirtualAlloc(base_address, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
-    yk_memory_arena_innit(&engine_memory->temp_storage, temp_storage_size, (u8*)engine_memory->perm_storage.base + perm_storage_size);
-
-    engine_memory->is_initialized = 1;
-}
-
-void engine_memory_cleanup(YkMemory* engine_memory)
-{
-    yk_memory_arena_clean_reset(&engine_memory->perm_storage);
-    yk_memory_arena_clean_reset(&engine_memory->temp_storage);
-    engine_memory->is_initialized = 0;
-    VirtualFree(base_address, 0, MEM_RELEASE);
-}
-
 int main(int argc, char *argv[])
 {
 
     struct YkDebugAppState state = { };
     reload_dll(&state);
 
-    engine_memory_innit(&state.engine_memory);
+   // engine_memory_innit(&state.engine_memory);
 
     state.ren.clock = clock();
 
@@ -66,12 +36,12 @@ int main(int argc, char *argv[])
 
             if (yk_input_is_key_tapped(&state.window.keys,YK_KEY_ESC)) {
                 state.shutdown(&state);
-                engine_memory_cleanup(&state.engine_memory);
+                //engine_memory_cleanup(&state.engine_memory);
                 
                 FreeLibrary(state.hModule);
                 reload_dll(&state);
 
-                engine_memory_innit(&state.engine_memory);
+                //engine_memory_innit(&state.engine_memory);
                 state.start(&state);
             }
         }
@@ -164,7 +134,7 @@ int main(int argc, char *argv[])
     state.shutdown(&state);
     
     yk_free_window(&state.window);
-    engine_memory_cleanup(&state.engine_memory);
+  //  engine_memory_cleanup(&state.engine_memory);
 
     FreeLibrary(state.hModule);
     remove("temp.dll");
