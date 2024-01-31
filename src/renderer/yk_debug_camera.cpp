@@ -36,7 +36,6 @@ void ykr_camera_update(YkDebugCamera* self, f32 delta)
 
 void ykr_camera_input(YkDebugCamera* self, struct YkWindow* window)
 {
-	
 	if (yk_input_is_key_held(&window->keys, 'W'))
 	{
 		self->_vel.z = -1;

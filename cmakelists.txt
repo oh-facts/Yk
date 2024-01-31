@@ -46,7 +46,7 @@ if(YK_BUILD_SHARED)
 else()
     add_library(${PROJECT_NAME} STATIC ${yk_src})
 endif()
-
+target_precompile_headers(yk PRIVATE "src/pch.h")
 
 
 target_link_libraries(${PROJECT_NAME}  ${Vulkan_LIBRARIES} glm::glm)

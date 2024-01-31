@@ -6,7 +6,7 @@
     I hope no one sees this. I don't want to be casted to the deep circles of hell
 */
 
-#define shinchan "res/models/shinchan/shinchan.gltf"
+#define shinchan "res/models/shinchan/scene.glb"
 #define fits     "res/models/fire_in_the_sky/scene.gltf"
 #define fits2    "res/models/fire_in_the_sky2/scene.gltf"
 #define sponza   "res/models/sponza/sponza.gltf"
@@ -26,7 +26,7 @@
 
 YK_API void _debug_app_start(struct YkDebugAppState* self)
 {
-
+  
     yk_renderer_innit(&self->ren, &self->window);
 
     
