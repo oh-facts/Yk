@@ -1,5 +1,5 @@
 #include <yk_debug_app.h>
-#include <math.h>
+
 #include <yk.h>
 
 /*
@@ -23,9 +23,6 @@
           (check ykr_model_loader.cpp)
 */
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/matrix_decompose.hpp>
 
 YK_API void _debug_app_start(struct YkDebugAppState* self)
 {

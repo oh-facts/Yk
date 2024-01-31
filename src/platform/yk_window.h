@@ -1,7 +1,6 @@
 #ifndef YK_WINDOW_H
 #define YK_WINDOW_H
 
-#include<yk.h>
 #include <yk_api.h>
 #include <platform/yk_input.h>
 

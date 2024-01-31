@@ -2,7 +2,6 @@
 #define YK_MEMORY
 
 #include <defines.h>
-#include <Windows.h>
 #include <yk_api.h>
 
 struct YkMemoryArena

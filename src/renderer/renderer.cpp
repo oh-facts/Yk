@@ -4,6 +4,13 @@
 #define VMA_IMPLEMENTATION
 #include <vma/vk_mem_alloc.h>
 
+#include <yk_file_reader.h>
+
+/*
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+*/
 
 /*
     -------------------------------
@@ -578,11 +585,10 @@ void yk_renderer_draw_bg(YkRenderer* renderer, VkCommandBuffer cmd)
    vkCmdDispatch(cmd, renderer->draw_image.imageExtent.width / 16.0 , renderer->draw_image.imageExtent.height / 16.0, 1);
 }
 
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+
 void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
 {
+    int temp = 1;
     //glm::mat4 myMatrix = glm::mat4(1.0f);
    // glmc_mat4_identity(&aa);
     PFN_vkCmdBeginRenderingKHR vkCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(renderer->device, "vkCmdBeginRenderingKHR");

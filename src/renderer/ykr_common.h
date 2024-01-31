@@ -12,10 +12,8 @@
 #define LOG_DEVICE_DETAILS 1
 #define FORCE_INTEGRATED 0
 
-#include <vulkan/vulkan.h>
-#include <vma/vk_mem_alloc.h>
-#include <time.h>
-#include <stdio.h>
+#include <pch.h>
+
 #include <yk_memory.h>
 #include <yk_math.h>
 
@@ -54,9 +52,6 @@ struct YkMeshBuffer
 	YkBuffer v_buffer;
 	VkDeviceAddress v_address;
 };
-
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 
 struct YkDrawPushConstants
 {

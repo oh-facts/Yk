@@ -3,13 +3,9 @@
 
 #include <renderer/ykr_common.h>
 
-#include <vulkan/vulkan.h>
-#include <vulkan/vk_enum_string_helper.h>
 
 #include <yk_api.h>
 
-#include <vma/vk_mem_alloc.h>
-#include <time.h>
 #include <platform/yk_window.h>
 #include <renderer/yk_debug_camera.h>
 #include <renderer/descriptors.h>

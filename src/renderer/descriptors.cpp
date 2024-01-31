@@ -54,7 +54,7 @@ void desc_set_innit(VkDevice device, VkDescriptorSet* set, VkDescriptorPool pool
 }
 
 void desc_layout_innit(VkDevice device, VkDescriptorSetLayout* layout, VkShaderStageFlags flags)
-{
+{   
     VkDescriptorSetLayoutBinding binding = {};
     binding.binding = 0;
     binding.descriptorCount = 1;

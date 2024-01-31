@@ -1,5 +1,5 @@
 #include <yk_memory.h>
-#include <iostream>
+
 
 void yk_memory_arena_innit(YkMemoryArena* arena, size_t size, void* base)
 {

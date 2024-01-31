@@ -13,6 +13,9 @@ void engine_memory_innit(YkMemory* engine_memory)
     size_t perm_storage_size = Megabytes(64);
     size_t temp_storage_size = Gigabytes(1);
 
+    int temp = 0;
+    int ppo = 0;
+
     u64 total_size = perm_storage_size + temp_storage_size;
 
     yk_memory_arena_innit(&engine_memory->perm_storage, perm_storage_size, VirtualAlloc(base_address, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));

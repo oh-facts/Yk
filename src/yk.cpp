@@ -2,5 +2,5 @@
 
 static void hi()
 {
-	printf("die please pleas");
+	printf("die please please e");
 }
