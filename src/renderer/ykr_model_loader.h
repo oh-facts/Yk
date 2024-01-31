@@ -8,7 +8,7 @@
 	out_num_meshes stores the 
 	number of meshes.
 */
-mesh_asset* ykr_load_mesh(YkRenderer* renderer, const char* filepath, YkMemoryArena* scratch, YkMemoryArena* perm, size_t* out_num_meshes);
+mesh_asset* ykr_load_mesh(const YkRenderer* renderer, const char* filepath, YkMemoryArena* scratch, YkMemoryArena* perm, size_t* num_mesh);
 
 /*
 	Clear mesh loading context. Uses local static variables to make mesh loading non-convulated

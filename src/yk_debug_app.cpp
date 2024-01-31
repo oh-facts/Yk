@@ -14,6 +14,7 @@
 #define msa      "res/models/mystery_shack_attic/mystery_shack_attic.glb"
 #define doppio   "res/models/doppio/scene.gltf"
 #define tr       "res/models/test_room/scene.glb"
+#define room     "res/models/room/scene.gltf"
 
 /*
     Note: shinchan needs material 1
@@ -21,6 +22,10 @@
           rest need debug_color 1
           (check ykr_model_loader.cpp)
 */
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 
 YK_API void _debug_app_start(struct YkDebugAppState* self)
 {
@@ -34,12 +39,47 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
     size_t model_load_temp = Megabytes(5);
     YkMemoryArena perm_sub = yk_memory_sub_arena(&self->engine_memory.perm_storage, model_load_temp);
 
-    self->ren.test_meshes = ykr_load_mesh(&self->ren, shinchan, &scratch, &perm_sub, &self->ren.test_mesh_count);
+    size_t one_c = 0;
+    mesh_asset * one =    ykr_load_mesh(&self->ren, room, &scratch, &perm_sub, &one_c);
+    ykr_load_mesh_cleanup();
+    yk_memory_arena_zero(&self->engine_memory.temp_storage);
+
+    size_t two_c = 0;
+    mesh_asset * two =   ykr_load_mesh(&self->ren, shinchan, &scratch, &perm_sub, &two_c);
+    ykr_load_mesh_cleanup();
+    yk_memory_arena_zero(&self->engine_memory.temp_storage);
+
+
+    for (u32 i = 0; i < two_c; i++)
+    {
+       
+        glm::vec3 scale, translation;
+        glm::quat rotation;
+        glm::vec3 skew;
+        glm::vec4 perspective;
+
+        glm::decompose(two[i].model_mat, scale, rotation, translation, skew, perspective);
+
+        glm::mat4 temp = glm::mat4(1);
+
+        temp = glm::translate(temp, glm::vec3(-33, -31, -10.63));
+        temp = glm::rotate(temp, 90 * DEG_TO_RAD, glm::vec3(0, 1, 0));
+        temp = glm::scale(temp, scale);
+
+        two[i].model_mat = temp ;
+    }
+
+    mesh_asset* onetwo = (mesh_asset*)malloc(sizeof(mesh_asset) * (one_c + two_c));
+    memcpy(onetwo, one, sizeof(mesh_asset) * one_c);
+    memcpy(onetwo + one_c, two, sizeof(mesh_asset) * two_c);
+    self->ren.test_meshes = onetwo;
+    self->ren.test_mesh_count = one_c + two_c;
+
 
     yk_renderer_innit_scene(&self->ren);
 
-    yk_memory_arena_zero(&self->engine_memory.temp_storage);
-    ykr_load_mesh_cleanup();
+    
+
 }
 
 YK_API void _debug_app_update(struct YkDebugAppState* self, f64 dt)

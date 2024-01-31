@@ -14,7 +14,7 @@ yk_internal size_t index_num;
 yk_internal size_t vertex_num;
 
 yk_internal mesh_asset* out;
-yk_internal YkRenderer* _renderer;
+yk_internal const YkRenderer* _renderer;
 
 #define debug_color 0
 #define material_color 1
@@ -56,7 +56,7 @@ void ykr_load_mesh_cleanup()
     _renderer = 0;
     total_vertices = 0;
     total_indices = 0;
-    total_meshes = 0;
+    //total_meshes = 0;
     total_surfaces = 0;
 }
 
@@ -260,7 +260,7 @@ void traverse_node(cgltf_node* _node)
 
 }
 
-mesh_asset* ykr_load_mesh(YkRenderer* renderer, const char* filepath, YkMemoryArena* scratch, YkMemoryArena* perm, size_t* out_num_meshes)
+mesh_asset* ykr_load_mesh(const YkRenderer* renderer, const char* filepath, YkMemoryArena* scratch, YkMemoryArena* perm, size_t * num_mesh)
 {
 
     out = 0;
@@ -283,10 +283,14 @@ mesh_asset* ykr_load_mesh(YkRenderer* renderer, const char* filepath, YkMemoryAr
         scratch->used = scratch->size;
 
 
-        out = (mesh_asset*)(perm->base);
-        surfaces = (geo_surface*)((u8*)out + sizeof(mesh_asset) * data->meshes_count);
+  //      out = (mesh_asset*)(perm->base + total_meshes * sizeof(mesh_asset));
+//        surfaces = (geo_surface*)((u8*)out + sizeof(mesh_asset) * data->meshes_count);
 
-        *out_num_meshes = data->meshes_count;
+        out = (mesh_asset*)malloc(sizeof(mesh_asset) * data->meshes_count);
+        surfaces = (geo_surface*)malloc(sizeof(geo_surface) * data->meshes_count);
+
+        *num_mesh = data->meshes_count;
+       // renderer->test_mesh_count += data->meshes_count;
 
         for (u32 _scene_index = 0; _scene_index < data->scenes_count; _scene_index++)
         {

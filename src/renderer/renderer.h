@@ -133,6 +133,6 @@ void yk_renderer_draw(YkRenderer* renderer, YkWindow* win, f64 dt);
 
 b8 yk_recreate_swapchain(YkRenderer* renderer, struct YkWindow* win);
 
-YkMeshBuffer ykr_upload_mesh(YkRenderer* renderer, YkVertex vertices[], u32 num_vertices, u32 indices[], u32 num_indices);
+YkMeshBuffer ykr_upload_mesh(const YkRenderer* renderer, YkVertex vertices[], u32 num_vertices, u32 indices[], u32 num_indices);
 
 #endif

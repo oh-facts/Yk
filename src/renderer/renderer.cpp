@@ -20,9 +20,6 @@ void pipeline_innit(YkRenderer* renderer);
 void gradient_pipeline(YkRenderer* renderer);
 void mesh_pipeline(YkRenderer* renderer);
 
-
-YkMeshBuffer ykr_upload_mesh(YkRenderer* renderer, YkVertex vertices[], u32 num_vertices, u32 indices[], u32 num_indices);
-
 /*
  -------util-------
 */
@@ -661,7 +658,7 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
                 glm::mat4 model = mesh->model_mat;
                // glm::mat4 model = glm::identity<glm::mat4>();
                 //   model = glm::translate(model, mesh->trans);
-               model = glm::rotate(model, time * 0.5f, glm::vec3(0,1,0));
+               //model = glm::rotate(model, time * 0.5f, glm::vec3(0,1,0));
                 //   model = glm::rotate(model, mesh->rot.y, glm::vec3(0, 1, 0));
                 //   model = glm::rotate(model, mesh->rot.z, glm::vec3(0, 0, 1));
                // model = glm::scale(model, glm::vec3(2));
@@ -1087,7 +1084,7 @@ void _copy_vert_index_buffer(VkCommandBuffer cmd, void* data)
     vkCmdCopyBuffer(cmd, copy_buffer->staging, copy_buffer->index_buffer, 1, &index_copy);
 }
 
-YkMeshBuffer ykr_upload_mesh(YkRenderer* renderer, YkVertex vertices[], u32 num_vertices, u32 indices[], u32 num_indices)
+YkMeshBuffer ykr_upload_mesh(const YkRenderer* renderer, YkVertex vertices[], u32 num_vertices, u32 indices[], u32 num_indices)
 {
     const size_t vert_buffer_size = sizeof(YkVertex) * num_vertices;
     const size_t index_buffer_size = sizeof(u32) * num_indices;

@@ -23,5 +23,5 @@ void main()
 	vec3 ambient = ambient_color.w * ambient_color.xyz;
 	vec3 diffuse = diff * ambient_color.xyz;
 	vec3 result = (ambient + diffuse + specular) * inColor;
-	outFragColor = vec4(inColor , 1);
+	outFragColor = vec4(result , 1);
 }
