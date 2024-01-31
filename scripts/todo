@@ -199,4 +199,6 @@ unity build was deadend. It took ~6 seconds. Regular build is ~3 seconds
 precompiled headers might be helpful
 
 precompiled headers are mental. I get < 1s consistently.
+
+ok hot reloading works again. I will put all dependencies inside header files so I can always use pch
 !!! --------------- !!!

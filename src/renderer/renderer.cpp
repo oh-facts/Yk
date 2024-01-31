@@ -1,10 +1,12 @@
 #include <renderer/renderer.h>
 #include <renderer/ykr_debug_util.h>
 #include <renderer/ykr_instance.h>
+
+#include <yk_file_reader.h>
+
 #define VMA_IMPLEMENTATION
 #include <vma/vk_mem_alloc.h>
 
-#include <yk_file_reader.h>
 
 /*
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -1107,11 +1109,15 @@ YkMeshBuffer ykr_upload_mesh(const YkRenderer* renderer, YkVertex vertices[], u3
 
 
     YkBuffer staging = ykr_create_buffer(renderer->vma_allocator, vert_buffer_size + index_buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-    void* data = staging.alloc->GetMappedData();
+    
+    void* data = 0;
+    vmaMapMemory(renderer->vma_allocator, staging.alloc, &data);
+   //     staging.alloc->GetMappedData();
 
     memcpy(data, vertices, vert_buffer_size);
     memcpy((char*)data + vert_buffer_size, indices, index_buffer_size);
 
+    vmaUnmapMemory(renderer->vma_allocator, staging.alloc);
 
     copy_buffer_data copy_buffer_data = { vert_buffer_size, index_buffer_size, out.v_buffer.buffer, out.i_buffer.buffer, staging.buffer };
 
