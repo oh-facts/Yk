@@ -25,6 +25,7 @@ size is in bits
 
 #define yk_internal static
 #define yk_global static
+#define yk_local_persist static
 
 typedef uint8_t u8;
 typedef uint16_t u16;
