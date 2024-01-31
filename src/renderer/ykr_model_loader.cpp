@@ -57,7 +57,7 @@ void ykr_load_mesh_cleanup()
     total_vertices = 0;
     total_indices = 0;
     //total_meshes = 0;
-    total_surfaces = 0;
+   // total_surfaces = 0;
 }
 
 void traverse_node(cgltf_node* _node)
@@ -280,17 +280,19 @@ mesh_asset* ykr_load_mesh(const YkRenderer* renderer, const char* filepath, YkMe
 
         indices = (u32*)(scratch->base);
         vertices = (YkVertex*)((u8*)indices + scratch->size / 2);
-        scratch->used = scratch->size;
+        
 
+        // Maybe have two arenas? So I can actually make use of the "used" part?
+        // Right now I partition this arena in part_ratio : 1
+        
 
-  //      out = (mesh_asset*)(perm->base + total_meshes * sizeof(mesh_asset));
-//        surfaces = (geo_surface*)((u8*)out + sizeof(mesh_asset) * data->meshes_count);
-
-        out = (mesh_asset*)malloc(sizeof(mesh_asset) * data->meshes_count);
-        surfaces = (geo_surface*)malloc(sizeof(geo_surface) * data->meshes_count);
+        u32 part_ratio = 4;
+        out = (mesh_asset*)(perm->base + total_meshes * sizeof(mesh_asset));
+        surfaces = (geo_surface*)((u8*)out + ( perm->size - perm->size / part_ratio) + total_surfaces * sizeof(geo_surface));
+        
 
         *num_mesh = data->meshes_count;
-       // renderer->test_mesh_count += data->meshes_count;
+
 
         for (u32 _scene_index = 0; _scene_index < data->scenes_count; _scene_index++)
         {
@@ -308,6 +310,11 @@ mesh_asset* ykr_load_mesh(const YkRenderer* renderer, const char* filepath, YkMe
         }
 
     }
+
+    //a bit pointless since I am using the same arena.
+    //Maybe I can have an array of used and available pairs?
+    perm->used += total_meshes * sizeof(mesh_asset);
+    perm->used += total_surfaces * sizeof(surfaces);
 
     return out;
 }

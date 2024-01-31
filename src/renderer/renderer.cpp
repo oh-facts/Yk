@@ -706,10 +706,6 @@ void yk_renderer_innit_scene(YkRenderer* renderer)
 
 void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
 {
-
-    renderer->cam.pos = glm::vec3{ -8.f,0.f,-0.f };
-    renderer->cam.yaw = 90 * DEG_TO_RAD;
-
     renderer->current_frame = 0;
     //---pure boiler plate ---//
     yk_innit_vulkan(renderer);

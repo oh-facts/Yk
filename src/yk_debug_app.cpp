@@ -42,17 +42,20 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
     size_t one_c = 0;
     mesh_asset * one =    ykr_load_mesh(&self->ren, room, &scratch, &perm_sub, &one_c);
     ykr_load_mesh_cleanup();
-    yk_memory_arena_zero(&self->engine_memory.temp_storage);
-
+    
     size_t two_c = 0;
     mesh_asset * two =   ykr_load_mesh(&self->ren, shinchan, &scratch, &perm_sub, &two_c);
     ykr_load_mesh_cleanup();
-    yk_memory_arena_zero(&self->engine_memory.temp_storage);
 
+    size_t three_c = 0;
+    mesh_asset* trhee = ykr_load_mesh(&self->ren, shinchan, &scratch, &perm_sub, &three_c);
+    ykr_load_mesh_cleanup();
+    
+    yk_memory_arena_clean_reset(&self->engine_memory.temp_storage);
 
     for (u32 i = 0; i < two_c; i++)
     {
-       
+       //ToDo(facts): Store trans,rot and scale so you don't need to decompose model everytime you want to use it
         glm::vec3 scale, translation;
         glm::quat rotation;
         glm::vec3 skew;
@@ -69,12 +72,12 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
         two[i].model_mat = temp ;
     }
 
-    mesh_asset* onetwo = (mesh_asset*)malloc(sizeof(mesh_asset) * (one_c + two_c));
-    memcpy(onetwo, one, sizeof(mesh_asset) * one_c);
-    memcpy(onetwo + one_c, two, sizeof(mesh_asset) * two_c);
-    self->ren.test_meshes = onetwo;
-    self->ren.test_mesh_count = one_c + two_c;
+    self->ren.test_meshes = one;
+    self->ren.test_mesh_count = one_c + two_c + three_c;
 
+
+    self->ren.cam.pos = glm::vec3{ -6.51f, -30.31f,-10.13f };
+    self->ren.cam.yaw = -1.6f;
 
     yk_renderer_innit_scene(&self->ren);
 

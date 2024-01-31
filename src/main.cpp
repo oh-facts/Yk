@@ -23,8 +23,8 @@ void engine_memory_innit(YkMemory* engine_memory)
 
 void engine_memory_cleanup(YkMemory* engine_memory)
 {
-    yk_memory_arena_reset(&engine_memory->perm_storage);
-    yk_memory_arena_reset(&engine_memory->temp_storage);
+    yk_memory_arena_clean_reset(&engine_memory->perm_storage);
+    yk_memory_arena_clean_reset(&engine_memory->temp_storage);
     engine_memory->is_initialized = 0;
     VirtualFree(base_address, 0, MEM_RELEASE);
 }
