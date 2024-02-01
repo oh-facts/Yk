@@ -253,8 +253,8 @@ VkPipeline yk_create_raster_pipeline(VkDevice device, const char* vert_path, con
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_NONE;
-    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     
     //Note(facts 12/23 2:20): come back to this later
     rasterizer.depthBiasEnable = VK_FALSE;

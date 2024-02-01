@@ -83,7 +83,7 @@ void traverse_node(cgltf_node* _node)
         for (u32 j = 0; j < mesh->primitives_count; j++)
         {
             cgltf_primitive* p = &mesh->primitives[j];
-
+            
             if (p->type != cgltf_primitive_type_triangles)
             {
                 printf("%d\n", p->type);
@@ -120,7 +120,6 @@ void traverse_node(cgltf_node* _node)
 
                 index_num += index_attrib->count;
             }
-
 
             //attributes
             //     1. Vertex

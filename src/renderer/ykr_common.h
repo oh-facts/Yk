@@ -73,6 +73,7 @@ struct mesh_asset
 	struct geo_surface* surfaces;
 	u32 num_surfaces;
 	glm::mat4 model_mat;
+	glm::mat4 local;
 };
 
 struct YkRenderer;
