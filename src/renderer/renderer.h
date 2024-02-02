@@ -40,6 +40,7 @@ struct yk_frame_data
 
 	YkBuffer* mesh_buffers;
 	VkDescriptorSet* mesh_sets;
+	VkDescriptorSet* unt_mesh_sets;
 };
 
 struct YkRenderer
@@ -88,6 +89,9 @@ struct YkRenderer
 	size_t test_mesh_count;
 	VkDescriptorPool mesh_desc_pool;
 	VkDescriptorSetLayout mesh_desc_layout;
+
+	AllocatedImage texture;
+	VkSampler textureSampler;
 
 
 	VmaAllocator vma_allocator;

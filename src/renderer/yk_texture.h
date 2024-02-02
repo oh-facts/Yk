@@ -3,14 +3,14 @@
 
 #include <renderer/ykr_common.h>
 
-struct YkTexture
+struct YkImageData
 {
 	u8* data;
-	i32 width;
-	i32 height;
-	i32 num_channel;
+	u32 width;
+	u32 height;
+	u32 num_channel;
 };
 
-YkTexture yk_texture_create(const char* path);
-void yk_texture_free(YkTexture* texture);
+YkImageData yk_image_load_data(const char* path);
+void yk_image_data_free(YkImageData* self);
 #endif

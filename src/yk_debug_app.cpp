@@ -81,6 +81,11 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
     
     yk_memory_arena_clean_reset(&self->engine_memory.temp_storage);
 
+    for (u32 i = 0; i < one_c; i++)
+    {
+        one[i].test = 1;
+    }
+
     for (u32 i = 0; i < two_c; i++)
     {
         glm::mat4 temp = glm::mat4(1);
@@ -90,6 +95,7 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
         temp = glm::scale(temp, glm::vec3(0.5f));
 
         two[i].model_mat = temp * two[i].model_mat;
+        two[i].test = 0;
     }
  
     for (u32 i = 0; i < three_c; i++)
@@ -102,6 +108,7 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
         temp = glm::scale(temp, glm::vec3(0.5f));
 
         three[i].model_mat = temp * three[i].model_mat;
+        three[i].test = 0;
     }
     
     self->ren.test_meshes = one;

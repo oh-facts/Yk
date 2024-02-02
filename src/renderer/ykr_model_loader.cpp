@@ -125,6 +125,7 @@ void traverse_node(cgltf_node* _node)
             //     1. Vertex
             //     2. normals
             //     3. colors
+            //     4. uv
             for (u32 k = 0; k < p->attributes_count; k++)
             {
                 cgltf_attribute* attrib = &p->attributes[k];
@@ -201,23 +202,40 @@ void traverse_node(cgltf_node* _node)
                     }
                 }
 
-                    if (attrib->type == cgltf_attribute_type_color)
+                if (attrib->type == cgltf_attribute_type_color)
+                {
+                    cgltf_accessor* color_attrib = attrib->data;
+
+                    for (u32 l = 0; l < color_attrib->count; l++)
                     {
-                        cgltf_accessor* color_attrib = attrib->data;
+                        f32 _color[4] = {};
+                        cgltf_accessor_read_float(color_attrib, l, _color, sizeof(f32));
+                        f32 red = _color[0];
+                        f32 green = _color[1];
+                        f32 blue = _color[2];
+                        f32 alpha = _color[3];
 
-                        for (u32 l = 0; l < color_attrib->count; l++)
-                        {
-                            f32 _color[4] = {};
-                            cgltf_accessor_read_float(color_attrib, l, _color, sizeof(f32));
-                            f32 red = _color[0];
-                            f32 green = _color[1];
-                            f32 blue = _color[2];
-                            f32 alpha = _color[3];
-
-                            vertices[l + init_vtx].color = v4{ red, green, blue, alpha };
-                        }
-
+                        vertices[l + init_vtx].color = v4{ red, green, blue, alpha };
                     }
+
+                }
+
+                if (attrib->type == cgltf_attribute_type_texcoord)
+                {
+                    cgltf_accessor* uv_attrib = attrib->data;
+                    if (attrib->index == 0)
+                    {
+                        for (u32 l = 0; l < uv_attrib->count; l++)
+                        {
+                            f32 _uv[2] = {};
+                            cgltf_accessor_read_float(uv_attrib, l, _uv, sizeof(f32));
+
+                            vertices[l + init_vtx].uv_x = _uv[0];
+                            vertices[l + init_vtx].uv_y = _uv[1];
+                        }
+                    }
+
+                }
 
 
             }
@@ -275,8 +293,8 @@ mesh_asset* ykr_load_mesh(const YkRenderer* renderer, const char* filepath, YkMe
         {
             printf("Couldn't load buffers");
         }
-
-
+     
+        
         indices = (u32*)(scratch->base);
         vertices = (YkVertex*)((u8*)indices + scratch->size / 2);
         
