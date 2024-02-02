@@ -16,6 +16,7 @@
 #define doppio   "res/models/doppio/scene.gltf"
 #define tr       "res/models/test_room/scene.glb"
 #define room     "res/models/room/scene.gltf"
+#define bill     "res/models/bill/bill.glb"
 
 /*
     Note: shinchan needs material 1
@@ -52,6 +53,20 @@ void engine_memory_cleanup(YkMemory* engine_memory)
     VirtualFree(base_address, 0, MEM_RELEASE);
 }
 
+void set_obj_pos(mesh_asset* asset, u32 mesh_count, glm::vec3 pos, f32 angle, glm::vec3 rot, glm::vec3 scale, u32 test = 0)
+{
+    for (u32 i = 0; i < mesh_count; i++)
+    {
+        glm::mat4 temp = glm::mat4(1);
+
+        temp = glm::translate(temp, pos);
+        temp = glm::rotate(temp, angle , rot);
+        temp = glm::scale(temp, scale);
+
+        asset[i].model_mat = temp * asset[i].model_mat;
+        asset[i].test = test;
+    }
+}
 
 
 YK_API void _debug_app_start(struct YkDebugAppState* self)
@@ -69,16 +84,18 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
 
     size_t one_c = 0;
     mesh_asset * one =    ykr_load_mesh(&self->ren, room, &scratch, &perm_sub, &one_c);
-    ykr_load_mesh_cleanup();
     
     size_t two_c = 0;
     mesh_asset * two =   ykr_load_mesh(&self->ren, shinchan, &scratch, &perm_sub, &two_c);
-    ykr_load_mesh_cleanup();
+
 
     size_t three_c = 0;
     mesh_asset* three = ykr_load_mesh(&self->ren, dmon, &scratch, &perm_sub, &three_c);
-    ykr_load_mesh_cleanup();
-    
+
+
+    size_t four_c = 0;
+    mesh_asset* four = ykr_load_mesh(&self->ren, bill, &scratch, &perm_sub, &four_c);
+
     yk_memory_arena_clean_reset(&self->engine_memory.temp_storage);
 
     for (u32 i = 0; i < one_c; i++)
@@ -86,33 +103,12 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
         one[i].test = 1;
     }
 
-    for (u32 i = 0; i < two_c; i++)
-    {
-        glm::mat4 temp = glm::mat4(1);
-
-        temp = glm::translate(temp, glm::vec3(-32, -31, -9));
-        temp = glm::rotate(temp, 90 * DEG_TO_RAD, glm::vec3(0, 1, 0));
-        temp = glm::scale(temp, glm::vec3(0.5f));
-
-        two[i].model_mat = temp * two[i].model_mat;
-        two[i].test = 0;
-    }
- 
-    for (u32 i = 0; i < three_c; i++)
-    {
-        //ToDo(facts): Store trans,rot and scale so you don't need to decompose model everytime you want to use it
-        
-        glm::mat4 temp = glm::mat4(1);
-        temp = glm::translate(temp, glm::vec3(-32, -31.05, -12));
-        temp = glm::rotate(temp, 90 * DEG_TO_RAD, glm::vec3(0, 1, 0));
-        temp = glm::scale(temp, glm::vec3(0.5f));
-
-        three[i].model_mat = temp * three[i].model_mat;
-        three[i].test = 0;
-    }
+    set_obj_pos(two, two_c, glm::vec3(-32, -31, -9), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
+    set_obj_pos(three, three_c, glm::vec3(-32, -31.05, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
+    set_obj_pos(four, four_c, glm::vec3(-16, -26.6f, -10.5f), -90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
     
     self->ren.test_meshes = one;
-    self->ren.test_mesh_count = one_c + two_c + three_c;
+    self->ren.test_mesh_count = one_c + two_c + three_c + four_c;
 
 
     self->ren.cam.pos = glm::vec3{ -6.51f, -30.31f,-10.13f };

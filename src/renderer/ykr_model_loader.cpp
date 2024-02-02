@@ -279,7 +279,7 @@ void traverse_node(cgltf_node* _node)
 
 mesh_asset* ykr_load_mesh(const YkRenderer* renderer, const char* filepath, YkMemoryArena* scratch, YkMemoryArena* perm, size_t * num_mesh)
 {
-
+    ykr_load_mesh_cleanup();
     out = 0;
     cgltf_options options = {};
     cgltf_data* data = 0;

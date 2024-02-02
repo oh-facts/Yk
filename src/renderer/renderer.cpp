@@ -454,7 +454,7 @@ void gradient_pipeline(YkRenderer* renderer)
 
 void yk_texture_innit(YkRenderer* renderer)
 {
-    YkImageData rawData = yk_image_load_data("res/textures/literallymebunny.jpg");
+    YkImageData rawData = yk_image_load_data("res/models/room/textures/ceiling0_baseColor.jpeg");
     renderer->texture = ykr_create_image_from_data(renderer, rawData.data,
                         VkExtent3D{.width = rawData.width, .height = rawData.height, .depth = 1},
                         VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_SAMPLED_BIT);
@@ -477,6 +477,11 @@ void yk_texture_innit(YkRenderer* renderer)
 
     printf("beep");
 
+}
+
+void yk_texture_destroy(YkRenderer* renderer)
+{
+    vmaDestroyImage(renderer->vma_allocator, renderer->texture.image, renderer->texture.allocation);
 }
 
 struct scene_data_ubo
@@ -909,6 +914,7 @@ void yk_free_renderer(YkRenderer* renderer)
 
     scene_data_destroy(renderer);
     mesh_desc_data_destroy(renderer);
+    yk_texture_destroy(renderer);
   
   //  vkDestroyPipeline(renderer->device, renderer->r_pipeline, 0);
   //  vkDestroyPipelineLayout(renderer->device, renderer->r_pipeline_layout, 0);
