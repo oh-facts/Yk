@@ -513,7 +513,7 @@ void scene_data_innit(YkRenderer* renderer)
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
         renderer->frame_data[i].scene_ubo = ykr_create_buffer(renderer->vma_allocator, sizeof(scene_data_ubo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-        desc_set_innit(renderer->device, &renderer->frame_data[i].scene_set, renderer->scene_desc_pool, &renderer->scene_desc_layout);
+        desc_set_innit(renderer->device, &renderer->frame_data[i].scene_set, renderer->scene_desc_pool, &renderer->scene_desc_layout, 1);
         scene_desc_data_write(renderer->device, renderer->frame_data[i].scene_ubo.buffer, renderer->frame_data[i].scene_set);
     }
 }
@@ -603,12 +603,14 @@ void mesh_desc_data_innit(YkRenderer* renderer)
     {
         //do in arena
         renderer->frame_data[i].mesh_buffers = (YkBuffer*)malloc(sizeof(YkBuffer) * renderer->test_mesh_count);
+        
         renderer->frame_data[i].mesh_sets = (VkDescriptorSet*)malloc(sizeof(VkDescriptorSet) * renderer->test_mesh_count);
+        desc_set_innit(renderer->device, renderer->frame_data[i].mesh_sets, renderer->mesh_desc_pool, &renderer->mesh_desc_layout, renderer->test_mesh_count);
 
         for (u32 j = 0; j < renderer->test_mesh_count; j++)
         {
             renderer->frame_data[i].mesh_buffers[j] = ykr_create_buffer(renderer->vma_allocator, sizeof(object_data_ubo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-            desc_set_innit(renderer->device, &renderer->frame_data[i].mesh_sets[j], renderer->mesh_desc_pool, &renderer->mesh_desc_layout);
+
             
             mesh_desc_data_write(renderer->device, renderer->frame_data[i].mesh_buffers[j].buffer, 
                 renderer->test_meshes[j].image.image.imageView, renderer->test_meshes[j].image.sampler, renderer->frame_data[i].mesh_sets[j]);
@@ -1277,7 +1279,7 @@ AllocatedImage ykr_create_image_from_data(const YkRenderer* renderer, void* data
     alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
     alloc_info.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    VkImageCreateInfo img_info = image_create_info(format, usage, extent);
+    VkImageCreateInfo img_info = image_create_info(format, usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT, extent);
 
 
     VkResultAssert(vmaCreateImage(renderer->vma_allocator, &img_info, &alloc_info, &out.image, &out.allocation, 0), "Image creation failed")
