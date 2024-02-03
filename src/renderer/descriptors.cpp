@@ -24,7 +24,7 @@ void ykr_desc_pool_innit(VkDevice device, u32 max_sets, VkDescriptorPoolSize* po
     vkCreateDescriptorPool(device, &info, 0, pool);
 }
 
-void desc_set_innit(VkDevice device, VkDescriptorSet* set, VkDescriptorPool pool, VkDescriptorSetLayout* layouts, u32 count)
+void desc_set_innit(VkDevice device, VkDescriptorSet* set, VkDescriptorPool pool, VkDescriptorSetLayout* layouts)
 {
     VkDescriptorSetAllocateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
