@@ -21,4 +21,6 @@
 #include <glm/gtx/transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 
+#include <cstring>
+
 #endif // ! PCH_H

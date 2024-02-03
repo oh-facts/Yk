@@ -48,6 +48,10 @@ struct YkDebugAppState
 
 inline void reload_dll(struct YkDebugAppState* state)
 {
+    //sometimes you'll get an error that dll not found
+    //its because you need to pass YK_BUILD_SHARED = 1
+    //to cmake to build as a dll. so, 
+    // -DYK_BUILD_SHARED=1
     yk_clone_file("yk.dll", "temp.dll");
 
     state->hModule = LoadLibraryA("temp.dll");

@@ -16,17 +16,21 @@ layout(set = 1, binding = 1) uniform sampler2D displayTexture;
 
 void main() 
 {
-	float specular_strength = 1.0;
+	//ambient_color.w * 
+	vec3 ambient = 0.9 * ambient_color.xyz;
+
 	vec3 norm = normalize(inNormal);
 	vec3 lightDir = normalize(ambient_pos.xyz - fragPos);
+	float diff = max(dot(norm, lightDir), 0.0);
+	vec3 diffuse = diff * ambient_color.xyz;
+
+	float specular_strength = 1.0;
 	vec3 reflect_dir = reflect(-lightDir, norm);
 	float spec = pow(max(dot(lightDir, reflect_dir), 0.0), 32);
 	vec3 specular = specular_strength * spec * ambient_color.xyz;
-	float diff = max(dot(norm, lightDir), 0.0);
-	vec3 ambient = ambient_color.w * ambient_color.xyz;
-	vec3 diffuse = diff * ambient_color.xyz;
 
 	vec3 textureColor = texture(displayTexture, inUV).xyz;
+
 
 	vec3 result;
 	if(textureColor.x == 0)

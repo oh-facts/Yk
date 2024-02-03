@@ -16,7 +16,9 @@
 #define doppio   "res/models/doppio/scene.gltf"
 #define tr       "res/models/test_room/scene.glb"
 #define room     "res/models/room/scene.gltf"
-#define bill     "res/models/bill/bill.glb"
+#define bill     "res/models/bill/scene1.glb"
+#define marc     "res/models/marceline/scene.gltf"
+
 
 /*
     Note: shinchan needs material 1
@@ -53,7 +55,7 @@ void engine_memory_cleanup(YkMemory* engine_memory)
     VirtualFree(base_address, 0, MEM_RELEASE);
 }
 
-void set_obj_pos(mesh_asset* asset, u32 mesh_count, glm::vec3 pos, f32 angle, glm::vec3 rot, glm::vec3 scale, u32 test = 0)
+void set_obj_pos(mesh_asset* asset, u32 mesh_count, glm::vec3 pos, f32 angle, glm::vec3 rot, glm::vec3 scale)
 {
     for (u32 i = 0; i < mesh_count; i++)
     {
@@ -64,7 +66,7 @@ void set_obj_pos(mesh_asset* asset, u32 mesh_count, glm::vec3 pos, f32 angle, gl
         temp = glm::scale(temp, scale);
 
         asset[i].model_mat = temp * asset[i].model_mat;
-        asset[i].test = test;
+
     }
 }
 
@@ -90,7 +92,7 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
 
 
     size_t three_c = 0;
-    mesh_asset* three = ykr_load_mesh(&self->ren, dmon, &scratch, &perm_sub, &three_c);
+    mesh_asset* three = ykr_load_mesh(&self->ren, marc, &scratch, &perm_sub, &three_c);
 
 
     size_t four_c = 0;
@@ -98,13 +100,8 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
 
     yk_memory_arena_clean_reset(&self->engine_memory.temp_storage);
 
-    for (u32 i = 0; i < one_c; i++)
-    {
-        one[i].test = 1;
-    }
-
     set_obj_pos(two, two_c, glm::vec3(-32, -31, -9), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
-    set_obj_pos(three, three_c, glm::vec3(-32, -31.05, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
+    set_obj_pos(three, three_c, glm::vec3(-32, -29.7, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
     set_obj_pos(four, four_c, glm::vec3(-16, -26.6f, -10.5f), -90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
     
     self->ren.test_meshes = one;

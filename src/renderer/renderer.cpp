@@ -29,7 +29,7 @@ void pipeline_innit(YkRenderer* renderer);
 void gradient_pipeline(YkRenderer* renderer);
 void mesh_pipeline(YkRenderer* renderer);
 
-AllocatedImage ykr_create_image_from_data(YkRenderer* renderer, void* data, VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
+AllocatedImage ykr_create_image_from_data(const YkRenderer* renderer, void* data, VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
 
 /*
  -------util-------
@@ -452,36 +452,16 @@ void gradient_pipeline(YkRenderer* renderer)
     vkDestroyShaderModule(renderer->device, compute_module,0);
 }
 
-void yk_texture_innit(YkRenderer* renderer)
-{
-    YkImageData rawData = yk_image_load_data("res/models/room/textures/ceiling0_baseColor.jpeg");
-    renderer->texture = ykr_create_image_from_data(renderer, rawData.data,
-                        VkExtent3D{.width = rawData.width, .height = rawData.height, .depth = 1},
-                        VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_SAMPLED_BIT);
-    yk_image_data_free(&rawData);
-    
-    VkSamplerCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    info.magFilter = VK_FILTER_LINEAR;
-    info.minFilter = VK_FILTER_LINEAR;
-    info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    
-    //set anistoropyptosy
-
-    info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    info.unnormalizedCoordinates = VK_FALSE;
-
-    vkCreateSampler(renderer->device, &info, 0, &renderer->textureSampler);
-
-    printf("beep");
-
-}
 
 void yk_texture_destroy(YkRenderer* renderer)
-{
-    vmaDestroyImage(renderer->vma_allocator, renderer->texture.image, renderer->texture.allocation);
+{   
+    for (u32 i = 0; i < renderer->test_mesh_count; i++)
+    {
+        /*
+            I am going to lose my mind if I name variables like this
+        */
+       vmaDestroyImage(renderer->vma_allocator, renderer->test_meshes[i].image.image.image, renderer->test_meshes[i].image.image.allocation);
+    }
 }
 
 struct scene_data_ubo
@@ -550,7 +530,7 @@ void scene_data_destroy(YkRenderer* renderer)
 }
 
 
-void mesh_desc_data_write(VkDevice device, VkBuffer buffer, VkImageView view, VkSampler sampler, VkDescriptorSet set, int a)
+void mesh_desc_data_write(VkDevice device, VkBuffer buffer, VkImageView view, VkSampler sampler, VkDescriptorSet set)
 {
     VkDescriptorBufferInfo buffer_info = {};
     buffer_info.buffer = buffer;
@@ -571,7 +551,7 @@ void mesh_desc_data_write(VkDevice device, VkBuffer buffer, VkImageView view, Vk
     writes[0].descriptorCount = 1;
     writes[0].pBufferInfo = &buffer_info;
 
-    if (a == 1)
+    if (view)
     {
         writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         writes[1].dstSet = set;
@@ -583,7 +563,7 @@ void mesh_desc_data_write(VkDevice device, VkBuffer buffer, VkImageView view, Vk
 
         vkUpdateDescriptorSets(device, 2, writes, 0, 0);
     }
-    else if( a == 0)
+    else
     {
         vkUpdateDescriptorSets(device, 1, writes, 0, 0);
     }
@@ -630,7 +610,8 @@ void mesh_desc_data_innit(YkRenderer* renderer)
             renderer->frame_data[i].mesh_buffers[j] = ykr_create_buffer(renderer->vma_allocator, sizeof(object_data_ubo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
             desc_set_innit(renderer->device, &renderer->frame_data[i].mesh_sets[j], renderer->mesh_desc_pool, &renderer->mesh_desc_layout);
             
-            mesh_desc_data_write(renderer->device, renderer->frame_data[i].mesh_buffers[j].buffer, renderer->texture.imageView, renderer->textureSampler, renderer->frame_data[i].mesh_sets[j], renderer->test_meshes[j].test);
+            mesh_desc_data_write(renderer->device, renderer->frame_data[i].mesh_buffers[j].buffer, 
+                renderer->test_meshes[j].image.image.imageView, renderer->test_meshes[j].image.sampler, renderer->frame_data[i].mesh_sets[j]);
         
         }
     }
@@ -870,7 +851,6 @@ void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
     //---can be optimized per object. But boilerplate for now --//
     yk_create_sync_objs(renderer);
     yk_desc_innit(renderer);
-    yk_texture_innit(renderer);
   
     //---can be optimized per object. But boilerplate for now --//
 
@@ -1287,7 +1267,7 @@ void _copy_img_data(VkCommandBuffer cmd, void* _img_copy_data)
     transition_image(cmd, data->dst_img.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
-AllocatedImage ykr_create_image_from_data(YkRenderer* renderer, void* data, VkExtent3D extent, VkFormat format, VkImageUsageFlags usage)
+AllocatedImage ykr_create_image_from_data(const YkRenderer* renderer, void* data, VkExtent3D extent, VkFormat format, VkImageUsageFlags usage)
 {
     AllocatedImage out = {};
     out.imageExtent = extent;
@@ -1300,7 +1280,7 @@ AllocatedImage ykr_create_image_from_data(YkRenderer* renderer, void* data, VkEx
     VkImageCreateInfo img_info = image_create_info(format, usage, extent);
 
 
-    vmaCreateImage(renderer->vma_allocator, &img_info, &alloc_info, &out.image, &out.allocation, 0);
+    VkResultAssert(vmaCreateImage(renderer->vma_allocator, &img_info, &alloc_info, &out.image, &out.allocation, 0), "Image creation failed")
 
     
     VkImageViewCreateInfo view_info = image_view_create_info(format, out.image, VK_IMAGE_ASPECT_COLOR_BIT);
