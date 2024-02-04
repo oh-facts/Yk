@@ -4,13 +4,13 @@
 /*
 	ToDo(facts): Dont use Vk as prefix. Comes off as vulkan provided macro
 */
-#define VkDEBUG 1
+#define VkDEBUG 0
 
 #define VK_USE_VALIDATION_LAYERS 0
 #define VK_EXT_PRINT_DEBUG 0
 #define VK_PRINT_SUCCESS 0
 #define LOG_DEVICE_DETAILS 1
-#define FORCE_INTEGRATED 0
+#define FORCE_INTEGRATED 1
 
 #include <pch.h>
 
@@ -72,18 +72,6 @@ struct texture_asset
 	VkSampler sampler;
 };
 
-enum pipeline_type
-{
-	pipeline_type_texured,
-	pipeline_type_utx,
-};
-
-struct material
-{
-	VkDescriptorSet set;
-	pipeline_type type;
-};
-
 struct mesh_asset
 {
 	const char* name;
@@ -91,8 +79,7 @@ struct mesh_asset
 	struct geo_surface* surfaces;
 	u32 num_surfaces;
 	glm::mat4 model_mat;
-
-	material* material;
+	texture_asset image;
 };
 
 struct YkRenderer;

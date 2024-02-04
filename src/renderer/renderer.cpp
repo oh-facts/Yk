@@ -384,7 +384,6 @@ VkPipeline yk_create_raster_pipeline(VkDevice device, const char* vert_path, con
 
 // -----------------
 
-// needs to go
 void yk_desc_innit(YkRenderer* renderer)
 {
     //compute desc set.
@@ -1278,7 +1277,7 @@ AllocatedImage ykr_create_image_from_data(const YkRenderer* renderer, void* data
     alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
     alloc_info.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    VkImageCreateInfo img_info = image_create_info(format, usage | VK_IMAGE_USAGE_TRANSFER_DST_BIT, extent);
+    VkImageCreateInfo img_info = image_create_info(format, usage, extent);
 
 
     VkResultAssert(vmaCreateImage(renderer->vma_allocator, &img_info, &alloc_info, &out.image, &out.allocation, 0), "Image creation failed")
@@ -1306,4 +1305,3 @@ AllocatedImage ykr_create_image_from_data(const YkRenderer* renderer, void* data
 
     return out;
 }
-

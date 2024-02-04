@@ -258,19 +258,13 @@ void traverse_node(cgltf_node* _node)
                 cgltf_texture_view* base_view = &material->pbr_metallic_roughness.base_color_texture;
                 if (base_view->texture)
                 {
-                    asset.material->type = pipeline_type_texured;
-                    
-                    asset.material->set;
                     /*
                         sowwy, I really don't know how else to handle this
                     */
                     char fullpath[ROOT_PATH_SIZE] = {};
                     join_paths(root_path, base_view->texture->image->uri,fullpath);
                     
-                    texture_asset ass = ykr_load_textures(_renderer, fullpath);
-                    
-                    
-
+                    asset.image = ykr_load_textures(_renderer, fullpath);
                     //printf("%s\n", asset.base_texture_path);
                 }
                 
@@ -313,8 +307,7 @@ void traverse_node(cgltf_node* _node)
 }
 
 mesh_asset* ykr_load_mesh(const YkRenderer* renderer, const char* filepath, YkMemoryArena* scratch, YkMemoryArena* perm, size_t * num_mesh)
-{   
-    printf("%s\n", filepath);
+{
     //feel free to suggest better method
     ykr_load_mesh_cleanup();
     strcpy(root_path, filepath);
@@ -403,9 +396,6 @@ yk_internal texture_asset ykr_load_textures(const YkRenderer* renderer, const ch
     return out;
 }
 
-/*
-    Stupid stupid utility function to convert relative path to absolute
-*/
 yk_internal void join_paths(const char* model_path, const char* texture_path, char* joined_path) 
 {
 

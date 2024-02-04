@@ -37,6 +37,10 @@ struct yk_frame_data
 	
 	YkBuffer scene_ubo;
 	VkDescriptorSet scene_set;
+
+	YkBuffer* mesh_buffers;
+	VkDescriptorSet* mesh_sets;
+	VkDescriptorSet* unt_mesh_sets;
 };
 
 struct YkRenderer
@@ -78,11 +82,8 @@ struct YkRenderer
 	VkDescriptorPool scene_desc_pool;
 	VkDescriptorSetLayout scene_desc_layout;
 
-	VkPipeline pipelines[pipeline_type_num];
-	VkPipelineLayout layouts[pipeline_type_num];
-
-	texture_asset* textures;
-	size_t texture_count;
+	VkPipelineLayout mesh_pl_layout;
+	VkPipeline mesh_pl;
 
 	mesh_asset* test_meshes;
 	size_t test_mesh_count;
