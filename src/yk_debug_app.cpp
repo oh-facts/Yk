@@ -132,14 +132,20 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
 
     yk_renderer_innit_scene(&self->ren);
 
-    yk_recreate_swapchain(&self->ren, &self->window);
-
+   
 }
 
 YK_API void _debug_app_update(struct YkDebugAppState* self, f64 dt)
 {
     yk_renderer_draw(&self->ren, &self->window, dt);
    
+    if(yk_input_is_key_tapped(&self->window.keys, 'E'))
+    {
+        printf("w");
+        
+        yk_recreate_swapchain(&self->ren, &self->window);
+    }
+
     static int a = 1;
     if(a == 0)
     {

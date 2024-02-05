@@ -701,7 +701,7 @@ void yk_renderer_draw_bg(YkRenderer* renderer, VkCommandBuffer cmd)
                                                    .layerCount = VK_REMAINING_ARRAY_LAYERS
     };
 
-    vkCmdClearColorImage(cmd, renderer->draw_image.image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clear_range);
+    vkCmdClearColorImage(cmd, renderer->draw_image.image, VK_IMAGE_LAYOUTdraw_image_desc_GENERAL, &clearValue, 1, &clear_range);
     */
 
    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, renderer->gradient_pp);
@@ -713,7 +713,7 @@ void yk_renderer_draw_bg(YkRenderer* renderer, VkCommandBuffer cmd)
 
    vkCmdPushConstants(cmd, renderer->gradient_pp_layouts, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push), &push);
    
-   vkCmdDispatch(cmd, renderer->draw_image.imageExtent.width / 16.0 , renderer->draw_image.imageExtent.height / 16.0, 1);
+   vkCmdDispatch(cmd, renderer->draw_image.imageExtent.width / 16 , renderer->draw_image.imageExtent.height / 16, 1);
 }
 
 
@@ -729,9 +729,9 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
     vk_color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
     vk_color_attachment.imageView = renderer->draw_image.imageView;
     vk_color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    vk_color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    vk_color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
     vk_color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    vk_color_attachment.clearValue.color = VkClearColorValue{ 0.0f, 0.0f, 0.0f, 0.f };
+    vk_color_attachment.clearValue.color = VkClearColorValue{ 1.0f, 0.0f, 0.0f, 1.f };
 
     VkRenderingAttachmentInfoKHR vk_depth_attachment = {};
     vk_depth_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
@@ -782,7 +782,7 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
         scene_data_ubo ubo = {};
         //f32 color = (sin(time * 3.f) + 1) / 2.f;
         //ubo.ambient_color = v4{ color, color ,color,1 };
-        ubo.ambient_color = v4{ 0.2f, 0.2f,0.2f,0.f };
+        ubo.ambient_color = v4{ 0.2f, 0.2f,0.2f,1.f };
         ubo.ambient_pos = v4{ renderer->cam.pos.x, renderer->cam.pos.y, renderer->cam.pos.z };
         ubo_update(renderer->vma_allocator, &renderer->frame_data[renderer->current_frame].scene_ubo, &ubo ,sizeof(scene_data_ubo));
 

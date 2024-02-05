@@ -4,7 +4,6 @@
 
 int main(int argc, char *argv[])
 {
-
     struct YkDebugAppState state = { };
     reload_dll(&state);
 
