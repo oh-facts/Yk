@@ -5,8 +5,6 @@
     Internal Util functions. No one outside this folder should see this
 */
 
-#include <vulkan/vk_enum_string_helper.h>
-#include <vulkan/vulkan.h>
 #include <renderer/ykr_common.h>
 void _print_device_details(VkPhysicalDeviceProperties* vk_phys_device_props);
     

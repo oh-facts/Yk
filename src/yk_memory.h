@@ -2,7 +2,6 @@
 #define YK_MEMORY
 
 #include <defines.h>
-#include <Windows.h>
 #include <yk_api.h>
 
 struct YkMemoryArena
@@ -24,8 +23,13 @@ typedef struct YkMemory YkMemory;
 
 
 YK_API void yk_memory_arena_innit(YkMemoryArena* arena, size_t size, void* base);
-YK_API void yk_memory_arena_push(YkMemoryArena* arena, size_t size, void* data);
-YK_API void yk_memory_arena_zero(YkMemoryArena* arena);
-YK_API void yk_memory_arena_reset(YkMemoryArena* arena);
+
+/*
+	Sets arena->used to 0 and memsets data to 0.
+	Size is unchanged. Memory isn't freed.
+	Might need a better name for this.
+*/
+YK_API void yk_memory_arena_clean_reset(YkMemoryArena* arena);
+
 YK_API YkMemoryArena yk_memory_sub_arena(YkMemoryArena* arena, size_t size);
 #endif // !YK_MEMORY

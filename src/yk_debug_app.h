@@ -3,7 +3,7 @@
 
 #include <yk.h>
 #include <yk_api.h>
-#include <Windows.h>
+
 typedef void (*debug_app_start_fn)(struct YkDebugAppState* state);
 typedef void (*debug_app_update_fn)(struct YkDebugAppState* state, f64 dt);
 typedef int (*debug_app_is_running_fn)(struct YkDebugAppState* state);
@@ -48,6 +48,10 @@ struct YkDebugAppState
 
 inline void reload_dll(struct YkDebugAppState* state)
 {
+    //sometimes you'll get an error that dll not found
+    //its because you need to pass YK_BUILD_SHARED = 1
+    //to cmake to build as a dll. so, 
+    // -DYK_BUILD_SHARED=1
     yk_clone_file("yk.dll", "temp.dll");
 
     state->hModule = LoadLibraryA("temp.dll");

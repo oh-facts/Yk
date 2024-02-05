@@ -12,10 +12,8 @@
 #define LOG_DEVICE_DETAILS 1
 #define FORCE_INTEGRATED 0
 
-#include <vulkan/vulkan.h>
-#include <vma/vk_mem_alloc.h>
-#include <time.h>
-#include <stdio.h>
+#include <pch.h>
+
 #include <yk_memory.h>
 #include <yk_math.h>
 
@@ -55,9 +53,6 @@ struct YkMeshBuffer
 	VkDeviceAddress v_address;
 };
 
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
 struct YkDrawPushConstants
 {
 	glm::mat4 world_matrix;
@@ -71,6 +66,18 @@ struct geo_surface
 	u32 count;
 };
 
+struct texture_asset
+{
+	AllocatedImage image;
+	VkSampler sampler;
+	u64 id;
+};
+
+struct material
+{
+	texture_asset base;
+};
+
 struct mesh_asset
 {
 	const char* name;
@@ -78,6 +85,7 @@ struct mesh_asset
 	struct geo_surface* surfaces;
 	u32 num_surfaces;
 	glm::mat4 model_mat;
+	u32 texture_id;
 };
 
 struct YkRenderer;

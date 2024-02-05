@@ -2,7 +2,7 @@
 #define DEFINES_H
 
 #include <stdint.h>
-
+#include <pch.h>
 /*
 common primitive types and related constants aliased for readability.
 size is in bits
@@ -25,6 +25,7 @@ size is in bits
 
 #define yk_internal static
 #define yk_global static
+#define yk_local_persist static
 
 typedef uint8_t u8;
 typedef uint16_t u16;

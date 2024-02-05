@@ -1,11 +1,7 @@
 #ifndef YK_DEBUG_CAMERA_H
 #define YK_DEBUG_CAMERA_H
-#include <glm/glm.hpp>
+
 #include <defines.h>
-
-
-#define cam_speed 10.f
-#define cam_sens 4.f
 
 struct YkDebugCamera
 {

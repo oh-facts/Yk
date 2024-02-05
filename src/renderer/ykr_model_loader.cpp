@@ -3,6 +3,10 @@
 #define CGLTF_WRITE_IMPLEMENTATION
 #include <cgltf/cgltf_write.h>
 #include <renderer/renderer.h>
+#include <renderer/yk_texture.h>
+
+yk_internal void join_paths(const char* model_path, const char* texture_path, char* joined_path);
+
 //dear lawd, pwease forgive me
 yk_internal u32 mesh_index;
 
@@ -15,9 +19,11 @@ yk_internal size_t vertex_num;
 
 yk_internal mesh_asset* out;
 yk_internal YkRenderer* _renderer;
+#define ROOT_PATH_SIZE 256
+yk_internal char root_path[ROOT_PATH_SIZE];
 
 #define debug_color 0
-#define material_color 0
+#define material_color 1
 
 //perf reasons
 /*
@@ -56,8 +62,9 @@ void ykr_load_mesh_cleanup()
     _renderer = 0;
     total_vertices = 0;
     total_indices = 0;
-    total_meshes = 0;
-    total_surfaces = 0;
+    memset(root_path, 0,ROOT_PATH_SIZE);
+    //total_meshes = 0;
+   // total_surfaces = 0;
 }
 
 void traverse_node(cgltf_node* _node)
@@ -83,7 +90,7 @@ void traverse_node(cgltf_node* _node)
         for (u32 j = 0; j < mesh->primitives_count; j++)
         {
             cgltf_primitive* p = &mesh->primitives[j];
-
+            
             if (p->type != cgltf_primitive_type_triangles)
             {
                 printf("%d\n", p->type);
@@ -121,86 +128,87 @@ void traverse_node(cgltf_node* _node)
                 index_num += index_attrib->count;
             }
 
-
             //attributes
             //     1. Vertex
             //     2. normals
             //     3. colors
-            for (u32 k = 0; k < p->attributes_count; k++)
+            //     4. uv
             {
-                cgltf_attribute* attrib = &p->attributes[k];
-               
-
-                if (attrib->type == cgltf_attribute_type_position)
+                for (u32 k = 0; k < p->attributes_count; k++)
                 {
-                    cgltf_accessor* vert_attrib = attrib->data;
-                    vertex_num += attrib->data->count;
-                    // vertices.reserve(attrib->data->count);
-                    for (u32 l = 0; l < attrib->data->count; l++)
+                    cgltf_attribute* attrib = &p->attributes[k];
+
+
+                    if (attrib->type == cgltf_attribute_type_position)
                     {
-                        f32 _vertices[3] = {};
-                        cgltf_accessor_read_float(vert_attrib, l, _vertices, sizeof(f32));
-
-                        if (vert_attrib->type != cgltf_type_vec3)
+                        cgltf_accessor* vert_attrib = attrib->data;
+                        vertex_num += attrib->data->count;
+                        // vertices.reserve(attrib->data->count);
+                        for (u32 l = 0; l < attrib->data->count; l++)
                         {
-                            printf("q");
-                            exit(69);
-                        }
-                        //bleh bleh bleh
-                        //     -vampires
+                            f32 _vertices[3] = {};
+                            cgltf_accessor_read_float(vert_attrib, l, _vertices, sizeof(f32));
 
-                        vertices[l + init_vtx].pos.x = _vertices[0];
-                        vertices[l + init_vtx].pos.y = _vertices[1];
-                        vertices[l + init_vtx].pos.z = _vertices[2];
-
-                        //yk_memory_arena_insert(&vertex_arena, sizeof(YkVertex), l + init_vtx, &_v);
-
-
-                        //Material colors
-#if material_color
-                        if (p->material)
-                        {
-                            if (p->material->has_pbr_metallic_roughness)
+                            if (vert_attrib->type != cgltf_type_vec3)
                             {
-                                cgltf_material* _mat = p->material;
-                                f32* base_color_factor = _mat->pbr_metallic_roughness.base_color_factor;
-                                f32 red = base_color_factor[0];
-                                f32 green = base_color_factor[1];
-                                f32 blue = base_color_factor[2];
-                                f32 alpha = base_color_factor[3];
-                                vertices[l + init_vtx].color = v4{ red, green, blue, alpha };
+                                printf("q");
+                                exit(69);
                             }
-                        }
+                            //bleh bleh bleh
+                            //     -vampires
+
+                            vertices[l + init_vtx].pos.x = _vertices[0];
+                            vertices[l + init_vtx].pos.y = _vertices[1];
+                            vertices[l + init_vtx].pos.z = _vertices[2];
+
+                            //yk_memory_arena_insert(&vertex_arena, sizeof(YkVertex), l + init_vtx, &_v);
+
+
+                            //Material colors
+#if material_color
+                            if (p->material)
+                            {
+                                if (p->material->has_pbr_metallic_roughness)
+                                {
+                                    cgltf_material* _mat = p->material;
+                                    f32* base_color_factor = _mat->pbr_metallic_roughness.base_color_factor;
+                                    f32 red = base_color_factor[0];
+                                    f32 green = base_color_factor[1];
+                                    f32 blue = base_color_factor[2];
+                                    f32 alpha = base_color_factor[3];
+                                    vertices[l + init_vtx].color = v4{ red, green, blue, alpha };
+                                }
+                            }
 #endif
+
+                        }
+
 
                     }
 
-
-                }
-
-                if (attrib->type == cgltf_attribute_type_normal)
-                {
-                    cgltf_accessor* norm_attrib = attrib->data;
-
-                    for (u32 l = 0; l < norm_attrib->count; l++)
+                    if (attrib->type == cgltf_attribute_type_normal)
                     {
-                        f32 _norm[3] = {};
-                        cgltf_accessor_read_float(norm_attrib, l, _norm, sizeof(f32));
+                        cgltf_accessor* norm_attrib = attrib->data;
 
-                        //I don't say bleh bleh bleh
-                        //             -Adam Sandler
+                        for (u32 l = 0; l < norm_attrib->count; l++)
+                        {
+                            f32 _norm[3] = {};
+                            cgltf_accessor_read_float(norm_attrib, l, _norm, sizeof(f32));
 
-                        vertices[l + init_vtx].normal.x = _norm[0];
-                        vertices[l + init_vtx].normal.y = _norm[1];
-                        vertices[l + init_vtx].normal.z = _norm[2];
+                            //I don't say bleh bleh bleh
+                            //             -Adam Sandler
+
+                            vertices[l + init_vtx].normal.x = _norm[0];
+                            vertices[l + init_vtx].normal.y = _norm[1];
+                            vertices[l + init_vtx].normal.z = _norm[2];
 
 #if debug_color
-                        vertices[l + init_vtx].color = v4{ _norm[0], _norm[1], _norm[2], 1 };
+                            vertices[l + init_vtx].color = v4{ _norm[0], _norm[1], _norm[2], 1 };
 #endif                     
 
 
+                        }
                     }
-                }
 
                     if (attrib->type == cgltf_attribute_type_color)
                     {
@@ -220,9 +228,63 @@ void traverse_node(cgltf_node* _node)
 
                     }
 
+                    if (attrib->type == cgltf_attribute_type_texcoord)
+                    {
+                        cgltf_accessor* uv_attrib = attrib->data;
+                        if (attrib->index == 0)
+                        {
+                            for (u32 l = 0; l < uv_attrib->count; l++)
+                            {
+                                f32 _uv[2] = {};
+                                cgltf_accessor_read_float(uv_attrib, l, _uv, sizeof(f32));
 
+                                vertices[l + init_vtx].uv_x = _uv[0];
+                                vertices[l + init_vtx].uv_y = _uv[1];
+                            }
+                        }
+
+                    }
+
+
+                }
             }
+            
 
+            cgltf_material* material = p->material;
+
+            if (material->has_pbr_metallic_roughness)
+            {
+                cgltf_texture_view* base_view = &material->pbr_metallic_roughness.base_color_texture;
+                if (base_view->texture)
+                {
+                    for(u32 k = 0; k < _renderer->texture_count; k ++)
+                    {
+                        char fullpath[ROOT_PATH_SIZE] = {};
+                        join_paths(root_path, base_view->texture->image->uri,fullpath);
+            
+                        u64 hash = djb2_hash(fullpath);
+                        
+                        texture_asset* ass = (texture_asset*)_renderer->textures.base;
+
+                        if(ass[k].id == hash)
+                        {
+                            asset.texture_id = hash;
+//                            printf("%llu\n",hash);
+                        }
+                        
+                    }
+                    
+                    //asset.image = ykr_load_textures(_renderer, fullpath);
+                    
+                    //printf("%s\n", asset.base_texture_path);
+                }
+                else
+                {
+                   // asset.image = ykr_load_textures(_renderer, "res/textures/transparent.png");
+                }
+                
+            }
+ 
 
             asset.num_surfaces++;
             asset.surfaces[j] = surface;
@@ -260,8 +322,12 @@ void traverse_node(cgltf_node* _node)
 
 }
 
-mesh_asset* ykr_load_mesh(YkRenderer* renderer, const char* filepath, YkMemoryArena* scratch, YkMemoryArena* perm, size_t* out_num_meshes)
+mesh_asset* ykr_load_mesh(YkRenderer* renderer, const char* filepath, YkMemoryArena* scratch, YkMemoryArena* perm, size_t * num_mesh)
 {
+   
+    //feel free to suggest better method
+    ykr_load_mesh_cleanup();
+    strcpy(root_path, filepath);
 
     out = 0;
     cgltf_options options = {};
@@ -277,17 +343,43 @@ mesh_asset* ykr_load_mesh(YkRenderer* renderer, const char* filepath, YkMemoryAr
             printf("Couldn't load buffers");
         }
 
+        texture_asset* view = (texture_asset*)(renderer->textures.base);
+        for(u32 i = 0; i < data->textures_count; i ++)
+        {
+            char fullpath[ROOT_PATH_SIZE] = {};
+            join_paths(root_path, data->textures[i].image->uri,fullpath);
+            printf("%s\n", fullpath);
 
+            view[renderer->texture_count] = ykr_load_textures(renderer,fullpath);
+            view[renderer->texture_count].id = djb2_hash(fullpath);
+
+            renderer->texture_count++;
+            renderer->textures.used += sizeof(texture_asset);
+        }
+/*
+        for(u32 i = 0; i < data->textures_count; i ++)
+        {
+          
+            printf("%llu\n", view[i].id);
+
+        }
+*/
         indices = (u32*)(scratch->base);
         vertices = (YkVertex*)((u8*)indices + scratch->size / 2);
-        scratch->used = scratch->size;
+        
 
+        // Maybe have two arenas? So I can actually make use of the "used" part?
+        // Right now I partition this arena in part_ratio : 1
+        
 
-        out = (mesh_asset*)(perm->base);
-        surfaces = (geo_surface*)((u8*)out + sizeof(mesh_asset) * data->meshes_count);
+        u32 part_ratio = 4;
+        out = (mesh_asset*)(perm->base + total_meshes * sizeof(mesh_asset));
+        surfaces = (geo_surface*)((u8*)out + ( perm->size - perm->size / part_ratio) + total_surfaces * sizeof(geo_surface));
+        
 
-        *out_num_meshes = data->meshes_count;
+        *num_mesh = data->meshes_count;
 
+        printf("%s\n", filepath);
         for (u32 _scene_index = 0; _scene_index < data->scenes_count; _scene_index++)
         {
 
@@ -305,5 +397,31 @@ mesh_asset* ykr_load_mesh(YkRenderer* renderer, const char* filepath, YkMemoryAr
 
     }
 
+    //a bit pointless since I am using the same arena.
+    //Maybe I can have an array of used and available pairs?
+    perm->used += total_meshes * sizeof(mesh_asset);
+    perm->used += total_surfaces * sizeof(surfaces);
+
     return out;
+}
+
+
+yk_internal void join_paths(const char* model_path, const char* texture_path, char* joined_path) 
+{
+
+    const char* lastSlash = strrchr(model_path, '/');
+
+    if (lastSlash != NULL) 
+    {
+        size_t model_len = lastSlash - model_path + 1;
+
+        strncpy(joined_path, model_path, model_len);
+
+        strcat(joined_path, texture_path);
+    } 
+    else 
+    {
+
+        printf("crash");
+    }
 }

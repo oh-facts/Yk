@@ -3,17 +3,13 @@
 
 #include <renderer/ykr_common.h>
 
-#include <vulkan/vulkan.h>
-#include <vulkan/vk_enum_string_helper.h>
 
 #include <yk_api.h>
 
-#include <vma/vk_mem_alloc.h>
-#include <time.h>
 #include <platform/yk_window.h>
 #include <renderer/yk_debug_camera.h>
 #include <renderer/descriptors.h>
-
+#include <pch.h>
 
 
 struct ComputePushConstants {
@@ -55,6 +51,7 @@ struct YkRenderer
 	VkPhysicalDevice phys_device;
 	VkDevice device;
 	VkQueue gfx_q;
+	VkQueue prt_q;
 	i32 qfams[3];
 	VkSwapchainKHR swapchain;
 
@@ -93,7 +90,6 @@ struct YkRenderer
 	VkDescriptorPool mesh_desc_pool;
 	VkDescriptorSetLayout mesh_desc_layout;
 
-
 	VmaAllocator vma_allocator;
 
 	u32 frames_rendered;
@@ -105,6 +101,9 @@ struct YkRenderer
 
 	YkDebugCamera cam;
 
+	texture_asset trans_tx;
+	YkMemoryArena textures;
+	u32 texture_count;
 
 
 #if VK_USE_VALIDATION_LAYERS
@@ -127,10 +126,16 @@ void yk_renderer_wait(YkRenderer* renderer);
 
 void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window);
 
+void yk_renderer_innit_scene(YkRenderer* renderer);
+
 void yk_renderer_draw(YkRenderer* renderer, YkWindow* win, f64 dt);
 
 b8 yk_recreate_swapchain(YkRenderer* renderer, struct YkWindow* win);
 
-YkMeshBuffer ykr_upload_mesh(YkRenderer* renderer, YkVertex vertices[], u32 num_vertices, u32 indices[], u32 num_indices);
+YkMeshBuffer ykr_upload_mesh(const YkRenderer* renderer, YkVertex vertices[], u32 num_vertices, u32 indices[], u32 num_indices);
+
+AllocatedImage ykr_create_image_from_data(const YkRenderer* renderer, void* data, VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
+
+texture_asset ykr_load_textures(const YkRenderer* renderer, const char* filepath);
 
 #endif

@@ -1,6 +1,6 @@
 #include <yk.h>
 
-void hi()
+static void hi()
 {
-	printf("die please");
+	printf("die please please e");
 }

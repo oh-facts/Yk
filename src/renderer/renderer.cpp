@@ -1,9 +1,18 @@
 #include <renderer/renderer.h>
 #include <renderer/ykr_debug_util.h>
 #include <renderer/ykr_instance.h>
+
+#include <yk_file_reader.h>
+
 #define VMA_IMPLEMENTATION
 #include <vma/vk_mem_alloc.h>
 
+
+/*
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+*/
 
 /*
     -------------------------------
@@ -20,8 +29,7 @@ void pipeline_innit(YkRenderer* renderer);
 void gradient_pipeline(YkRenderer* renderer);
 void mesh_pipeline(YkRenderer* renderer);
 
-
-YkMeshBuffer ykr_upload_mesh(YkRenderer* renderer, YkVertex vertices[], u32 num_vertices, u32 indices[], u32 num_indices);
+AllocatedImage ykr_create_image_from_data(const YkRenderer* renderer, void* data, VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
 
 /*
  -------util-------
@@ -247,8 +255,8 @@ VkPipeline yk_create_raster_pipeline(VkDevice device, const char* vert_path, con
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_NONE;
-    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     
     //Note(facts 12/23 2:20): come back to this later
     rasterizer.depthBiasEnable = VK_FALSE;
@@ -376,6 +384,23 @@ VkPipeline yk_create_raster_pipeline(VkDevice device, const char* vert_path, con
 
 // -----------------
 
+void update_cs(YkRenderer* renderer)
+{
+    VkDescriptorImageInfo img_info = {};
+    img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    img_info.imageView = renderer->draw_image.imageView;
+    
+    VkWriteDescriptorSet draw_img_write = {};
+    draw_img_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    draw_img_write.dstBinding = 0;
+    draw_img_write.descriptorCount = 1;
+    draw_img_write.dstSet = renderer->draw_image_desc;
+    draw_img_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    draw_img_write.pImageInfo = &img_info;
+
+    vkUpdateDescriptorSets(renderer->device, 1, &draw_img_write, 0 , 0);
+}
+
 void yk_desc_innit(YkRenderer* renderer)
 {
     //compute desc set.
@@ -392,19 +417,7 @@ void yk_desc_innit(YkRenderer* renderer)
 
     renderer->draw_image_desc = desc_set_allocate(renderer->device,renderer->global_pool,renderer->draw_image_layouts);
 
-    VkDescriptorImageInfo img_info = {};
-    img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-    img_info.imageView = renderer->draw_image.imageView;
-    
-    VkWriteDescriptorSet draw_img_write = {};
-    draw_img_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    draw_img_write.dstBinding = 0;
-    draw_img_write.descriptorCount = 1;
-    draw_img_write.dstSet = renderer->draw_image_desc;
-    draw_img_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    draw_img_write.pImageInfo = &img_info;
-
-    vkUpdateDescriptorSets(renderer->device, 1, &draw_img_write, 0 , 0);
+   update_cs(renderer);
 }
 
 void gradient_pipeline(YkRenderer* renderer)
@@ -444,10 +457,29 @@ void gradient_pipeline(YkRenderer* renderer)
     vkDestroyShaderModule(renderer->device, compute_module,0);
 }
 
+void yk_destroy_texture(VkDevice device, VmaAllocator allocator, texture_asset* asset)
+{
+    vkDestroyImageView(device,  asset->image.imageView,0);
+    vkDestroySampler(device, asset->sampler,0 );
+    vmaDestroyImage(allocator, asset->image.image, asset->image.allocation);
+}
+
+void ykr_destroy_textures(YkRenderer* renderer)
+{   
+    yk_destroy_texture(renderer->device, renderer->vma_allocator, &renderer->trans_tx);
+
+    texture_asset *view = (texture_asset*)renderer->textures.base;
+    for (u32 i = 0; i < renderer->texture_count; i++)
+    {
+        yk_destroy_texture(renderer->device, renderer->vma_allocator, &view[i]);
+    }
+    
+}
+
 struct scene_data_ubo
 {
     v4 ambient_color;
-    v4 ambient_dir;
+    v4 ambient_pos;
 };
 
 struct object_data_ubo
@@ -455,15 +487,46 @@ struct object_data_ubo
     glm::mat4 model;
 };
 
+void scene_desc_data_write(VkDevice device, VkBuffer buffer, VkDescriptorSet set)
+{
+    VkDescriptorBufferInfo buffer_info = {};
+    buffer_info.buffer = buffer;
+    buffer_info.offset = 0;
+    buffer_info.range = sizeof(scene_data_ubo);
+
+    VkWriteDescriptorSet write = {};
+    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write.dstSet = set;
+    write.dstBinding = 0;
+    write.dstArrayElement = 0;
+    write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    write.descriptorCount = 1;
+    write.pBufferInfo = &buffer_info;
+
+    vkUpdateDescriptorSets(device, 1, &write, 0, 0);
+}
+
 void scene_data_innit(YkRenderer* renderer)
 {
-    desc_pool_innit(renderer->device, &renderer->scene_desc_pool);
-    desc_layout_innit(renderer->device, &renderer->scene_desc_layout);
+
+    VkDescriptorSetLayoutBinding bindings[1] = {};
+    bindings[0].binding = 0;
+    bindings[0].descriptorCount = 1;
+    bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    ykr_desc_layout_innit(renderer->device, bindings, 1, &renderer->scene_desc_layout);
+
+    VkDescriptorPoolSize sizes[1] = {};
+    sizes[0].descriptorCount = MAX_FRAMES_IN_FLIGHT;
+    sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    ykr_desc_pool_innit(renderer->device, MAX_FRAMES_IN_FLIGHT, sizes, 1, &renderer->scene_desc_pool);
 
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
         renderer->frame_data[i].scene_ubo = ykr_create_buffer(renderer->vma_allocator, sizeof(scene_data_ubo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-        desc_set_innit(renderer->device, &renderer->frame_data[i].scene_set, renderer->scene_desc_pool, &renderer->scene_desc_layout, &renderer->frame_data[i].scene_ubo, sizeof(scene_data_ubo));
+        desc_set_innit(renderer->device, &renderer->frame_data[i].scene_set, renderer->scene_desc_pool, &renderer->scene_desc_layout);
+        scene_desc_data_write(renderer->device, renderer->frame_data[i].scene_ubo.buffer, renderer->frame_data[i].scene_set);
     }
 }
 
@@ -478,30 +541,130 @@ void scene_data_destroy(YkRenderer* renderer)
     }
 }
 
-/*
-    incomplete
-*/
+
+void mesh_desc_data_write(VkDevice device, VkBuffer buffer, VkImageView view, VkSampler sampler, VkDescriptorSet set)
+{
+    VkDescriptorBufferInfo buffer_info = {};
+    buffer_info.buffer = buffer;
+    buffer_info.offset = 0;
+    buffer_info.range = sizeof(object_data_ubo);
+
+    VkDescriptorImageInfo img_info = {};
+    img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    img_info.imageView = view;
+    img_info.sampler = sampler;
+
+    VkWriteDescriptorSet writes[2] = {};
+    writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writes[0].dstSet = set;
+    writes[0].dstBinding = 0;
+    writes[0].dstArrayElement = 0;
+    writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    writes[0].descriptorCount = 1;
+    writes[0].pBufferInfo = &buffer_info;
+
+
+    writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writes[1].dstSet = set;
+    writes[1].dstBinding = 1;
+    writes[1].dstArrayElement = 0;
+    writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    writes[1].descriptorCount = 1;
+    writes[1].pImageInfo = &img_info;
+
+    vkUpdateDescriptorSets(device, 2, writes, 0, 0);
+
+
+}
+
+
 void mesh_desc_data_innit(YkRenderer* renderer)
 {
-    desc_pool_innit(renderer->device, &renderer->mesh_desc_pool);
-    desc_layout_innit(renderer->device, &renderer->mesh_desc_layout);
+    VkDescriptorSetLayoutBinding bindings[2] = {};
+    bindings[0].binding = 0;
+    bindings[0].descriptorCount = 1;
+    bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    bindings[1].binding = 1;
+    bindings[1].descriptorCount = 1;
+    bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    ykr_desc_layout_innit(renderer->device, bindings, 2, &renderer->mesh_desc_layout);
+
+    VkDescriptorPoolSize sizes[2] = {};
+    sizes[0].descriptorCount = renderer->test_mesh_count * MAX_FRAMES_IN_FLIGHT;
+    sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+
+    sizes[1].descriptorCount = renderer->test_mesh_count * MAX_FRAMES_IN_FLIGHT;
+    sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+
+
+
+    ykr_desc_pool_innit(renderer->device, renderer->test_mesh_count * MAX_FRAMES_IN_FLIGHT, sizes, 2, &renderer->mesh_desc_pool);
+
+    renderer->trans_tx = ykr_load_textures(renderer,"res/textures/transparent.png");
+
+    for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    {
+        //do in arena
+        renderer->frame_data[i].mesh_buffers = (YkBuffer*)malloc(sizeof(YkBuffer) * renderer->test_mesh_count);
+        renderer->frame_data[i].mesh_sets = (VkDescriptorSet*)malloc(sizeof(VkDescriptorSet) * renderer->test_mesh_count);
+
+        for (u32 j = 0; j < renderer->test_mesh_count; j++)
+        {
+            renderer->frame_data[i].mesh_buffers[j] = ykr_create_buffer(renderer->vma_allocator, sizeof(object_data_ubo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+            desc_set_innit(renderer->device, &renderer->frame_data[i].mesh_sets[j], renderer->mesh_desc_pool, &renderer->mesh_desc_layout);
+            
+            texture_asset* view = (texture_asset*)renderer->textures.base;
+
+            b8 found = false;
+            for(u32 k = 0; k < renderer->texture_count; k ++)
+            {
+                if(view[k].id == renderer->test_meshes[j].texture_id)
+                {
+                    mesh_desc_data_write(renderer->device, renderer->frame_data[i].mesh_buffers[j].buffer, 
+                   view[k].image.imageView, view[k].sampler, renderer->frame_data[i].mesh_sets[j]);
+                   found = true;
+                    break;
+                }
+            }
+            if(!found)
+            {
+             mesh_desc_data_write(renderer->device, renderer->frame_data[i].mesh_buffers[j].buffer, 
+                   renderer->trans_tx.image.imageView, renderer->trans_tx.sampler, renderer->frame_data[i].mesh_sets[j]);
+            }
+
+        }
+    }
+}
+
+void mesh_desc_data_destroy(YkRenderer* renderer)
+{   
+
+    vkDestroyDescriptorPool(renderer->device, renderer->mesh_desc_pool, 0);
+    vkDestroyDescriptorSetLayout(renderer->device, renderer->mesh_desc_layout, 0);
 
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
         for (u32 j = 0; j < renderer->test_mesh_count; j++)
         {
-            renderer->frame_data[i].scene_ubo = ykr_create_buffer(renderer->vma_allocator, sizeof(scene_data_ubo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-            desc_set_innit(renderer->device, &renderer->frame_data[i].scene_set, renderer->scene_desc_pool, &renderer->scene_desc_layout, &renderer->frame_data[i].scene_ubo, sizeof(scene_data_ubo));
+            vmaDestroyBuffer(renderer->vma_allocator, renderer->frame_data[i].mesh_buffers[j].buffer, renderer->frame_data[i].mesh_buffers[j].alloc);
         }
+        free(renderer->frame_data[i].mesh_buffers);
+        free(renderer->frame_data[i].mesh_sets);
     }
 }
 
 void mesh_pipeline(YkRenderer* renderer)
-{    
+{   
+    VkDescriptorSetLayout layouts[2] = { renderer->scene_desc_layout, renderer->mesh_desc_layout };
+
     VkPipelineLayoutCreateInfo layout_info = {};
     layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    layout_info.pSetLayouts = &renderer->scene_desc_layout;
-    layout_info.setLayoutCount = 1;
+    layout_info.pSetLayouts = layouts;
+    layout_info.setLayoutCount = 2;
     
 
     VkPushConstantRange range = {};
@@ -512,7 +675,7 @@ void mesh_pipeline(YkRenderer* renderer)
     layout_info.pushConstantRangeCount = 1;
     layout_info.pPushConstantRanges = &range;
 
-    renderer->mesh_pl = yk_create_raster_pipeline(renderer->device, "res/shaders/mesh.vert.spv", "res/shaders/default.frag.spv", &renderer->mesh_pl_layout, &layout_info, renderer->draw_image.imageFormat, renderer->depth_image.imageFormat);
+    renderer->mesh_pl = yk_create_raster_pipeline(renderer->device, "res/shaders/mesh.vert.spv", "res/shaders/tex_img.frag.spv", &renderer->mesh_pl_layout, &layout_info, renderer->draw_image.imageFormat, renderer->depth_image.imageFormat);
 }
 
 void pipeline_innit(YkRenderer* renderer)
@@ -543,26 +706,25 @@ void yk_renderer_draw_bg(YkRenderer* renderer, VkCommandBuffer cmd)
                                                    .layerCount = VK_REMAINING_ARRAY_LAYERS
     };
 
-    vkCmdClearColorImage(cmd, renderer->draw_image.image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &clear_range);
+    vkCmdClearColorImage(cmd, renderer->draw_image.image, VK_IMAGE_LAYOUTdraw_image_desc_GENERAL, &clearValue, 1, &clear_range);
     */
 
    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, renderer->gradient_pp);
    vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_COMPUTE,renderer->gradient_pp_layouts, 0, 1, &renderer->draw_image_desc,0,0);
 
    ComputePushConstants push = {};
-   push.data2 = v4{ 0.0, 1.0, 1.0, 1.0 };
+   push.data2 = v4{ 0.0, 0.0, 1.0, 1.0 };
    push.data1 = v4{ 1.0, 0.0, 1.0, 1.0 };
 
    vkCmdPushConstants(cmd, renderer->gradient_pp_layouts, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push), &push);
    
-   vkCmdDispatch(cmd, renderer->draw_image.imageExtent.width / 16.0 , renderer->draw_image.imageExtent.height / 16.0, 1);
+   vkCmdDispatch(cmd, renderer->draw_image.imageExtent.width / 4  , renderer->draw_image.imageExtent.height / 4, 1);
 }
 
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+
 void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
 {
+    int temp = 1;
     //glm::mat4 myMatrix = glm::mat4(1.0f);
    // glmc_mat4_identity(&aa);
     PFN_vkCmdBeginRenderingKHR vkCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(renderer->device, "vkCmdBeginRenderingKHR");
@@ -574,7 +736,7 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
     vk_color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     vk_color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
     vk_color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    vk_color_attachment.clearValue.color = VkClearColorValue{ 1.0f, 0.0f, 0.0f, 1.0f };
+    vk_color_attachment.clearValue.color = VkClearColorValue{ 1.0f, 0.0f, 0.0f, 1.f };
 
     VkRenderingAttachmentInfoKHR vk_depth_attachment = {};
     vk_depth_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
@@ -623,11 +785,11 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
         proj[1][1] *= -1;
 
         scene_data_ubo ubo = {};
-        f32 color = (sin(time * 3.f) + 1) / 2.f;
-        ubo.ambient_color = v4{ color, color ,color,1 };
-        ubo.ambient_dir = v4{ 0,0,1,0 };
+        //f32 color = (sin(time * 3.f) + 1) / 2.f;
+        //ubo.ambient_color = v4{ color, color ,color,1 };
+        ubo.ambient_color = v4{ 0.2f, 0.2f,0.2f,1.f };
+        ubo.ambient_pos = v4{ renderer->cam.pos.x, renderer->cam.pos.y, renderer->cam.pos.z };
         ubo_update(renderer->vma_allocator, &renderer->frame_data[renderer->current_frame].scene_ubo, &ubo ,sizeof(scene_data_ubo));
-
 
         for (size_t i = 0; i < renderer->test_mesh_count; i++)
         {
@@ -638,7 +800,7 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
                 glm::mat4 model = mesh->model_mat;
                // glm::mat4 model = glm::identity<glm::mat4>();
                 //   model = glm::translate(model, mesh->trans);
-               // model = glm::rotate(model, time * 0.5f, glm::vec3(0,0,1));
+               //model = glm::rotate(model, time * 0.5f, glm::vec3(0,1,0));
                 //   model = glm::rotate(model, mesh->rot.y, glm::vec3(0, 1, 0));
                 //   model = glm::rotate(model, mesh->rot.z, glm::vec3(0, 0, 1));
                // model = glm::scale(model, glm::vec3(2));
@@ -649,6 +811,11 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
 
                 push_constants.v_buffer = mesh->buffer.v_address;
 
+                object_data_ubo obj_ubo = {};
+                obj_ubo.model = model;
+                ubo_update(renderer->vma_allocator, &renderer->frame_data[renderer->current_frame].mesh_buffers[i], &obj_ubo, sizeof(object_data_ubo));
+
+
                 vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl);
                 vkCmdSetViewport(cmd, 0, 1, &renderer->viewport);
                 vkCmdSetScissor(cmd, 0, 1, &renderer->scissor);
@@ -656,6 +823,8 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
                 
 
                 vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl_layout, 0, 1, &renderer->frame_data[renderer->current_frame].scene_set, 0, 0);
+                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl_layout, 1, 1, &renderer->frame_data[renderer->current_frame].mesh_sets[i], 0, 0);
+
                 vkCmdBindIndexBuffer(cmd, mesh->buffer.i_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
                 vkCmdDrawIndexed(cmd, mesh->surfaces[j].count, 1, mesh->surfaces[j].start, 0, 0);
             }
@@ -669,12 +838,15 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
 
 }
 
+void yk_renderer_innit_scene(YkRenderer* renderer)
+{
+    scene_data_innit(renderer);
+    mesh_desc_data_innit(renderer);
+    pipeline_innit(renderer);
+}
+
 void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
 {
-
-    renderer->cam.pos = glm::vec3{ -8.f,0.f,-0.f };
-    renderer->cam.yaw = 90 * DEG_TO_RAD;
-
     renderer->current_frame = 0;
     //---pure boiler plate ---//
     yk_innit_vulkan(renderer);
@@ -695,19 +867,15 @@ void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
     //---pure boiler plate ---//
 
     /* per objectish */
-   // createDescriptorSetLayout(renderer);
-   // yk_create_gfx_pipeline(renderer);
+
     yk_cmd_innit(renderer);
     /* per objectish */
-   // createDescriptorPool(renderer);
+
  
     //---can be optimized per object. But boilerplate for now --//
     yk_create_sync_objs(renderer);
     yk_desc_innit(renderer);
-
-    scene_data_innit(renderer);
-
-    pipeline_innit(renderer);
+  
     //---can be optimized per object. But boilerplate for now --//
 
 
@@ -749,6 +917,8 @@ void yk_free_renderer(YkRenderer* renderer)
     }
 
     scene_data_destroy(renderer);
+    mesh_desc_data_destroy(renderer);
+    ykr_destroy_textures(renderer);
   
   //  vkDestroyPipeline(renderer->device, renderer->r_pipeline, 0);
   //  vkDestroyPipelineLayout(renderer->device, renderer->r_pipeline_layout, 0);
@@ -925,16 +1095,21 @@ void yk_renderer_draw(YkRenderer* renderer, YkWindow* win, f64 dt)
     VkResultAssert(vkResetFences(renderer->device, 1, &current_frame->in_flight_fence), "Reset fences");
 
     u32 imageIndex = -1;
-
-    if (vkAcquireNextImageKHR(renderer->device, renderer->swapchain, UINT64_MAX,
-        current_frame->image_available_semawhore,
-        VK_NULL_HANDLE, &imageIndex) == VK_ERROR_OUT_OF_DATE_KHR)
+    
     {
-        if (yk_recreate_swapchain(renderer, win) == false)
+        VkResult res = vkAcquireNextImageKHR(renderer->device, renderer->swapchain, UINT64_MAX,
+        current_frame->image_available_semawhore,
+        VK_NULL_HANDLE, &imageIndex);
+
+        if ( res == VK_ERROR_OUT_OF_DATE_KHR)
         {
-            return;
+             if (yk_recreate_swapchain(renderer, win) == false)
+            {
+                return;
+            }
         }
     }
+   
 
     VkCommandBufferBeginInfo vk_cmd_buffer_begin_info = yk_cmd_buffer_begin_info_create(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);   
     VkResultAssert(vkBeginCommandBuffer(current_frame->cmd_buffers, &vk_cmd_buffer_begin_info), "Command buffer begin");
@@ -1017,9 +1192,8 @@ b8 yk_recreate_swapchain(YkRenderer* renderer, YkWindow* win)
 
     yk_cleanup_swapchain(renderer);
 
-
-
     yk_create_swapchain(renderer, win);
+    update_cs(renderer);
 
     return true;
 }
@@ -1050,7 +1224,7 @@ void _copy_vert_index_buffer(VkCommandBuffer cmd, void* data)
     vkCmdCopyBuffer(cmd, copy_buffer->staging, copy_buffer->index_buffer, 1, &index_copy);
 }
 
-YkMeshBuffer ykr_upload_mesh(YkRenderer* renderer, YkVertex vertices[], u32 num_vertices, u32 indices[], u32 num_indices)
+YkMeshBuffer ykr_upload_mesh(const YkRenderer* renderer, YkVertex vertices[], u32 num_vertices, u32 indices[], u32 num_indices)
 {
     const size_t vert_buffer_size = sizeof(YkVertex) * num_vertices;
     const size_t index_buffer_size = sizeof(u32) * num_indices;
@@ -1071,11 +1245,15 @@ YkMeshBuffer ykr_upload_mesh(YkRenderer* renderer, YkVertex vertices[], u32 num_
 
 
     YkBuffer staging = ykr_create_buffer(renderer->vma_allocator, vert_buffer_size + index_buffer_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_ONLY);
-    void* data = staging.alloc->GetMappedData();
+    
+    void* data = 0;
+    vmaMapMemory(renderer->vma_allocator, staging.alloc, &data);
+   //     staging.alloc->GetMappedData();
 
     memcpy(data, vertices, vert_buffer_size);
     memcpy((char*)data + vert_buffer_size, indices, index_buffer_size);
 
+    vmaUnmapMemory(renderer->vma_allocator, staging.alloc);
 
     copy_buffer_data copy_buffer_data = { vert_buffer_size, index_buffer_size, out.v_buffer.buffer, out.i_buffer.buffer, staging.buffer };
 
@@ -1117,19 +1295,20 @@ void _copy_img_data(VkCommandBuffer cmd, void* _img_copy_data)
     transition_image(cmd, data->dst_img.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
-AllocatedImage ykr_create_image_from_data(YkRenderer* renderer, void* data, VkExtent3D extent, VkFormat format, VkImageUsageFlags usage)
+AllocatedImage ykr_create_image_from_data(const YkRenderer* renderer, void* data, VkExtent3D extent, VkFormat format, VkImageUsageFlags usage)
 {
     AllocatedImage out = {};
-
+    out.imageExtent = extent;
+    out.imageFormat = format;
 
     VmaAllocationCreateInfo alloc_info = {};
     alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
     alloc_info.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    VkImageCreateInfo img_info = image_create_info(format, usage, extent);
+    VkImageCreateInfo img_info = image_create_info(format, usage | VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, extent);
 
 
-    vmaCreateImage(renderer->vma_allocator, &img_info, &alloc_info, &out.image, &out.allocation, 0);
+    VkResultAssert(vmaCreateImage(renderer->vma_allocator, &img_info, &alloc_info, &out.image, &out.allocation, 0), "Image creation failed")
 
     
     VkImageViewCreateInfo view_info = image_view_create_info(format, out.image, VK_IMAGE_ASPECT_COLOR_BIT);
@@ -1140,11 +1319,46 @@ AllocatedImage ykr_create_image_from_data(YkRenderer* renderer, void* data, VkEx
     
     img_copy_data copy_data = {};
     copy_data.copy_buffer = ykr_create_buffer(renderer->vma_allocator, data_size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-    memcpy(copy_data.copy_buffer.alloc, data, data_size);
+    
+    Assert(copy_data.copy_buffer.alloc != 0, "why bro");
+
+    memcpy(copy_data.copy_buffer.info.pMappedData, data, data_size);
+
+    copy_data.extent = extent;
+    copy_data.dst_img = out;
 
     ykr_imm_submit(renderer->device, renderer->imm_cmd, renderer->imm_fence, _copy_img_data, (void*)(&copy_data), renderer->gfx_q);
 
     ykr_destroy_buffer(renderer->vma_allocator, &copy_data.copy_buffer);
+
+    return out;
+}
+
+
+texture_asset ykr_load_textures(const YkRenderer* renderer, const char* filepath)
+{
+    texture_asset out = {};
+
+    YkImageData rawData = yk_image_load_data(filepath);
+     out.image = ykr_create_image_from_data(renderer, rawData.data,
+        VkExtent3D{ .width = rawData.width, .height = rawData.height, .depth = 1 },
+        VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_SAMPLED_BIT);
+    yk_image_data_free(&rawData);
+
+    VkSamplerCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    info.magFilter = VK_FILTER_LINEAR;
+    info.minFilter = VK_FILTER_LINEAR;
+    info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+    //set anistoropyptosy
+
+    info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    info.unnormalizedCoordinates = VK_FALSE;
+
+    vkCreateSampler(renderer->device, &info, 0, &out.sampler);
 
     return out;
 }

@@ -1,7 +1,10 @@
 #include <renderer/yk_debug_camera.h>
-#include <glm/gtx/transform.hpp>
-#include <glm/gtx/quaternion.hpp>
+
 #include <platform/yk_window.h>
+
+#define cam_speed 10.f
+#define cam_sens 4.f
+
 
 glm::mat4 ykr_camera_get_view_matrix(YkDebugCamera* self)
 {
@@ -33,7 +36,6 @@ void ykr_camera_update(YkDebugCamera* self, f32 delta)
 
 void ykr_camera_input(YkDebugCamera* self, struct YkWindow* window)
 {
-	
 	if (yk_input_is_key_held(&window->keys, 'W'))
 	{
 		self->_vel.z = -1;
