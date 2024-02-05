@@ -32,12 +32,15 @@ look at `scripts/cmakec.bat` to see the cmake command being used. I leave it as 
 
 `res` folder **must** be unzipped and placed in root directory.
 
-It should look like this
+It should look something like this
 ```
-/Yk
-├── res
-│   ├── models
-├── src
+Yk/
+├─ scripts/
+├─ src/
+├─ res/
+│  ├─ models
+│  ├─ textures
+├─ README.md
 ...
 ```
 
