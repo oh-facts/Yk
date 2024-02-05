@@ -267,8 +267,13 @@ void traverse_node(cgltf_node* _node)
                     asset.image = ykr_load_textures(_renderer, fullpath);
                     //printf("%s\n", asset.base_texture_path);
                 }
+                else
+                {
+                    asset.image = ykr_load_textures(_renderer, "res/textures/transparent.png");
+                }
                 
             }
+ 
 
             asset.num_surfaces++;
             asset.surfaces[j] = surface;
@@ -308,6 +313,7 @@ void traverse_node(cgltf_node* _node)
 
 mesh_asset* ykr_load_mesh(const YkRenderer* renderer, const char* filepath, YkMemoryArena* scratch, YkMemoryArena* perm, size_t * num_mesh)
 {
+    printf("%s\n", filepath);
     //feel free to suggest better method
     ykr_load_mesh_cleanup();
     strcpy(root_path, filepath);

@@ -4,13 +4,13 @@
 /*
 	ToDo(facts): Dont use Vk as prefix. Comes off as vulkan provided macro
 */
-#define VkDEBUG 0
+#define VkDEBUG 1
 
-#define VK_USE_VALIDATION_LAYERS 0
+#define VK_USE_VALIDATION_LAYERS 1
 #define VK_EXT_PRINT_DEBUG 0
 #define VK_PRINT_SUCCESS 0
 #define LOG_DEVICE_DETAILS 1
-#define FORCE_INTEGRATED 1
+#define FORCE_INTEGRATED 0
 
 #include <pch.h>
 

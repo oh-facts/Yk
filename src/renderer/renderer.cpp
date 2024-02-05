@@ -460,6 +460,8 @@ void yk_texture_destroy(YkRenderer* renderer)
         /*
             I am going to lose my mind if I name variables like this
         */
+       vkDestroyImageView(renderer->device, renderer->test_meshes[i].image.image.imageView,0);
+       vkDestroySampler(renderer->device,renderer->test_meshes[i].image.sampler,0 );
        vmaDestroyImage(renderer->vma_allocator, renderer->test_meshes[i].image.image.image, renderer->test_meshes[i].image.image.allocation);
     }
 }
@@ -551,22 +553,16 @@ void mesh_desc_data_write(VkDevice device, VkBuffer buffer, VkImageView view, Vk
     writes[0].descriptorCount = 1;
     writes[0].pBufferInfo = &buffer_info;
 
-    if (view)
-    {
-        writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writes[1].dstSet = set;
-        writes[1].dstBinding = 1;
-        writes[1].dstArrayElement = 0;
-        writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        writes[1].descriptorCount = 1;
-        writes[1].pImageInfo = &img_info;
 
-        vkUpdateDescriptorSets(device, 2, writes, 0, 0);
-    }
-    else
-    {
-        vkUpdateDescriptorSets(device, 1, writes, 0, 0);
-    }
+    writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writes[1].dstSet = set;
+    writes[1].dstBinding = 1;
+    writes[1].dstArrayElement = 0;
+    writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    writes[1].descriptorCount = 1;
+    writes[1].pImageInfo = &img_info;
+
+    vkUpdateDescriptorSets(device, 2, writes, 0, 0);
 
 
 }
@@ -596,7 +592,7 @@ void mesh_desc_data_innit(YkRenderer* renderer)
 
 
 
-    ykr_desc_pool_innit(renderer->device, renderer->test_mesh_count * MAX_FRAMES_IN_FLIGHT, sizes, 1, &renderer->mesh_desc_pool);
+    ykr_desc_pool_innit(renderer->device, renderer->test_mesh_count * MAX_FRAMES_IN_FLIGHT, sizes, 2, &renderer->mesh_desc_pool);
 
 
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
@@ -1277,7 +1273,7 @@ AllocatedImage ykr_create_image_from_data(const YkRenderer* renderer, void* data
     alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
     alloc_info.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    VkImageCreateInfo img_info = image_create_info(format, usage, extent);
+    VkImageCreateInfo img_info = image_create_info(format, usage | VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, extent);
 
 
     VkResultAssert(vmaCreateImage(renderer->vma_allocator, &img_info, &alloc_info, &out.image, &out.allocation, 0), "Image creation failed")

@@ -8,7 +8,6 @@ layout (location = 0) in vec3 inColor;
 layout (location = 1) in vec2 inUV;
 layout (location = 2) in vec3 inNormal;
 layout (location = 3) in vec3 fragPos;
-layout (location = 4) in mat4 a;
 
 layout (location = 0) out vec4 outFragColor;
 
@@ -29,18 +28,19 @@ void main()
 	float spec = pow(max(dot(lightDir, reflect_dir), 0.0), 32);
 	vec3 specular = specular_strength * spec * ambient_color.xyz;
 
-	vec3 textureColor = texture(displayTexture, inUV).xyz;
 
-
+	vec4 textureColor = texture(displayTexture, inUV);
 	vec3 result;
-	if(textureColor.x == 0)
+	if(textureColor.a == 0)
 	{
 		result = (ambient + diffuse + specular) * inColor;
 	}
 	else
 	{
-		result = (ambient + diffuse + specular) * textureColor;
+		result = (ambient + diffuse + specular) * inColor * textureColor.xyz;
 	}
+
+
 	outFragColor = vec4(result, 1.0);
 
 }
