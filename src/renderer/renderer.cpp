@@ -718,7 +718,7 @@ void yk_renderer_draw_bg(YkRenderer* renderer, VkCommandBuffer cmd)
 
    vkCmdPushConstants(cmd, renderer->gradient_pp_layouts, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push), &push);
    
-   vkCmdDispatch(cmd, renderer->draw_image.imageExtent.width / 4  , renderer->draw_image.imageExtent.height / 4, 1);
+   vkCmdDispatch(cmd, ceil(renderer->draw_image.imageExtent.width / 8)  , ceil(renderer->draw_image.imageExtent.height / 4), 1);
 }
 
 
