@@ -5,7 +5,6 @@
 #include <renderer/renderer.h>
 #include <renderer/yk_texture.h>
 
-yk_internal texture_asset ykr_load_textures(const YkRenderer* renderer, const char* filepath);
 yk_internal void join_paths(const char* model_path, const char* texture_path, char* joined_path);
 
 //dear lawd, pwease forgive me
@@ -19,7 +18,7 @@ yk_internal size_t index_num;
 yk_internal size_t vertex_num;
 
 yk_internal mesh_asset* out;
-yk_internal const YkRenderer* _renderer;
+yk_internal YkRenderer* _renderer;
 #define ROOT_PATH_SIZE 256
 yk_internal char root_path[ROOT_PATH_SIZE];
 
@@ -258,18 +257,30 @@ void traverse_node(cgltf_node* _node)
                 cgltf_texture_view* base_view = &material->pbr_metallic_roughness.base_color_texture;
                 if (base_view->texture)
                 {
-                    /*
-                        sowwy, I really don't know how else to handle this
-                    */
-                    char fullpath[ROOT_PATH_SIZE] = {};
-                    join_paths(root_path, base_view->texture->image->uri,fullpath);
+                    for(u32 k = 0; k < _renderer->texture_count; k ++)
+                    {
+                        char fullpath[ROOT_PATH_SIZE] = {};
+                        join_paths(root_path, base_view->texture->image->uri,fullpath);
+            
+                        u64 hash = djb2_hash(fullpath);
+                        
+                        texture_asset* ass = (texture_asset*)_renderer->textures.base;
+
+                        if(ass[k].id == hash)
+                        {
+                            asset.texture_id = hash;
+//                            printf("%llu\n",hash);
+                        }
+                        
+                    }
                     
-                    asset.image = ykr_load_textures(_renderer, fullpath);
+                    //asset.image = ykr_load_textures(_renderer, fullpath);
+                    
                     //printf("%s\n", asset.base_texture_path);
                 }
                 else
                 {
-                    asset.image = ykr_load_textures(_renderer, "res/textures/transparent.png");
+                   // asset.image = ykr_load_textures(_renderer, "res/textures/transparent.png");
                 }
                 
             }
@@ -311,7 +322,7 @@ void traverse_node(cgltf_node* _node)
 
 }
 
-mesh_asset* ykr_load_mesh(const YkRenderer* renderer, const char* filepath, YkMemoryArena* scratch, YkMemoryArena* perm, size_t * num_mesh)
+mesh_asset* ykr_load_mesh(YkRenderer* renderer, const char* filepath, YkMemoryArena* scratch, YkMemoryArena* perm, size_t * num_mesh)
 {
     printf("%s\n", filepath);
     //feel free to suggest better method
@@ -331,8 +342,28 @@ mesh_asset* ykr_load_mesh(const YkRenderer* renderer, const char* filepath, YkMe
         {
             printf("Couldn't load buffers");
         }
-     
-        
+
+        texture_asset* view = (texture_asset*)(renderer->textures.base);
+        for(u32 i = 0; i < data->textures_count; i ++)
+        {
+            char fullpath[ROOT_PATH_SIZE] = {};
+            join_paths(root_path, data->textures[i].image->uri,fullpath);
+            
+
+            view[renderer->texture_count] = ykr_load_textures(renderer,fullpath);
+            view[renderer->texture_count].id = djb2_hash(fullpath);
+
+            renderer->texture_count++;
+            renderer->textures.used += sizeof(texture_asset);
+        }
+/*
+        for(u32 i = 0; i < data->textures_count; i ++)
+        {
+          
+            printf("%llu\n", view[i].id);
+
+        }
+*/
         indices = (u32*)(scratch->base);
         vertices = (YkVertex*)((u8*)indices + scratch->size / 2);
         
@@ -374,33 +405,6 @@ mesh_asset* ykr_load_mesh(const YkRenderer* renderer, const char* filepath, YkMe
     return out;
 }
 
-yk_internal texture_asset ykr_load_textures(const YkRenderer* renderer, const char* filepath)
-{
-    texture_asset out = {};
-
-    YkImageData rawData = yk_image_load_data(filepath);
-     out.image = ykr_create_image_from_data(renderer, rawData.data,
-        VkExtent3D{ .width = rawData.width, .height = rawData.height, .depth = 1 },
-        VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_SAMPLED_BIT);
-    yk_image_data_free(&rawData);
-
-    VkSamplerCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    info.magFilter = VK_FILTER_LINEAR;
-    info.minFilter = VK_FILTER_LINEAR;
-    info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-
-    //set anistoropyptosy
-
-    info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    info.unnormalizedCoordinates = VK_FALSE;
-
-    vkCreateSampler(renderer->device, &info, 0, &out.sampler);
-
-    return out;
-}
 
 yk_internal void join_paths(const char* model_path, const char* texture_path, char* joined_path) 
 {

@@ -452,18 +452,23 @@ void gradient_pipeline(YkRenderer* renderer)
     vkDestroyShaderModule(renderer->device, compute_module,0);
 }
 
+void yk_destroy_texture(VkDevice device, VmaAllocator allocator, texture_asset* asset)
+{
+    vkDestroyImageView(device,  asset->image.imageView,0);
+    vkDestroySampler(device, asset->sampler,0 );
+    vmaDestroyImage(allocator, asset->image.image, asset->image.allocation);
+}
 
-void yk_texture_destroy(YkRenderer* renderer)
+void ykr_destroy_textures(YkRenderer* renderer)
 {   
-    for (u32 i = 0; i < renderer->test_mesh_count; i++)
+    yk_destroy_texture(renderer->device, renderer->vma_allocator, &renderer->trans_tx);
+
+    texture_asset *view = (texture_asset*)renderer->textures.base;
+    for (u32 i = 0; i < renderer->texture_count; i++)
     {
-        /*
-            I am going to lose my mind if I name variables like this
-        */
-       vkDestroyImageView(renderer->device, renderer->test_meshes[i].image.image.imageView,0);
-       vkDestroySampler(renderer->device,renderer->test_meshes[i].image.sampler,0 );
-       vmaDestroyImage(renderer->vma_allocator, renderer->test_meshes[i].image.image.image, renderer->test_meshes[i].image.image.allocation);
+        yk_destroy_texture(renderer->device, renderer->vma_allocator, &view[i]);
     }
+    
 }
 
 struct scene_data_ubo
@@ -594,6 +599,7 @@ void mesh_desc_data_innit(YkRenderer* renderer)
 
     ykr_desc_pool_innit(renderer->device, renderer->test_mesh_count * MAX_FRAMES_IN_FLIGHT, sizes, 2, &renderer->mesh_desc_pool);
 
+    renderer->trans_tx = ykr_load_textures(renderer,"res/textures/transparent.png");
 
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
@@ -606,15 +612,32 @@ void mesh_desc_data_innit(YkRenderer* renderer)
             renderer->frame_data[i].mesh_buffers[j] = ykr_create_buffer(renderer->vma_allocator, sizeof(object_data_ubo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
             desc_set_innit(renderer->device, &renderer->frame_data[i].mesh_sets[j], renderer->mesh_desc_pool, &renderer->mesh_desc_layout);
             
-            mesh_desc_data_write(renderer->device, renderer->frame_data[i].mesh_buffers[j].buffer, 
-                renderer->test_meshes[j].image.image.imageView, renderer->test_meshes[j].image.sampler, renderer->frame_data[i].mesh_sets[j]);
-        
+            texture_asset* view = (texture_asset*)renderer->textures.base;
+
+            b8 found = false;
+            for(u32 k = 0; k < renderer->texture_count; k ++)
+            {
+                if(view[k].id == renderer->test_meshes[j].texture_id)
+                {
+                    mesh_desc_data_write(renderer->device, renderer->frame_data[i].mesh_buffers[j].buffer, 
+                   view[k].image.imageView, view[k].sampler, renderer->frame_data[i].mesh_sets[j]);
+                   found = true;
+                    break;
+                }
+            }
+            if(!found)
+            {
+             mesh_desc_data_write(renderer->device, renderer->frame_data[i].mesh_buffers[j].buffer, 
+                   renderer->trans_tx.image.imageView, renderer->trans_tx.sampler, renderer->frame_data[i].mesh_sets[j]);
+            }
+
         }
     }
 }
 
 void mesh_desc_data_destroy(YkRenderer* renderer)
-{
+{   
+
     vkDestroyDescriptorPool(renderer->device, renderer->mesh_desc_pool, 0);
     vkDestroyDescriptorSetLayout(renderer->device, renderer->mesh_desc_layout, 0);
 
@@ -890,7 +913,7 @@ void yk_free_renderer(YkRenderer* renderer)
 
     scene_data_destroy(renderer);
     mesh_desc_data_destroy(renderer);
-    yk_texture_destroy(renderer);
+    ykr_destroy_textures(renderer);
   
   //  vkDestroyPipeline(renderer->device, renderer->r_pipeline, 0);
   //  vkDestroyPipelineLayout(renderer->device, renderer->r_pipeline_layout, 0);
@@ -1298,6 +1321,35 @@ AllocatedImage ykr_create_image_from_data(const YkRenderer* renderer, void* data
     ykr_imm_submit(renderer->device, renderer->imm_cmd, renderer->imm_fence, _copy_img_data, (void*)(&copy_data), renderer->gfx_q);
 
     ykr_destroy_buffer(renderer->vma_allocator, &copy_data.copy_buffer);
+
+    return out;
+}
+
+
+texture_asset ykr_load_textures(const YkRenderer* renderer, const char* filepath)
+{
+    texture_asset out = {};
+
+    YkImageData rawData = yk_image_load_data(filepath);
+     out.image = ykr_create_image_from_data(renderer, rawData.data,
+        VkExtent3D{ .width = rawData.width, .height = rawData.height, .depth = 1 },
+        VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_SAMPLED_BIT);
+    yk_image_data_free(&rawData);
+
+    VkSamplerCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    info.magFilter = VK_FILTER_LINEAR;
+    info.minFilter = VK_FILTER_LINEAR;
+    info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+    //set anistoropyptosy
+
+    info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    info.unnormalizedCoordinates = VK_FALSE;
+
+    vkCreateSampler(renderer->device, &info, 0, &out.sampler);
 
     return out;
 }

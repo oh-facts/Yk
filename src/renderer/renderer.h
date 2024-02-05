@@ -40,7 +40,6 @@ struct yk_frame_data
 
 	YkBuffer* mesh_buffers;
 	VkDescriptorSet* mesh_sets;
-	VkDescriptorSet* unt_mesh_sets;
 };
 
 struct YkRenderer
@@ -101,6 +100,9 @@ struct YkRenderer
 
 	YkDebugCamera cam;
 
+	texture_asset trans_tx;
+	YkMemoryArena textures;
+	u32 texture_count;
 
 
 #if VK_USE_VALIDATION_LAYERS
@@ -132,5 +134,7 @@ b8 yk_recreate_swapchain(YkRenderer* renderer, struct YkWindow* win);
 YkMeshBuffer ykr_upload_mesh(const YkRenderer* renderer, YkVertex vertices[], u32 num_vertices, u32 indices[], u32 num_indices);
 
 AllocatedImage ykr_create_image_from_data(const YkRenderer* renderer, void* data, VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
+
+texture_asset ykr_load_textures(const YkRenderer* renderer, const char* filepath);
 
 #endif

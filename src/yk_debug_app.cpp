@@ -76,13 +76,14 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
 
     engine_memory_innit(&self->engine_memory);
     yk_renderer_innit(&self->ren, &self->window);
-
-    
+    self->ren.texture_count = 0;
     size_t model_load_size = Gigabytes(1);
     YkMemoryArena scratch = yk_memory_sub_arena(&self->engine_memory.temp_storage, model_load_size);
 
     size_t model_load_temp = Megabytes(5);
     YkMemoryArena perm_sub = yk_memory_sub_arena(&self->engine_memory.perm_storage, model_load_temp);
+
+    self->ren.textures = yk_memory_sub_arena(&self->engine_memory.perm_storage, Megabytes(1));
 
     size_t one_c = 0;
     mesh_asset * one =    ykr_load_mesh(&self->ren, room, &scratch, &perm_sub, &one_c);
@@ -91,8 +92,8 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
     mesh_asset * two =   ykr_load_mesh(&self->ren, shinchan, &scratch, &perm_sub, &two_c);
 
 
-    size_t three_c = 0;
-    mesh_asset* three = ykr_load_mesh(&self->ren, marc, &scratch, &perm_sub, &three_c);
+   // size_t three_c = 0;
+  //  mesh_asset* three = ykr_load_mesh(&self->ren, marc, &scratch, &perm_sub, &three_c);
 
 
     size_t four_c = 0;
@@ -101,11 +102,12 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
     yk_memory_arena_clean_reset(&self->engine_memory.temp_storage);
 
     set_obj_pos(two, two_c, glm::vec3(-32, -31, -9), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
-    set_obj_pos(three, three_c, glm::vec3(-32, -29.7, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
+    //set_obj_pos(three, three_c, glm::vec3(-32, -29.7, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
     set_obj_pos(four, four_c, glm::vec3(-16, -26.6f, -10.5f), -90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
     
     self->ren.test_meshes = one;
-    self->ren.test_mesh_count = one_c + two_c + three_c + four_c;
+//    self->ren.test_mesh_count = one_c + two_c + three_c + four_c;
+    self->ren.test_mesh_count = one_c + two_c +  four_c;
 
 
     self->ren.cam.pos = glm::vec3{ -6.51f, -30.31f,-10.13f };

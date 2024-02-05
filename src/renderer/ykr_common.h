@@ -4,9 +4,9 @@
 /*
 	ToDo(facts): Dont use Vk as prefix. Comes off as vulkan provided macro
 */
-#define VkDEBUG 1
+#define VkDEBUG 0
 
-#define VK_USE_VALIDATION_LAYERS 1
+#define VK_USE_VALIDATION_LAYERS 0
 #define VK_EXT_PRINT_DEBUG 0
 #define VK_PRINT_SUCCESS 0
 #define LOG_DEVICE_DETAILS 1
@@ -70,6 +70,12 @@ struct texture_asset
 {
 	AllocatedImage image;
 	VkSampler sampler;
+	u64 id;
+};
+
+struct material
+{
+	texture_asset base;
 };
 
 struct mesh_asset
@@ -79,7 +85,7 @@ struct mesh_asset
 	struct geo_surface* surfaces;
 	u32 num_surfaces;
 	glm::mat4 model_mat;
-	texture_asset image;
+	u32 texture_id;
 };
 
 struct YkRenderer;
