@@ -31,6 +31,8 @@ void mesh_pipeline(YkRenderer* renderer);
 
 AllocatedImage ykr_create_image_from_data(const YkRenderer* renderer, void* data, VkExtent3D extent, VkFormat format, VkImageUsageFlags usage);
 
+yk_internal YkTexture ykr_load_textures(const YkRenderer* renderer, const char* filepath);
+
 /*
  -------util-------
 */
@@ -452,18 +454,6 @@ void gradient_pipeline(YkRenderer* renderer)
     vkDestroyShaderModule(renderer->device, compute_module,0);
 }
 
-
-void yk_texture_destroy(YkRenderer* renderer)
-{   
-    for (u32 i = 0; i < renderer->test_mesh_count; i++)
-    {
-        /*
-            I am going to lose my mind if I name variables like this
-        */
-       vmaDestroyImage(renderer->vma_allocator, renderer->test_meshes[i].image.image.image, renderer->test_meshes[i].image.image.allocation);
-    }
-}
-
 struct scene_data_ubo
 {
     v4 ambient_color;
@@ -528,114 +518,104 @@ void scene_data_destroy(YkRenderer* renderer)
         vmaDestroyBuffer(renderer->vma_allocator, renderer->frame_data[i].scene_ubo.buffer, renderer->frame_data[i].scene_ubo.alloc);
     }
 }
+ 
+    
 
-
-void mesh_desc_data_write(VkDevice device, VkBuffer buffer, VkImageView view, VkSampler sampler, VkDescriptorSet set)
+void mesh_desc_data_innit(YkRenderer* renderer, mesh_asset* assets, size_t asset_count)
 {
-    VkDescriptorBufferInfo buffer_info = {};
-    buffer_info.buffer = buffer;
-    buffer_info.offset = 0;
-    buffer_info.range = sizeof(object_data_ubo);
+    VkDescriptorSetLayoutBinding bindings_default[2] = {};
+    bindings_default[0].binding = 0;
+    bindings_default[0].descriptorCount = 1;
+    bindings_default[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings_default[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-    VkDescriptorImageInfo img_info = {};
-    img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    img_info.imageView = view;
-    img_info.sampler = sampler;
+    bindings_default[1].binding = 1;
+    bindings_default[1].descriptorCount = 1;
+    bindings_default[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    bindings_default[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    VkWriteDescriptorSet writes[2] = {};
-    writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writes[0].dstSet = set;
-    writes[0].dstBinding = 0;
-    writes[0].dstArrayElement = 0;
-    writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    writes[0].descriptorCount = 1;
-    writes[0].pBufferInfo = &buffer_info;
+    ykr_desc_layout_innit(renderer->device, bindings_default, 2, &renderer->ro_desc_layouts[material_type_default]);
 
-    if (view)
+    VkDescriptorPoolSize sizes[2] = {};
+    sizes[0].descriptorCount = asset_count;
+    sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+
+    sizes[1].descriptorCount = asset_count * MAX_FRAMES_IN_FLIGHT;
+    sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+
+
+    ykr_desc_pool_innit(renderer->device, asset_count * MAX_FRAMES_IN_FLIGHT, sizes, 2, &renderer->ro_desc_pools[material_type_default]);
+
+    renderer->ro = (YkRenderObj*)(sizeof(YkRenderObj) * asset_count);
+    
+    for (u32 j = 0; j < asset_count; j++)
     {
+        mesh_asset* asset = &assets[j];
+        YkBuffer model_buffer = ykr_create_buffer(renderer->vma_allocator, sizeof(object_data_ubo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+        desc_set_innit(renderer->device, &renderer->ro[j].material.set, renderer->ro_desc_pools[material_type_default], &renderer->ro_desc_layouts[material_type_default]);
+        
+        VkDescriptorBufferInfo buffer_info = {};
+        buffer_info.buffer = model_buffer.buffer;
+        buffer_info.offset = 0;
+        buffer_info.range = sizeof(object_data_ubo);
+
+        VkDescriptorImageInfo img_info = {};
+        img_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        if(asset->texture_path)
+        {
+            YkTexture img = ykr_load_textures(renderer, asset->texture_path);
+            img_info.imageView = img.image.imageView;
+            img_info.sampler = img.sampler;
+        }
+
+        VkWriteDescriptorSet writes[2] = {};
+        writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[0].dstSet = renderer->ro[j].material.set;
+        writes[0].dstBinding = 0;
+        writes[0].dstArrayElement = 0;
+        writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        writes[0].descriptorCount = 1;
+        writes[0].pBufferInfo = &buffer_info;
+
+        
         writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writes[1].dstSet = set;
+        writes[1].dstSet = renderer->ro[j].material.set;
         writes[1].dstBinding = 1;
         writes[1].dstArrayElement = 0;
         writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         writes[1].descriptorCount = 1;
         writes[1].pImageInfo = &img_info;
-
-        vkUpdateDescriptorSets(device, 2, writes, 0, 0);
-    }
-    else
-    {
-        vkUpdateDescriptorSets(device, 1, writes, 0, 0);
-    }
-
-
-}
-
-
-void mesh_desc_data_innit(YkRenderer* renderer)
-{
-    VkDescriptorSetLayoutBinding bindings[2] = {};
-    bindings[0].binding = 0;
-    bindings[0].descriptorCount = 1;
-    bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-
-    bindings[1].binding = 1;
-    bindings[1].descriptorCount = 1;
-    bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-    ykr_desc_layout_innit(renderer->device, bindings, 2, &renderer->mesh_desc_layout);
-
-    VkDescriptorPoolSize sizes[2] = {};
-    sizes[0].descriptorCount = renderer->test_mesh_count * MAX_FRAMES_IN_FLIGHT;
-    sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-
-    sizes[1].descriptorCount = renderer->test_mesh_count * MAX_FRAMES_IN_FLIGHT;
-    sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-
-
-
-    ykr_desc_pool_innit(renderer->device, renderer->test_mesh_count * MAX_FRAMES_IN_FLIGHT, sizes, 1, &renderer->mesh_desc_pool);
-
-
-    for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
-    {
-        //do in arena
-        renderer->frame_data[i].mesh_buffers = (YkBuffer*)malloc(sizeof(YkBuffer) * renderer->test_mesh_count);
-        renderer->frame_data[i].mesh_sets = (VkDescriptorSet*)malloc(sizeof(VkDescriptorSet) * renderer->test_mesh_count);
-
-        for (u32 j = 0; j < renderer->test_mesh_count; j++)
-        {
-            renderer->frame_data[i].mesh_buffers[j] = ykr_create_buffer(renderer->vma_allocator, sizeof(object_data_ubo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
-            desc_set_innit(renderer->device, &renderer->frame_data[i].mesh_sets[j], renderer->mesh_desc_pool, &renderer->mesh_desc_layout);
-            
-            mesh_desc_data_write(renderer->device, renderer->frame_data[i].mesh_buffers[j].buffer, 
-                renderer->test_meshes[j].image.image.imageView, renderer->test_meshes[j].image.sampler, renderer->frame_data[i].mesh_sets[j]);
         
-        }
+        vkUpdateDescriptorSets(renderer->device, 2, writes, 0, 0);
+
+                
+
     }
 }
 
 void mesh_desc_data_destroy(YkRenderer* renderer)
 {
-    vkDestroyDescriptorPool(renderer->device, renderer->mesh_desc_pool, 0);
-    vkDestroyDescriptorSetLayout(renderer->device, renderer->mesh_desc_layout, 0);
-
-    for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    for(u32 i = 0; i < material_type_size; i ++)
     {
-        for (u32 j = 0; j < renderer->test_mesh_count; j++)
-        {
-            vmaDestroyBuffer(renderer->vma_allocator, renderer->frame_data[i].mesh_buffers[j].buffer, renderer->frame_data[i].mesh_buffers[j].alloc);
-        }
-        free(renderer->frame_data[i].mesh_buffers);
-        free(renderer->frame_data[i].mesh_sets);
+        vkDestroyDescriptorPool(renderer->device, renderer->ro_desc_pools[i], 0);
+        vkDestroyDescriptorSetLayout(renderer->device, renderer->ro_desc_layouts[i], 0);
     }
+
+
+    for (u32 j = 0; j < renderer->ro_count; j++)
+    {
+        YkRenderObj *obj = &renderer->ro[j];
+        vmaDestroyBuffer(renderer->vma_allocator, obj->buffer.buffer, obj->buffer.alloc);
+        
+    }
+
 }
 
 void mesh_pipeline(YkRenderer* renderer)
 {   
-    VkDescriptorSetLayout layouts[2] = { renderer->scene_desc_layout, renderer->mesh_desc_layout };
+    VkDescriptorSetLayout layouts[2] = { renderer->scene_desc_layout, renderer->ro_desc_layouts[material_type_default]};
 
     VkPipelineLayoutCreateInfo layout_info = {};
     layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -651,14 +631,9 @@ void mesh_pipeline(YkRenderer* renderer)
     layout_info.pushConstantRangeCount = 1;
     layout_info.pPushConstantRanges = &range;
 
-    renderer->mesh_pl = yk_create_raster_pipeline(renderer->device, "res/shaders/mesh.vert.spv", "res/shaders/tex_img.frag.spv", &renderer->mesh_pl_layout, &layout_info, renderer->draw_image.imageFormat, renderer->depth_image.imageFormat);
-}
-
-void pipeline_innit(YkRenderer* renderer)
-{
-    gradient_pipeline(renderer);
-
-    mesh_pipeline(renderer);
+    renderer->pipelines[material_type_default] = yk_create_raster_pipeline(renderer->device, 
+    "res/shaders/mesh.vert.spv", "res/shaders/tex_img.frag.spv", &renderer->pipeline_layouts[material_type_default], 
+    &layout_info, renderer->draw_image.imageFormat, renderer->depth_image.imageFormat);
 }
 
 
@@ -767,43 +742,41 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
         ubo.ambient_pos = v4{ renderer->cam.pos.x, renderer->cam.pos.y, renderer->cam.pos.z };
         ubo_update(renderer->vma_allocator, &renderer->frame_data[renderer->current_frame].scene_ubo, &ubo ,sizeof(scene_data_ubo));
 
-        for (size_t i = 0; i < renderer->test_mesh_count; i++)
+        for (size_t i = 0; i < renderer->ro_count; i++)
         {
-            mesh_asset* mesh = &renderer->test_meshes[i];
+            YkRenderObj* obj = &renderer->ro[i];
 
-            for (size_t j = 0; j < mesh->num_surfaces; j++)
-            {
-                glm::mat4 model = mesh->model_mat;
-               // glm::mat4 model = glm::identity<glm::mat4>();
-                //   model = glm::translate(model, mesh->trans);
-               //model = glm::rotate(model, time * 0.5f, glm::vec3(0,1,0));
-                //   model = glm::rotate(model, mesh->rot.y, glm::vec3(0, 1, 0));
-                //   model = glm::rotate(model, mesh->rot.z, glm::vec3(0, 0, 1));
-               // model = glm::scale(model, glm::vec3(2));
+            glm::mat4 model = obj->model_mat;
+            // glm::mat4 model = glm::identity<glm::mat4>();
+            //   model = glm::translate(model, mesh->trans);
+            //model = glm::rotate(model, time * 0.5f, glm::vec3(0,1,0));
+            //   model = glm::rotate(model, mesh->rot.y, glm::vec3(0, 1, 0));
+            //   model = glm::rotate(model, mesh->rot.z, glm::vec3(0, 0, 1));
+            // model = glm::scale(model, glm::vec3(2));
 
-                glm::mat4 mvp = proj * view * model;
+            glm::mat4 mvp = proj * view * model;
 
-                push_constants.world_matrix = mvp;
+            push_constants.world_matrix = mvp;
 
-                push_constants.v_buffer = mesh->buffer.v_address;
+            push_constants.v_buffer = obj->vert_address;
 
-                object_data_ubo obj_ubo = {};
-                obj_ubo.model = model;
-                ubo_update(renderer->vma_allocator, &renderer->frame_data[renderer->current_frame].mesh_buffers[i], &obj_ubo, sizeof(object_data_ubo));
+            object_data_ubo obj_ubo = {};
+            obj_ubo.model = model;
+            ubo_update(renderer->vma_allocator, &obj->buffer, &obj_ubo, sizeof(object_data_ubo));
 
 
-                vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl);
-                vkCmdSetViewport(cmd, 0, 1, &renderer->viewport);
-                vkCmdSetScissor(cmd, 0, 1, &renderer->scissor);
-                vkCmdPushConstants(cmd, renderer->mesh_pl_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(YkDrawPushConstants), &push_constants);
-                
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipelines[material_type_default]);
+            vkCmdSetViewport(cmd, 0, 1, &renderer->viewport);
+            vkCmdSetScissor(cmd, 0, 1, &renderer->scissor);
+            vkCmdPushConstants(cmd, renderer->pipeline_layouts[material_type_default], VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(YkDrawPushConstants), &push_constants);
+            
 
-                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl_layout, 0, 1, &renderer->frame_data[renderer->current_frame].scene_set, 0, 0);
-                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl_layout, 1, 1, &renderer->frame_data[renderer->current_frame].mesh_sets[i], 0, 0);
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipeline_layouts[material_type_default], 0, 1, &renderer->frame_data[renderer->current_frame].scene_set, 0, 0);
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->pipeline_layouts[material_type_default], 1, 1, &obj->material.set, 0, 0);
 
-                vkCmdBindIndexBuffer(cmd, mesh->buffer.i_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-                vkCmdDrawIndexed(cmd, mesh->surfaces[j].count, 1, mesh->surfaces[j].start, 0, 0);
-            }
+            vkCmdBindIndexBuffer(cmd, obj->index_buffer, 0, VK_INDEX_TYPE_UINT32);
+            vkCmdDrawIndexed(cmd, obj->count, 1, obj->start, 0, 0);
+        
            
         }
      
@@ -814,11 +787,13 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
 
 }
 
-void yk_renderer_innit_scene(YkRenderer* renderer)
+void yk_renderer_innit_scene(YkRenderer* renderer, 	mesh_asset* meshes, size_t mesh_count)
 {
     scene_data_innit(renderer);
-    mesh_desc_data_innit(renderer);
-    pipeline_innit(renderer);
+    
+    mesh_desc_data_innit(renderer, meshes, mesh_count);
+
+    gradient_pipeline(renderer);
 }
 
 void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window)
@@ -863,8 +838,8 @@ void yk_free_renderer(YkRenderer* renderer)
     vkDestroyPipelineLayout(renderer->device, renderer->gradient_pp_layouts,0);
     vkDestroyPipeline(renderer->device, renderer->gradient_pp,0);
 
-    vkDestroyPipelineLayout(renderer->device, renderer->mesh_pl_layout, 0);
-    vkDestroyPipeline(renderer->device, renderer->mesh_pl, 0);
+    vkDestroyPipelineLayout(renderer->device, renderer->pipeline_layouts[0], 0);
+    vkDestroyPipeline(renderer->device, renderer->pipelines[0], 0);
     
     vkDestroyDescriptorPool(renderer->device,renderer->global_pool, 0);
     vkDestroyDescriptorSetLayout(renderer->device,renderer->draw_image_layouts,0);
@@ -882,20 +857,8 @@ void yk_free_renderer(YkRenderer* renderer)
     vkDestroyFence(renderer->device, renderer->imm_fence, 0);
     
     //ToDo(facts): For the love of god, make a function to destroy all buffers
-
-    for (u32 i = 0; i < renderer->test_mesh_count; i++)
-    {
-        YkMeshBuffer* buff = &renderer->test_meshes[i].buffer;
-
-        vmaDestroyBuffer(renderer->vma_allocator, buff->v_buffer.buffer, buff->v_buffer.alloc);
-        vmaDestroyBuffer(renderer->vma_allocator, buff->i_buffer.buffer, buff->i_buffer.alloc);
-
-    }
-
     scene_data_destroy(renderer);
     mesh_desc_data_destroy(renderer);
-    yk_texture_destroy(renderer);
-  
   //  vkDestroyPipeline(renderer->device, renderer->r_pipeline, 0);
   //  vkDestroyPipelineLayout(renderer->device, renderer->r_pipeline_layout, 0);
 
@@ -1305,3 +1268,32 @@ AllocatedImage ykr_create_image_from_data(const YkRenderer* renderer, void* data
 
     return out;
 }
+
+yk_internal YkTexture ykr_load_textures(const YkRenderer* renderer, const char* filepath)
+{
+    YkTexture out = {};
+
+    YkImageData rawData = yk_image_load_data(filepath);
+     out.image = ykr_create_image_from_data(renderer, rawData.data,
+        VkExtent3D{ .width = rawData.width, .height = rawData.height, .depth = 1 },
+        VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_SAMPLED_BIT);
+    yk_image_data_free(&rawData);
+
+    VkSamplerCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    info.magFilter = VK_FILTER_LINEAR;
+    info.minFilter = VK_FILTER_LINEAR;
+    info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+    //set anistoropyptosy
+
+    info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    info.unnormalizedCoordinates = VK_FALSE;
+
+    vkCreateSampler(renderer->device, &info, 0, &out.sampler);
+
+    return out;
+}
+
