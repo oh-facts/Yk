@@ -8,7 +8,7 @@ void ykr_desc_layout_innit(VkDevice device, VkDescriptorSetLayoutBinding* bindin
     desc_layout_info.bindingCount = num_bindings;
     desc_layout_info.pBindings = bindings;
 
-    VkResultAssert(vkCreateDescriptorSetLayout(device, &desc_layout_info, 0, layout),"desc set layout");
+    vkCreateDescriptorSetLayout(device, &desc_layout_info, 0, layout);
 }
 
 void ykr_desc_pool_innit(VkDevice device, u32 max_sets, VkDescriptorPoolSize* pool_sizes, u32 num_pools_sizes, VkDescriptorPool* pool)

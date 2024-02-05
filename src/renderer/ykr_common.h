@@ -4,13 +4,13 @@
 /*
 	ToDo(facts): Dont use Vk as prefix. Comes off as vulkan provided macro
 */
-#define VkDEBUG 1
+#define VkDEBUG 0
 
-#define VK_USE_VALIDATION_LAYERS 1
+#define VK_USE_VALIDATION_LAYERS 0
 #define VK_EXT_PRINT_DEBUG 0
 #define VK_PRINT_SUCCESS 0
 #define LOG_DEVICE_DETAILS 1
-#define FORCE_INTEGRATED 0
+#define FORCE_INTEGRATED 1
 
 #include <pch.h>
 
@@ -66,36 +66,10 @@ struct geo_surface
 	u32 count;
 };
 
-struct YkTexture
+struct texture_asset
 {
 	AllocatedImage image;
 	VkSampler sampler;
-};
-
-enum material_type
-{
-	material_type_default,
-	material_type_size = material_type_default,
-};
-
-struct YkMaterial
-{
-	material_type type;
-	VkDescriptorSet set;
-};
-
-struct YkRenderObj
-{
-	u32 start;
-	u32 count;
-	VkBuffer index_buffer;
-	
-	YkMaterial material;
-
-	glm::mat4 model_mat;
-	YkBuffer buffer;
-
-	VkDeviceAddress vert_address;
 };
 
 struct mesh_asset
@@ -105,7 +79,7 @@ struct mesh_asset
 	struct geo_surface* surfaces;
 	u32 num_surfaces;
 	glm::mat4 model_mat;
-	const char* texture_path;
+	texture_asset image;
 };
 
 struct YkRenderer;

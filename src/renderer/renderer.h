@@ -11,6 +11,7 @@
 #include <renderer/descriptors.h>
 #include <pch.h>
 
+
 struct ComputePushConstants {
 	v4 data1;
 	v4 data2;
@@ -36,6 +37,10 @@ struct yk_frame_data
 	
 	YkBuffer scene_ubo;
 	VkDescriptorSet scene_set;
+
+	YkBuffer* mesh_buffers;
+	VkDescriptorSet* mesh_sets;
+	VkDescriptorSet* unt_mesh_sets;
 };
 
 struct YkRenderer
@@ -77,14 +82,13 @@ struct YkRenderer
 	VkDescriptorPool scene_desc_pool;
 	VkDescriptorSetLayout scene_desc_layout;
 
-	YkRenderObj* ro;
-	size_t ro_count;
+	VkPipelineLayout mesh_pl_layout;
+	VkPipeline mesh_pl;
 
-	VkDescriptorPool ro_desc_pools[material_type_size];
-	VkDescriptorSetLayout ro_desc_layouts[material_type_size];
-
-	VkPipelineLayout pipeline_layouts[material_type_size];
-	VkPipeline pipelines[material_type_size];
+	mesh_asset* test_meshes;
+	size_t test_mesh_count;
+	VkDescriptorPool mesh_desc_pool;
+	VkDescriptorSetLayout mesh_desc_layout;
 
 	VmaAllocator vma_allocator;
 
@@ -119,7 +123,7 @@ void yk_renderer_wait(YkRenderer* renderer);
 
 void yk_renderer_innit(YkRenderer* renderer, struct YkWindow* window);
 
-void yk_renderer_innit_scene(YkRenderer* renderer, 	mesh_asset* test_meshes, size_t test_mesh_count);
+void yk_renderer_innit_scene(YkRenderer* renderer);
 
 void yk_renderer_draw(YkRenderer* renderer, YkWindow* win, f64 dt);
 

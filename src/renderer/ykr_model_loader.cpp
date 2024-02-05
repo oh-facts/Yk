@@ -5,6 +5,7 @@
 #include <renderer/renderer.h>
 #include <renderer/yk_texture.h>
 
+yk_internal texture_asset ykr_load_textures(const YkRenderer* renderer, const char* filepath);
 yk_internal void join_paths(const char* model_path, const char* texture_path, char* joined_path);
 
 //dear lawd, pwease forgive me
@@ -262,8 +263,8 @@ void traverse_node(cgltf_node* _node)
                     */
                     char fullpath[ROOT_PATH_SIZE] = {};
                     join_paths(root_path, base_view->texture->image->uri,fullpath);
-                    asset.texture_path = fullpath;
-                    //asset.image = ykr_load_textures(_renderer, fullpath);
+                    
+                    asset.image = ykr_load_textures(_renderer, fullpath);
                     //printf("%s\n", asset.base_texture_path);
                 }
                 
@@ -363,6 +364,34 @@ mesh_asset* ykr_load_mesh(const YkRenderer* renderer, const char* filepath, YkMe
     //Maybe I can have an array of used and available pairs?
     perm->used += total_meshes * sizeof(mesh_asset);
     perm->used += total_surfaces * sizeof(surfaces);
+
+    return out;
+}
+
+yk_internal texture_asset ykr_load_textures(const YkRenderer* renderer, const char* filepath)
+{
+    texture_asset out = {};
+
+    YkImageData rawData = yk_image_load_data(filepath);
+     out.image = ykr_create_image_from_data(renderer, rawData.data,
+        VkExtent3D{ .width = rawData.width, .height = rawData.height, .depth = 1 },
+        VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_USAGE_SAMPLED_BIT);
+    yk_image_data_free(&rawData);
+
+    VkSamplerCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    info.magFilter = VK_FILTER_LINEAR;
+    info.minFilter = VK_FILTER_LINEAR;
+    info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+    //set anistoropyptosy
+
+    info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    info.unnormalizedCoordinates = VK_FALSE;
+
+    vkCreateSampler(renderer->device, &info, 0, &out.sampler);
 
     return out;
 }

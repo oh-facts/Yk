@@ -104,10 +104,16 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
     set_obj_pos(three, three_c, glm::vec3(-32, -29.7, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
     set_obj_pos(four, four_c, glm::vec3(-16, -26.6f, -10.5f), -90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
     
+    self->ren.test_meshes = one;
+    self->ren.test_mesh_count = one_c + two_c + three_c + four_c;
+
+
     self->ren.cam.pos = glm::vec3{ -6.51f, -30.31f,-10.13f };
     self->ren.cam.yaw = -1.6f;
 
-    yk_renderer_innit_scene(&self->ren, one, one_c + two_c + three_c + four_c);
+    yk_renderer_innit_scene(&self->ren);
+
+    
 
 }
 
