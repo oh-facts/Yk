@@ -51,6 +51,7 @@ struct YkRenderer
 	VkPhysicalDevice phys_device;
 	VkDevice device;
 	VkQueue gfx_q;
+	VkQueue prt_q;
 	i32 qfams[3];
 	VkSwapchainKHR swapchain;
 

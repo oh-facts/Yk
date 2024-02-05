@@ -384,6 +384,23 @@ VkPipeline yk_create_raster_pipeline(VkDevice device, const char* vert_path, con
 
 // -----------------
 
+void update_cs(YkRenderer* renderer)
+{
+    VkDescriptorImageInfo img_info = {};
+    img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    img_info.imageView = renderer->draw_image.imageView;
+    
+    VkWriteDescriptorSet draw_img_write = {};
+    draw_img_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    draw_img_write.dstBinding = 0;
+    draw_img_write.descriptorCount = 1;
+    draw_img_write.dstSet = renderer->draw_image_desc;
+    draw_img_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    draw_img_write.pImageInfo = &img_info;
+
+    vkUpdateDescriptorSets(renderer->device, 1, &draw_img_write, 0 , 0);
+}
+
 void yk_desc_innit(YkRenderer* renderer)
 {
     //compute desc set.
@@ -400,19 +417,7 @@ void yk_desc_innit(YkRenderer* renderer)
 
     renderer->draw_image_desc = desc_set_allocate(renderer->device,renderer->global_pool,renderer->draw_image_layouts);
 
-    VkDescriptorImageInfo img_info = {};
-    img_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-    img_info.imageView = renderer->draw_image.imageView;
-    
-    VkWriteDescriptorSet draw_img_write = {};
-    draw_img_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    draw_img_write.dstBinding = 0;
-    draw_img_write.descriptorCount = 1;
-    draw_img_write.dstSet = renderer->draw_image_desc;
-    draw_img_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    draw_img_write.pImageInfo = &img_info;
-
-    vkUpdateDescriptorSets(renderer->device, 1, &draw_img_write, 0 , 0);
+   update_cs(renderer);
 }
 
 void gradient_pipeline(YkRenderer* renderer)
@@ -708,12 +713,12 @@ void yk_renderer_draw_bg(YkRenderer* renderer, VkCommandBuffer cmd)
    vkCmdBindDescriptorSets(cmd,VK_PIPELINE_BIND_POINT_COMPUTE,renderer->gradient_pp_layouts, 0, 1, &renderer->draw_image_desc,0,0);
 
    ComputePushConstants push = {};
-   push.data2 = v4{ 0.0, 1.0, 1.0, 1.0 };
+   push.data2 = v4{ 0.0, 0.0, 1.0, 1.0 };
    push.data1 = v4{ 1.0, 0.0, 1.0, 1.0 };
 
    vkCmdPushConstants(cmd, renderer->gradient_pp_layouts, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(push), &push);
    
-   vkCmdDispatch(cmd, renderer->draw_image.imageExtent.width / 16 , renderer->draw_image.imageExtent.height / 16, 1);
+   vkCmdDispatch(cmd, renderer->draw_image.imageExtent.width / 4  , renderer->draw_image.imageExtent.height / 4, 1);
 }
 
 
@@ -1090,16 +1095,21 @@ void yk_renderer_draw(YkRenderer* renderer, YkWindow* win, f64 dt)
     VkResultAssert(vkResetFences(renderer->device, 1, &current_frame->in_flight_fence), "Reset fences");
 
     u32 imageIndex = -1;
-
-    if (vkAcquireNextImageKHR(renderer->device, renderer->swapchain, UINT64_MAX,
-        current_frame->image_available_semawhore,
-        VK_NULL_HANDLE, &imageIndex) == VK_ERROR_OUT_OF_DATE_KHR)
+    
     {
-        if (yk_recreate_swapchain(renderer, win) == false)
+        VkResult res = vkAcquireNextImageKHR(renderer->device, renderer->swapchain, UINT64_MAX,
+        current_frame->image_available_semawhore,
+        VK_NULL_HANDLE, &imageIndex);
+
+        if ( res == VK_ERROR_OUT_OF_DATE_KHR)
         {
-            return;
+             if (yk_recreate_swapchain(renderer, win) == false)
+            {
+                return;
+            }
         }
     }
+   
 
     VkCommandBufferBeginInfo vk_cmd_buffer_begin_info = yk_cmd_buffer_begin_info_create(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);   
     VkResultAssert(vkBeginCommandBuffer(current_frame->cmd_buffers, &vk_cmd_buffer_begin_info), "Command buffer begin");
@@ -1182,9 +1192,8 @@ b8 yk_recreate_swapchain(YkRenderer* renderer, YkWindow* win)
 
     yk_cleanup_swapchain(renderer);
 
-
-
     yk_create_swapchain(renderer, win);
+    update_cs(renderer);
 
     return true;
 }

@@ -32,7 +32,7 @@ void main()
 
 	vec3 result = (ambient + diffuse + specular) * 
 				  inColor * mix(vec3(1.0), textureColor.xyz, textureColor.a);
-
+	
 	outFragColor = vec4(result, 1.0);
 
 }
