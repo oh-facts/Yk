@@ -6,18 +6,20 @@
     I hope no one sees this. I don't want to be casted to the deep circles of hell
 */
 
-#define dmon     "res/models/doraemon/doraemon.glb"   
-#define shinchan "res/models/shinchan/scene.glb"
-#define fits     "res/models/fire_in_the_sky/scene.gltf"
-#define fits2    "res/models/fire_in_the_sky2/scene.gltf"
-#define sponza   "res/models/sponza/sponza.gltf"
-#define duck     "res/models/duck/Duck.gltf"
-#define msa      "res/models/mystery_shack_attic/mystery_shack_attic.glb"
-#define doppio   "res/models/doppio/scene.gltf"
-#define tr       "res/models/test_room/scene.glb"
-#define room     "res/models/room/scene.gltf"
+#define twob      "res/models/2b/scene.gltf"
+
+//asuka needs her texturs fixed in blender. idk how to use blender
+#define asuka    "res/models/asuka/CHR_ASK_001_main.gltf"
+
 #define bill     "res/models/bill/scene1.glb"
-#define marc     "res/models/marceline/scene.gltf"
+#define dmon     "res/models/doraemon/doraemon.glb"   
+#define duck     "res/models/duck/Duck.gltf"
+#define fits     "res/models/fire_in_the_sky/scene.gltf"
+#define msa      "res/models/mystery_shack_attic/mystery_shack_attic.glb"
+#define jojo     "res/models/jojo/scene.gltf"
+#define room     "res/models/room/scene.gltf"
+#define shinchan "res/models/shinchan/scene.glb"
+
 
 
 /*
@@ -70,7 +72,7 @@ void set_obj_pos(mesh_asset* asset, u32 mesh_count, glm::vec3 pos, f32 angle, gl
     }
 }
 
-#define obj_count 4
+#define obj_count 5
 
 void load_scene(YkRenderer* ren, const char* paths[], mesh_asset* assets[], size_t sizes[], YkMemoryArena* scratch, YkMemoryArena* perm )
 {
@@ -107,8 +109,9 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
     const char* asset_paths[obj_count] = {
         room,
         shinchan,
-        marc,
-        bill
+        twob,
+        bill,
+        jojo
     };
 
     mesh_asset* assets[obj_count] = {};
@@ -120,9 +123,11 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
     yk_memory_arena_clean_reset(&self->engine_memory.temp_storage);
 
     set_obj_pos(assets[1], sizes[1], glm::vec3(-32, -31, -9), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
-    set_obj_pos(assets[2], sizes[2], glm::vec3(-32, -29.7, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
+    set_obj_pos(assets[2], sizes[2], glm::vec3(-32, -31.1, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.05f));
     set_obj_pos(assets[3], sizes[3], glm::vec3(-16, -26.6f, -10.5f), -90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
+    set_obj_pos(assets[4], sizes[4], glm::vec3(-28, -30.9f, -8.3f), -90 * DEG_TO_RAD, glm::vec3(1, 0, 0), glm::vec3(0.025f));
     
+
     self->ren.test_meshes = assets[0];
     self->ren.test_mesh_count = size_sum(sizes);
  
