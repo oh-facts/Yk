@@ -324,7 +324,7 @@ void traverse_node(cgltf_node* _node)
 
 mesh_asset* ykr_load_mesh(YkRenderer* renderer, const char* filepath, YkMemoryArena* scratch, YkMemoryArena* perm, size_t * num_mesh)
 {
-    printf("%s\n", filepath);
+   
     //feel free to suggest better method
     ykr_load_mesh_cleanup();
     strcpy(root_path, filepath);
@@ -348,7 +348,7 @@ mesh_asset* ykr_load_mesh(YkRenderer* renderer, const char* filepath, YkMemoryAr
         {
             char fullpath[ROOT_PATH_SIZE] = {};
             join_paths(root_path, data->textures[i].image->uri,fullpath);
-            
+            printf("%s\n", fullpath);
 
             view[renderer->texture_count] = ykr_load_textures(renderer,fullpath);
             view[renderer->texture_count].id = djb2_hash(fullpath);
@@ -379,7 +379,7 @@ mesh_asset* ykr_load_mesh(YkRenderer* renderer, const char* filepath, YkMemoryAr
 
         *num_mesh = data->meshes_count;
 
-
+        printf("%s\n", filepath);
         for (u32 _scene_index = 0; _scene_index < data->scenes_count; _scene_index++)
         {
 

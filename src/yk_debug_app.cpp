@@ -70,6 +70,25 @@ void set_obj_pos(mesh_asset* asset, u32 mesh_count, glm::vec3 pos, f32 angle, gl
     }
 }
 
+#define obj_count 3
+
+void load_scene(YkRenderer* ren, const char* paths[], mesh_asset* assets[], size_t sizes[], YkMemoryArena* scratch, YkMemoryArena* perm )
+{
+    for(u32 i = 0; i < obj_count; i ++)
+    {
+        assets[i] = ykr_load_mesh(ren, paths[i],scratch, perm, &sizes[i]);
+    }
+}
+
+size_t size_sum(size_t sizes[])
+{
+    size_t out = 0;
+    for(u32 i = 0; i < obj_count; i ++ )
+    {
+        out += sizes[i];
+    }
+    return out;
+}
 
 YK_API void _debug_app_start(struct YkDebugAppState* self)
 {
@@ -85,44 +104,55 @@ YK_API void _debug_app_start(struct YkDebugAppState* self)
 
     self->ren.textures = yk_memory_sub_arena(&self->engine_memory.perm_storage, Megabytes(1));
 
-    size_t one_c = 0;
-    mesh_asset * one =    ykr_load_mesh(&self->ren, room, &scratch, &perm_sub, &one_c);
-    
-    size_t two_c = 0;
-    mesh_asset * two =   ykr_load_mesh(&self->ren, shinchan, &scratch, &perm_sub, &two_c);
+    const char* asset_paths[obj_count] = {
+        room,
+        shinchan,
+    //    marc,
+        bill
+    };
+
+    mesh_asset* assets[obj_count] = {};
+    size_t sizes[obj_count] = {};
 
 
-   // size_t three_c = 0;
-  //  mesh_asset* three = ykr_load_mesh(&self->ren, marc, &scratch, &perm_sub, &three_c);
-
-
-    size_t four_c = 0;
-    mesh_asset* four = ykr_load_mesh(&self->ren, bill, &scratch, &perm_sub, &four_c);
+    load_scene(&self->ren, asset_paths,assets,sizes,&scratch,&perm_sub);
 
     yk_memory_arena_clean_reset(&self->engine_memory.temp_storage);
 
-    set_obj_pos(two, two_c, glm::vec3(-32, -31, -9), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
-    //set_obj_pos(three, three_c, glm::vec3(-32, -29.7, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
-    set_obj_pos(four, four_c, glm::vec3(-16, -26.6f, -10.5f), -90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
+    set_obj_pos(assets[1], sizes[1], glm::vec3(-32, -31, -9), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
+    set_obj_pos(assets[2], sizes[2], glm::vec3(-32, -29.7, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
+   // set_obj_pos(assets[3], sizes[3], glm::vec3(-16, -26.6f, -10.5f), -90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
     
-    self->ren.test_meshes = one;
-//    self->ren.test_mesh_count = one_c + two_c + three_c + four_c;
-    self->ren.test_mesh_count = one_c + two_c +  four_c;
-
+    self->ren.test_meshes = assets[0];
+    self->ren.test_mesh_count = size_sum(sizes);
+ 
 
     self->ren.cam.pos = glm::vec3{ -6.51f, -30.31f,-10.13f };
     self->ren.cam.yaw = -1.6f;
 
     yk_renderer_innit_scene(&self->ren);
 
-    
+    yk_recreate_swapchain(&self->ren, &self->window);
 
 }
 
 YK_API void _debug_app_update(struct YkDebugAppState* self, f64 dt)
 {
-    int temp = 2;
     yk_renderer_draw(&self->ren, &self->window, dt);
+   
+    static int a = 1;
+    if(a == 0)
+    {
+        static f32 time = 0;
+        for(u32 i = 0; i < self->ren.test_mesh_count; i ++)
+        {
+            glm::mat4 mat = glm::mat4(1);
+            mat = glm::rotate( mat, (f32)dt , glm::vec3(0,1,0));
+
+            self->ren.test_meshes[i].model_mat = mat * self->ren.test_meshes[i].model_mat;
+        }
+
+    }
 }
 
 YK_API int _debug_app_is_running(struct YkDebugAppState* self)

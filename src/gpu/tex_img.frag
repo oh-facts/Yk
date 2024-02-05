@@ -15,7 +15,6 @@ layout(set = 1, binding = 1) uniform sampler2D displayTexture;
 
 void main() 
 {
-	//ambient_color.w * 
 	vec3 ambient = 0.9 * ambient_color.xyz;
 
 	vec3 norm = normalize(inNormal);
@@ -30,16 +29,9 @@ void main()
 
 
 	vec4 textureColor = texture(displayTexture, inUV);
-	vec3 result;
-	if(textureColor.a == 0)
-	{
-		result = (ambient + diffuse + specular) * inColor;
-	}
-	else
-	{
-		result = (ambient + diffuse + specular) * inColor * textureColor.xyz;
-	}
 
+	vec3 result = (ambient + diffuse + specular) * 
+				  inColor * mix(vec3(1.0), textureColor.xyz, textureColor.a);
 
 	outFragColor = vec4(result, 1.0);
 

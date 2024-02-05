@@ -729,9 +729,9 @@ void yk_renderer_draw_triangle(YkRenderer* renderer, VkCommandBuffer cmd)
     vk_color_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;
     vk_color_attachment.imageView = renderer->draw_image.imageView;
     vk_color_attachment.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    vk_color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    vk_color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     vk_color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    vk_color_attachment.clearValue.color = VkClearColorValue{ 1.0f, 0.0f, 0.0f, 1.0f };
+    vk_color_attachment.clearValue.color = VkClearColorValue{ 0.0f, 0.0f, 0.0f, 0.f };
 
     VkRenderingAttachmentInfoKHR vk_depth_attachment = {};
     vk_depth_attachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO_KHR;

@@ -35,14 +35,14 @@ int main(int argc, char *argv[])
             state.update(&state, dt);
 
             if (yk_input_is_key_tapped(&state.window.keys,YK_KEY_ESC)) {
-                state.shutdown(&state);
+               // state.shutdown(&state);
                 //engine_memory_cleanup(&state.engine_memory);
                 
                 FreeLibrary(state.hModule);
                 reload_dll(&state);
 
                 //engine_memory_innit(&state.engine_memory);
-                state.start(&state);
+               // state.start(&state);
             }
         }
 
