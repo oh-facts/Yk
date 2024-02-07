@@ -85,8 +85,8 @@ struct YkRenderer
 	VkPipelineLayout mesh_pl_layout;
 	VkPipeline mesh_pl;
 
-	mesh_asset* test_meshes;
-	size_t test_mesh_count;
+	YkMemoryArena test_meshes;
+
 	VkDescriptorPool mesh_desc_pool;
 	VkDescriptorSetLayout mesh_desc_layout;
 
@@ -103,7 +103,6 @@ struct YkRenderer
 
 	texture_asset trans_tx;
 	YkMemoryArena textures;
-	u32 texture_count;
 
 
 #if VK_USE_VALIDATION_LAYERS

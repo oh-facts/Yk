@@ -37,8 +37,9 @@ int main(int argc, char *argv[])
                // state.shutdown(&state);
                 //engine_memory_cleanup(&state.engine_memory);
                 
-                FreeLibrary(state.hModule);
+                FreeLibrary(state.game_dll);
                 reload_dll(&state);
+                state.update_once(&state);
 
                 //engine_memory_innit(&state.engine_memory);
                // state.start(&state);
@@ -135,7 +136,7 @@ int main(int argc, char *argv[])
     yk_free_window(&state.window);
   //  engine_memory_cleanup(&state.engine_memory);
 
-    FreeLibrary(state.hModule);
+    FreeLibrary(state.game_dll);
     remove("temp.dll");
     return 0;
 }

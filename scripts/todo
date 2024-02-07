@@ -180,10 +180,11 @@ ToDo(facts): compile vma as a dll so I don't have to compile it again
  ToDo(facts): Option to force integrated gpu
               (done)
  ToDo(facts): Modify game memory so I can hot reload like I used to (Basically stop destroying memory between recompilations)
+              (done)
  ToDo(facts): Port to C and check compilation times. I saw a video of mine where I was compiling it in < half a second. It takes 3 - 8 seconds now.
               Don't know if its this much because of all the new code or because of C++. Investigate this. Unlinking crt isn't viable
               since I make use of dependencies and they definitely use them. glm is full of std::vector.
-
+              (resolved)
 !! ------------ !!
 
 !!! HIGHER PRIORITY !!!
@@ -202,3 +203,8 @@ precompiled headers are mental. I get < 1s consistently.
 
 ok hot reloading works again. I will put all dependencies inside header files so I can always use pch
 !!! --------------- !!!
+
+ToDo(facts)
+1. Refactor :skull:
+2. vertex colors
+3. glb files texture parsing

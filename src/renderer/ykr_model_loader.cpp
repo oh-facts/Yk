@@ -5,6 +5,13 @@
 #include <renderer/renderer.h>
 #include <renderer/yk_texture.h>
 
+/*
+    These variables don't persist. There is no global
+    state. They are static to make life easy (see recursion
+    function). If you can find a way to avoid them 
+    without making things messy. Go ahead.
+*/
+
 yk_internal void join_paths(const char* model_path, const char* texture_path, char* joined_path);
 
 //dear lawd, pwease forgive me
@@ -19,6 +26,8 @@ yk_internal size_t vertex_num;
 
 yk_internal mesh_asset* out;
 yk_internal YkRenderer* _renderer;
+yk_internal mesh_loader_context* _cxt;
+
 #define ROOT_PATH_SIZE 256
 yk_internal char root_path[ROOT_PATH_SIZE];
 
@@ -47,8 +56,6 @@ s: 103
 
 yk_internal size_t total_vertices;
 yk_internal size_t total_indices;
-yk_internal size_t total_meshes;
-yk_internal size_t total_surfaces;
 
 void ykr_load_mesh_cleanup()
 {
@@ -60,11 +67,10 @@ void ykr_load_mesh_cleanup()
     vertex_num = 0;
     out = 0;
     _renderer = 0;
+    _cxt = 0;
     total_vertices = 0;
     total_indices = 0;
     memset(root_path, 0,ROOT_PATH_SIZE);
-    //total_meshes = 0;
-   // total_surfaces = 0;
 }
 
 void traverse_node(cgltf_node* _node)
@@ -76,9 +82,8 @@ void traverse_node(cgltf_node* _node)
         cgltf_mesh* mesh = _node->mesh;
         mesh_asset asset = {};
         asset.name = mesh->name;
-        asset.surfaces = (geo_surface*)((u8*)surfaces + sizeof(geo_surface) * total_surfaces);
+        asset.surfaces = (geo_surface*)((u8*)surfaces + sizeof(geo_surface) * _cxt->total_surfaces);
 
-        total_surfaces += mesh->primitives_count;
         if (asset.surfaces == 0)
         {
             exit(2);
@@ -257,7 +262,9 @@ void traverse_node(cgltf_node* _node)
                 cgltf_texture_view* base_view = &material->pbr_metallic_roughness.base_color_texture;
                 if (base_view->texture)
                 {
-                    for(u32 k = 0; k < _renderer->texture_count; k ++)
+                    size_t texture_count = arena_count(_renderer->textures, texture_asset);
+
+                    for(u32 k = 0; k < texture_count; k ++)
                     {
                         char fullpath[ROOT_PATH_SIZE] = {};
                         join_paths(root_path, base_view->texture->image->uri,fullpath);
@@ -288,6 +295,7 @@ void traverse_node(cgltf_node* _node)
 
             asset.num_surfaces++;
             asset.surfaces[j] = surface;
+            _cxt->total_surfaces++;
 
         }
         f32 mat[16] = {};
@@ -307,7 +315,8 @@ void traverse_node(cgltf_node* _node)
 
         total_indices += index_num;
         total_vertices += vertex_num;
-        total_meshes++;
+
+        _cxt->total_meshes++;
 
     }
 
@@ -322,11 +331,12 @@ void traverse_node(cgltf_node* _node)
 
 }
 
-mesh_asset* ykr_load_mesh(YkRenderer* renderer, const char* filepath, YkMemoryArena* scratch, YkMemoryArena* perm, size_t * num_mesh)
+mesh_asset* ykr_load_mesh(YkRenderer* renderer, mesh_loader_context* cxt, const char* filepath, YkMemoryArena* scratch, YkMemoryArena* perm, size_t * num_mesh)
 {
-   
-    //feel free to suggest better method
     ykr_load_mesh_cleanup();
+
+    //feel free to suggest better method
+
     strcpy(root_path, filepath);
 
     out = 0;
@@ -335,6 +345,8 @@ mesh_asset* ykr_load_mesh(YkRenderer* renderer, const char* filepath, YkMemoryAr
 
     _renderer = renderer;
 
+    _cxt = cxt;
+
     if (cgltf_parse_file(&options, filepath, &data) == cgltf_result_success)
     {
 
@@ -342,20 +354,19 @@ mesh_asset* ykr_load_mesh(YkRenderer* renderer, const char* filepath, YkMemoryAr
         {
             printf("Couldn't load buffers");
         }
-
-        texture_asset* view = (texture_asset*)(renderer->textures.base);
+     
         for(u32 i = 0; i < data->textures_count; i ++)
         {
             char fullpath[ROOT_PATH_SIZE] = {};
             join_paths(root_path, data->textures[i].image->uri,fullpath);
             printf("%s\n", fullpath);
+            
+            texture_asset texture = ykr_load_textures(renderer,fullpath);
+            texture.id = djb2_hash(fullpath);
+            arena_push(renderer->textures,texture_asset, texture);
 
-            view[renderer->texture_count] = ykr_load_textures(renderer,fullpath);
-            view[renderer->texture_count].id = djb2_hash(fullpath);
-
-            renderer->texture_count++;
-            renderer->textures.used += sizeof(texture_asset);
         }
+         
 /*
         for(u32 i = 0; i < data->textures_count; i ++)
         {
@@ -373,8 +384,8 @@ mesh_asset* ykr_load_mesh(YkRenderer* renderer, const char* filepath, YkMemoryAr
         
 
         u32 part_ratio = 4;
-        out = (mesh_asset*)(perm->base + total_meshes * sizeof(mesh_asset));
-        surfaces = (geo_surface*)((u8*)out + ( perm->size - perm->size / part_ratio) + total_surfaces * sizeof(geo_surface));
+        out = (mesh_asset*)(perm->base + _cxt->total_meshes * sizeof(mesh_asset));
+        surfaces = (geo_surface*)((u8*)out + ( perm->size - perm->size / part_ratio) + _cxt->total_surfaces * sizeof(geo_surface));
         
 
         *num_mesh = data->meshes_count;
@@ -399,8 +410,8 @@ mesh_asset* ykr_load_mesh(YkRenderer* renderer, const char* filepath, YkMemoryAr
 
     //a bit pointless since I am using the same arena.
     //Maybe I can have an array of used and available pairs?
-    perm->used += total_meshes * sizeof(mesh_asset);
-    perm->used += total_surfaces * sizeof(surfaces);
+    perm->used = _cxt->total_meshes * sizeof(mesh_asset);
+    perm->used += _cxt->total_surfaces * sizeof(surfaces);
 
     return out;
 }

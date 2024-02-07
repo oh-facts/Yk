@@ -1,6 +1,16 @@
 #ifndef YK_MATH
 #define YK_MATH
 
+/*
+	This will likely be retired.
+	At this point I only use the
+	types  for convenience.  For
+	v2 instead of f32[2] because
+	v2 gives me QoL features.
+	For actual math, use the glm
+	library.
+*/
+
 #include <math.h>
 #include <defines.h>
 #define PI 	(3.14159265359f)

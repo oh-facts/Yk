@@ -18,8 +18,11 @@ struct YkMemory
     YkMemoryArena perm_storage;
     YkMemoryArena temp_storage;
 };
+#define arena_push(arena,type,data) ((type*)(arena.base))[arena.used/sizeof(type)] =  data; arena.used += sizeof(data)
 
-typedef struct YkMemory YkMemory;
+#define arena_count(arena,type)		((arena.used/sizeof(type)))
+
+#define arena_index(arena,type,index) ((type*)(arena.base))[index]
 
 
 YK_API void yk_memory_arena_innit(YkMemoryArena* arena, size_t size, void* base);
@@ -31,5 +34,8 @@ YK_API void yk_memory_arena_innit(YkMemoryArena* arena, size_t size, void* base)
 */
 YK_API void yk_memory_arena_clean_reset(YkMemoryArena* arena);
 
-YK_API YkMemoryArena yk_memory_sub_arena(YkMemoryArena* arena, size_t size);
+/*
+	Returns a new arena by using the parent's memory.
+*/
+YK_API YkMemoryArena yk_memory_sub_arena(YkMemoryArena* parent, size_t size);
 #endif // !YK_MEMORY
