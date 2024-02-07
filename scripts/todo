@@ -206,5 +206,15 @@ ok hot reloading works again. I will put all dependencies inside header files so
 
 ToDo(facts)
 1. Refactor :skull:
+      Been going well. I don't want to fail so I will study a bit.
+      So, the problem with loading more assets is that they use the buffers and desc
+      sets inside the frame data and if I load more assets, I need to make more space
+      for them inside my frame data. Also, the reason textures don't load for new models
+      is because I am not writing their descriptor sets. Normally, after loading all models,
+      I run my desc set update over them. So new models don't get that. Go ahead and do it.
+      Have it so that the desc set update function receives an array of meshes that need
+      updating instead of checking the renderer for meshes. Also, combine mesh count and mesh
+      together. This engine is coming along well.
 2. vertex colors
 3. glb files texture parsing
+

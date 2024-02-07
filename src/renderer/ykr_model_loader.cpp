@@ -354,6 +354,8 @@ mesh_asset* ykr_load_mesh(YkRenderer* renderer, mesh_loader_context* cxt, const 
         {
             printf("Couldn't load buffers");
         }
+
+        *num_mesh = data->meshes_count;
      
         for(u32 i = 0; i < data->textures_count; i ++)
         {
