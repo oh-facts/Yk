@@ -16,13 +16,13 @@ void main()
 {
 	float specular_strength = 1.0;
 	vec3 norm = normalize(inNormal);
-	vec3 lightDir = normalize(ambient_pos.xyz - fragPos);
+	vec3 lightDir = normalize(lightPos.xyz - fragPos);
 	vec3 reflect_dir = reflect(-lightDir, norm);
 	float spec = pow(max(dot(lightDir, reflect_dir), 0.0), 32);
-	vec3 specular = specular_strength * spec * ambient_color.xyz;
+	vec3 specular = specular_strength * spec * lightColor.xyz;
 	float diff = max(dot(norm, lightDir), 0.0);
-	vec3 ambient = ambient_color.w * ambient_color.xyz;
-	vec3 diffuse = diff * ambient_color.xyz;
+	vec3 ambient = lightColor.w * lightColor.xyz;
+	vec3 diffuse = diff * lightColor.xyz;
 	vec3 result = (ambient + diffuse + specular) * inColor;
 	outFragColor = vec4(result , 1);
 }

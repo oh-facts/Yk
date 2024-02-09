@@ -263,19 +263,19 @@ void traverse_node(cgltf_node* _node)
                 if (base_view->texture)
                 {
                     size_t texture_count = arena_count(_renderer->textures, texture_asset);
-
+                    char fullpath[ROOT_PATH_SIZE] = {};
+                    join_paths(root_path, base_view->texture->image->uri,fullpath);
+        
+                    u64 hash = djb2_hash(fullpath);
+                    
+                    texture_asset* ass = (texture_asset*)_renderer->textures.base;
+  
                     for(u32 k = 0; k < texture_count; k ++)
                     {
-                        char fullpath[ROOT_PATH_SIZE] = {};
-                        join_paths(root_path, base_view->texture->image->uri,fullpath);
-            
-                        u64 hash = djb2_hash(fullpath);
-                        
-                        texture_asset* ass = (texture_asset*)_renderer->textures.base;
-
                         if(ass[k].id == hash)
                         {
-                            asset.texture_id = hash;
+                            surface.texture_id = hash;
+                            break;
 //                            printf("%llu\n",hash);
                         }
                         
@@ -365,6 +365,7 @@ mesh_asset* ykr_load_mesh(YkRenderer* renderer, mesh_loader_context* cxt, const 
             
             texture_asset texture = ykr_load_textures(renderer,fullpath);
             texture.id = djb2_hash(fullpath);
+            texture.name = data->textures[i].image->name;
             arena_push(renderer->textures,texture_asset, texture);
 
         }

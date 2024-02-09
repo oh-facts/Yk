@@ -7,18 +7,23 @@
 */
 
 #define twob "res/models/2b/scene.gltf"
+#define asuka_1 "res/models/asuka/1/scene.gltf"
+#define asuka_2 "res/models/asuka/2/scene.gltf"
 
-// asuka needs her texturs fixed in blender. idk how to use blender
-#define asuka "res/models/asuka/CHR_ASK_001_main.gltf"
-
-#define bill "res/models/bill/scene1.glb"
-#define dmon "res/models/doraemon/doraemon.glb"
-#define duck "res/models/duck/Duck.gltf"
-#define fits "res/models/fire_in_the_sky/scene.gltf"
-#define msa "res/models/mystery_shack_attic/mystery_shack_attic.glb"
 #define jojo "res/models/jojo/scene.gltf"
-#define room "res/models/room/scene.gltf"
 #define shinchan "res/models/shinchan/scene.glb"
+#define dmon "res/models/doraemon/doraemon.glb"
+
+#define bill_1 "res/models/bill/scene1.glb"
+#define bill_2 "res/models/bill/scene.gltf"
+#define msa "res/models/mystery_shack_attic/mystery_shack_attic.glb"
+
+#define fits "res/models/fire_in_the_sky/scene.gltf"
+#define room "res/models/room/scene.gltf"
+
+#define duck "res/models/duck/Duck.gltf"
+
+#define sponza "res/models/sponza/Sponza.gltf"
 
 #if DEBUG
 LPVOID base_address = (LPVOID)Terabytes(2);
@@ -61,6 +66,7 @@ void set_obj_pos(mesh_asset *asset, u32 mesh_count, glm::vec3 pos, f32 angle, gl
     }
 }
 
+//#define obj_count 1
 #define obj_count 5
 
 size_t size_sum_from(size_t sizes[], u32 from)
@@ -91,8 +97,9 @@ YK_API void _debug_app_start(struct YkDebugAppState *self)
         room,
         shinchan,
         twob,
-        bill,
-        jojo};
+        bill_2,
+        jojo
+    };
 
     mesh_asset *assets[obj_count] = {};
     size_t sizes[obj_count] = {};
@@ -103,9 +110,12 @@ YK_API void _debug_app_start(struct YkDebugAppState *self)
     }
     yk_memory_arena_clean_reset(&self->engine_memory.temp_storage);
 
+    
+   // set_obj_pos(&arena_index(self->ren.test_meshes,mesh_asset, 0), sizes[0],  glm::vec3{-35.51f, -30.31f, -10.13f}, 0, glm::vec3(1), glm::vec3(1));
     set_obj_pos(&arena_index(self->ren.test_meshes,mesh_asset, size_sum_from(sizes,0)), sizes[1], glm::vec3(-32, -31, -9), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
+//    set_obj_pos(&arena_index(self->ren.test_meshes,mesh_asset, size_sum_from(sizes,1)), sizes[2], glm::vec3(-32, -31.1, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(3.f));
     set_obj_pos(&arena_index(self->ren.test_meshes,mesh_asset, size_sum_from(sizes,1)), sizes[2], glm::vec3(-32, -31.1, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.05f));
-    set_obj_pos(&arena_index(self->ren.test_meshes,mesh_asset, size_sum_from(sizes,2)), sizes[3], glm::vec3(-16, -26.6f, -10.5f), -90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
+    set_obj_pos(&arena_index(self->ren.test_meshes,mesh_asset, size_sum_from(sizes,2)), sizes[3], glm::vec3(-16, -29.f, -10.5f), -90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
     set_obj_pos(&arena_index(self->ren.test_meshes,mesh_asset, size_sum_from(sizes,3)), sizes[4],glm::vec3(-28, -30.9f, -8.3f), -90 * DEG_TO_RAD, glm::vec3(1, 0, 0), glm::vec3(0.025f));
 
     self->ren.cam.pos = glm::vec3{-6.51f, -30.31f, -10.13f};
@@ -139,9 +149,10 @@ YK_API int _debug_app_is_running(struct YkDebugAppState *self)
 
 YK_API void _debug_app_update_once(struct YkDebugAppState *self)
 {
-    size_t t = sizeof(texture_asset);
-    self->ren.cam.pos.y += 0.1f;
+    self->ren.cam.pos.y += 1.f;
 
+/*
+    size_t t = sizeof(texture_asset);
     size_t num = 0;
 
     size_t model_load_size = Gigabytes(1);
@@ -150,7 +161,7 @@ YK_API void _debug_app_update_once(struct YkDebugAppState *self)
     ykr_load_mesh(&self->ren, &self->cxt, duck, &scratch, &self->ren.test_meshes, &num);
 
     yk_memory_arena_clean_reset(&self->engine_memory.temp_storage);
-
+*/
    
 }
 

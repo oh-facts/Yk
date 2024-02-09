@@ -187,7 +187,7 @@ ToDo(facts): compile vma as a dll so I don't have to compile it again
               (resolved)
 !! ------------ !!
 
-!!! HIGHER PRIORITY !!!
+!!! HIGHER PRIORITY !!! (resolved)
 
 C++ is fine. I have zero energy to write a physics engine. C++ is fine.
 (true. I agree.)
@@ -205,6 +205,13 @@ ok hot reloading works again. I will put all dependencies inside header files so
 !!! --------------- !!!
 
 ToDo(facts)
+0. account for primitives !!!
+   wasted time on wondering why sponza textures didn't load.
+   works now.
+
+0.5 Do normals need to be re-calculated for objects that move?
+    No, normal = mat3(transpose(inverse(model_mat))) * v.normal transforms them
+
 1. Refactor :skull:
       Been going well. I don't want to fail so I will study a bit.
       So, the problem with loading more assets is that they use the buffers and desc
@@ -215,6 +222,35 @@ ToDo(facts)
       Have it so that the desc set update function receives an array of meshes that need
       updating instead of checking the renderer for meshes. Also, combine mesh count and mesh
       together. This engine is coming along well.
+
+      Also, work on descr indexing. This will make abstraction much easier And use ssbos instead 
+      of ubos. because ubo indexing isn't always supported.
+
+      pipeline abstraction
+      desc abstraction (after implementing indexing)
+      
+
 2. vertex colors
 3. glb files texture parsing
+4. shader compiling py script
+      py * -r 
 
+      compile all shaders recursively and suffix with .spv
+
+      py * 
+      compile non-recursively
+
+      py pp/foo.bar
+
+      compile a single shader
+5. Multiple entry points thing ?
+   For now I'll just use #if. I don't
+   know how I want to structure it yet.
+
+6. Camera zoom.
+
+7. Complete lighting fully
+
+8. Ray tracing rendering. (compute)
+
+I will then compare.

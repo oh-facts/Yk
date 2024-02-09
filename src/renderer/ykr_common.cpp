@@ -48,10 +48,18 @@ void copy_image_to_image(VkCommandBuffer cmd, VkImage src, VkImage dst, VkExtent
 
     VkImageBlit2 blit_reg = {};
     blit_reg.sType = VK_STRUCTURE_TYPE_IMAGE_BLIT_2;
+    
+    // (0,0.5) - inverted full res, to 1 pixel
+    // (0.5,1) - 1 pixel to normal full res
+    f32 _scale = 1.f;
 
+    f32 scale = 1 - _scale;
     //srcOffset[0] is top left corner. [1] is bottom right. Over here we are specifying the extent of the copy, which is whole image.
-    blit_reg.srcOffsets[1].x = src_size.width;
-    blit_reg.srcOffsets[1].y = src_size.height;
+    blit_reg.srcOffsets[0].x = src_size.width * scale;
+    blit_reg.srcOffsets[0].y = src_size.height * scale;
+   
+    blit_reg.srcOffsets[1].x = src_size.width * (1 - scale);
+    blit_reg.srcOffsets[1].y = src_size.height * (1 - scale);
     blit_reg.srcOffsets[1].z = 1;
 
     blit_reg.dstOffsets[1].x = dst_size.width;
