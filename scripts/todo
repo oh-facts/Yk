@@ -247,6 +247,11 @@ ToDo(facts)
    I got it to work, but then it broke normal colors. I need to look up how this is done.
    There are 3 moving parts. Vertex colors. Material color. Texture color. When one is absent,
    it is black. Because it is black, multiplying makes it black. There is surely a better way.  
+   Fixed it. Firstly, transparent texture is now a white texture. And invalid vertex colors have
+   their alpha set to 0 (everything is zero because no vertx colors found).
+   Made it branchless. Works fine now.
+   (done)
+   
 3. glb files texture parsing
 4. shader compiling py script
       py * -r 
