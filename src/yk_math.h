@@ -39,19 +39,6 @@ union v4 {
 		f32 x, y, z, w;
 	};
 	f32 e[4];
-
-	bool operator==(v4 other)
-	{
-		for(u32 i = 0; i < 4; i ++)
-		{
-			if(e[i] != other.e[i])
-			{
-				return false;
-			}
-		}
-
-		return true;
-	}
 };
 
 /*
