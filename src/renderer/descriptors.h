@@ -13,7 +13,6 @@ void ykr_desc_pool_innit(VkDevice device, u32 max_sets, VkDescriptorPoolSize* po
 
 void desc_set_innit(VkDevice device, VkDescriptorSet* set, VkDescriptorPool pool, VkDescriptorSetLayout* layouts);
 
-
 void ubo_update(VmaAllocator allocator, YkBuffer* buffer, void* ubo, size_t size);
 
 #endif

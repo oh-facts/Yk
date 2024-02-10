@@ -207,11 +207,12 @@ ok hot reloading works again. I will put all dependencies inside header files so
 ToDo(facts)
 0. account for primitives !!!
    wasted time on wondering why sponza textures didn't load.
-   works now.
+   (fixed).
 
 0.5 Do normals need to be re-calculated for objects that move?
     No, normal = mat3(transpose(inverse(model_mat))) * v.normal transforms them
-
+    (resolved)
+    
 1. Refactor :skull:
       Been going well. I don't want to fail so I will study a bit.
       So, the problem with loading more assets is that they use the buffers and desc
