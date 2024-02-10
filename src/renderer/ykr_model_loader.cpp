@@ -322,6 +322,7 @@ void ykr_load_mesh(YkRenderer *renderer, const char *filepath, load_mesh_scratch
         if (cgltf_load_buffers(&options, data, filepath) != cgltf_result_success)
         {
             printf("Couldn't load buffers");
+            exit(99);
         }
 
         model->mesh_count += data->meshes_count;
@@ -370,6 +371,7 @@ void ykr_load_mesh(YkRenderer *renderer, const char *filepath, load_mesh_scratch
     scratch->indices.used += sizeof(u32) * total_indices;
     scratch->vertices.used += sizeof(YkVertex) * total_vertices;
 
+    cgltf_free(data);
     // a bit pointless since I am using the same arena.
     // Maybe I can have an array of used and available pairs?
 }

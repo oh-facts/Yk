@@ -1,10 +1,15 @@
 #include <yk_debug_app.h>
 #include <yk_memory.h>
 
-#define _CRTDBG_MAP_ALLOC
-#include <stdlib.h>
-#include <crtdbg.h>
-#include <iostream>
+#define mem_leak_msvc 0
+
+#if mem_leak_msvc
+    #define _CRTDBG_MAP_ALLOC
+    #include <stdlib.h>
+    #include <crtdbg.h>
+    #include <iostream>
+#endif
+
 int main(int argc, char *argv[])
 {
     struct YkDebugAppState state = { };
@@ -142,7 +147,9 @@ int main(int argc, char *argv[])
     FreeLibrary(state.game_dll);
     remove("temp.dll");
 
+#if mem_leak_msvc
     _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
     _CrtDumpMemoryLeaks();
+#endif
     return 0;
 }
