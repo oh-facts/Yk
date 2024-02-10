@@ -18,12 +18,15 @@ struct YkMemory
     YkMemoryArena perm_storage;
     YkMemoryArena temp_storage;
 };
-#define arena_push(arena,type,data) ((type*)(arena.base))[arena.used/sizeof(type)] =  data; arena.used += sizeof(data)
+#define arena_push(arena,type,data) ((type*)(arena.base))[arena.used/sizeof(type)] =  data; \
+									arena.used += sizeof(data);								\
+									assert(arena.used <= arena.size)
 
 #define arena_count(arena,type)		((arena.used/sizeof(type)))
 
 #define arena_index(arena,type,index) ((type*)(arena.base))[index]
 
+#define arena_indexp(arena,type,index) ((type*)(arena->base))[index]
 
 YK_API void yk_memory_arena_innit(YkMemoryArena* arena, size_t size, void* base);
 

@@ -14,7 +14,7 @@ struct mesh_loader_context
 	out_num_meshes stores the 
 	number of meshes.
 */
-mesh_asset* ykr_load_mesh(YkRenderer* renderer, mesh_loader_context* cxt, const char* filepath, YkMemoryArena* scratch, YkMemoryArena* perm, size_t* num_mesh);
+void ykr_load_mesh(YkRenderer* renderer, mesh_loader_context* cxt, const char* filepath, YkMemoryArena* scratch, model_assets* model);
 
 /*
 	Clear mesh loading context. Uses local static variables to make mesh loading non-convulated

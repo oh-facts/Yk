@@ -52,9 +52,15 @@ void engine_memory_cleanup(YkMemory *engine_memory)
     VirtualFree(base_address, 0, MEM_RELEASE);
 }
 
-void set_obj_pos(mesh_asset *asset, u32 mesh_count, glm::vec3 pos, f32 angle, glm::vec3 rot, glm::vec3 scale)
+void set_obj_pos(model_assets *models, u32 index, glm::vec3 pos, f32 angle, glm::vec3 rot, glm::vec3 scale)
 {
-    for (u32 i = 0; i < mesh_count; i++)
+    size_t mesh_start = 0;
+    for (u32 i = 0; i < index; i++)
+    {
+        mesh_start += arena_index(models->per_model, size_t, i);
+    }
+    size_t mesh_count = arena_index(models->per_model, size_t, index);
+    for (u32 i = mesh_start; i < mesh_start + mesh_count; i++)
     {
         glm::mat4 temp = glm::mat4(1);
 
@@ -62,11 +68,11 @@ void set_obj_pos(mesh_asset *asset, u32 mesh_count, glm::vec3 pos, f32 angle, gl
         temp = glm::rotate(temp, angle, rot);
         temp = glm::scale(temp, scale);
 
-        asset[i].model_mat = temp * asset[i].model_mat;
+        arena_index(models->meshes, mesh_asset, i).model_mat = temp * arena_index(models->meshes, mesh_asset, i).model_mat;
     }
 }
 
-//#define obj_count 1
+// #define obj_count 1
 #define obj_count 5
 
 size_t size_sum_from(size_t sizes[], u32 from)
@@ -88,35 +94,34 @@ YK_API void _debug_app_start(struct YkDebugAppState *self)
     size_t model_load_size = Gigabytes(1);
     YkMemoryArena scratch = yk_memory_sub_arena(&self->engine_memory.temp_storage, model_load_size);
 
-    size_t model_load_temp = Megabytes(5);
-    self->ren.test_meshes = yk_memory_sub_arena(&self->engine_memory.perm_storage, model_load_temp);
+    size_t model_load_temp = Megabytes(1);
+    self->ren.model.meshes = yk_memory_sub_arena(&self->engine_memory.perm_storage, model_load_temp);
+    self->ren.model.surfaces = yk_memory_sub_arena(&self->engine_memory.perm_storage, model_load_temp);
+    self->ren.model.per_model = yk_memory_sub_arena(&self->engine_memory.perm_storage, model_load_temp);
 
     self->ren.textures = yk_memory_sub_arena(&self->engine_memory.perm_storage, Megabytes(1));
 
     const char *asset_paths[obj_count] = {
-        room,
+        sponza,
         shinchan,
         twob,
         bill_2,
-        jojo
-    };
+        jojo};
 
-    mesh_asset *assets[obj_count] = {};
     size_t sizes[obj_count] = {};
 
     for (u32 i = 0; i < obj_count; i++)
     {
-        ykr_load_mesh(&self->ren, &self->cxt, asset_paths[i], &scratch, &self->ren.test_meshes, &sizes[i]);
+        ykr_load_mesh(&self->ren, &self->cxt, asset_paths[i], &scratch, &self->ren.model);
     }
     yk_memory_arena_clean_reset(&self->engine_memory.temp_storage);
 
-    
-   // set_obj_pos(&arena_index(self->ren.test_meshes,mesh_asset, 0), sizes[0],  glm::vec3{-35.51f, -30.31f, -10.13f}, 0, glm::vec3(1), glm::vec3(1));
-    set_obj_pos(&arena_index(self->ren.test_meshes,mesh_asset, size_sum_from(sizes,0)), sizes[1], glm::vec3(-32, -31, -9), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
-//    set_obj_pos(&arena_index(self->ren.test_meshes,mesh_asset, size_sum_from(sizes,1)), sizes[2], glm::vec3(-32, -31.1, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(3.f));
-    set_obj_pos(&arena_index(self->ren.test_meshes,mesh_asset, size_sum_from(sizes,1)), sizes[2], glm::vec3(-32, -31.1, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.05f));
-    set_obj_pos(&arena_index(self->ren.test_meshes,mesh_asset, size_sum_from(sizes,2)), sizes[3], glm::vec3(-16, -29.f, -10.5f), -90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
-    set_obj_pos(&arena_index(self->ren.test_meshes,mesh_asset, size_sum_from(sizes,3)), sizes[4],glm::vec3(-28, -30.9f, -8.3f), -90 * DEG_TO_RAD, glm::vec3(1, 0, 0), glm::vec3(0.025f));
+    set_obj_pos(&self->ren.model, 0, glm::vec3{-35.51f, -30.31f, -10.13f}, 0, glm::vec3(1), glm::vec3(1));
+    set_obj_pos(&self->ren.model, 1, glm::vec3(-32, -31, -9), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
+    // set_obj_pos(&arena_index(self->ren.test_meshes,mesh_asset, size_sum_from(sizes,1)), sizes[2], glm::vec3(-32, -31.1, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(3.f));
+    set_obj_pos(&self->ren.model, 2, glm::vec3(-32, -31.1, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.05f));
+    set_obj_pos(&self->ren.model, 3, glm::vec3(-16, -29.f, -10.5f), -90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
+    set_obj_pos(&self->ren.model, 4, glm::vec3(-28, -30.9f, -8.3f), -90 * DEG_TO_RAD, glm::vec3(1, 0, 0), glm::vec3(0.025f));
 
     self->ren.cam.pos = glm::vec3{-6.51f, -30.31f, -10.13f};
     self->ren.cam.yaw = -1.6f;
@@ -151,18 +156,17 @@ YK_API void _debug_app_update_once(struct YkDebugAppState *self)
 {
     self->ren.cam.pos.y += 1.f;
 
-/*
-    size_t t = sizeof(texture_asset);
-    size_t num = 0;
+    /*
+        size_t t = sizeof(texture_asset);
+        size_t num = 0;
 
-    size_t model_load_size = Gigabytes(1);
-    YkMemoryArena scratch = yk_memory_sub_arena(&self->engine_memory.temp_storage, model_load_size);
+        size_t model_load_size = Gigabytes(1);
+        YkMemoryArena scratch = yk_memory_sub_arena(&self->engine_memory.temp_storage, model_load_size);
 
-    ykr_load_mesh(&self->ren, &self->cxt, duck, &scratch, &self->ren.test_meshes, &num);
+        ykr_load_mesh(&self->ren, &self->cxt, duck, &scratch, &self->ren.test_meshes, &num);
 
-    yk_memory_arena_clean_reset(&self->engine_memory.temp_storage);
-*/
-   
+        yk_memory_arena_clean_reset(&self->engine_memory.temp_storage);
+    */
 }
 
 YK_API void _debug_app_shutdown(struct YkDebugAppState *self)

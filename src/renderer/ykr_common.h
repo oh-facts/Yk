@@ -4,9 +4,9 @@
 /*
 	ToDo(facts): Dont use Vk as prefix. Comes off as vulkan provided macro
 */
-#define VkDEBUG 1
+#define VkDEBUG 0
 
-#define VK_USE_VALIDATION_LAYERS 1
+#define VK_USE_VALIDATION_LAYERS 0
 #define VK_EXT_PRINT_DEBUG 0
 #define VK_PRINT_SUCCESS 0
 #define LOG_DEVICE_DETAILS 1
@@ -80,13 +80,27 @@ struct material
 	texture_asset base;
 };
 
+
 struct mesh_asset
 {
 	const char* name;
-	struct YkMeshBuffer buffer;
-	struct geo_surface* surfaces;
-	u32 num_surfaces;
+	YkMeshBuffer buffer;
 	glm::mat4 model_mat;
+
+	//per mesh
+	size_t surface_count;		
+};
+
+struct model_assets
+{
+	//all surfaces
+	YkMemoryArena surfaces;
+	size_t surface_count;
+
+	//all meshes
+	YkMemoryArena meshes;
+	size_t mesh_count;
+	YkMemoryArena per_model;
 };
 
 struct YkRenderer;

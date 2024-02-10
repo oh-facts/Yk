@@ -85,7 +85,7 @@ struct YkRenderer
 	VkPipelineLayout mesh_pl_layout;
 	VkPipeline mesh_pl;
 
-	YkMemoryArena test_meshes;
+	model_assets model;
 
 	VkDescriptorPool mesh_desc_pool;
 	VkDescriptorSetLayout mesh_desc_layout;

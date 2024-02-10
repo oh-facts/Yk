@@ -557,7 +557,6 @@ void mesh_desc_data_write(VkDevice device, VkBuffer buffer, VkImageView view, Vk
 
 void mesh_desc_data_innit(YkRenderer *renderer)
 {
-    size_t mesh_count = arena_count(renderer->test_meshes, mesh_asset);
     VkDescriptorSetLayoutBinding bindings[2] = {};
     bindings[0].binding = 0;
     bindings[0].descriptorCount = 1;
@@ -571,20 +570,17 @@ void mesh_desc_data_innit(YkRenderer *renderer)
 
     ykr_desc_layout_innit(renderer->device, bindings, 2, &renderer->mesh_desc_layout);
 
-    u32 surface_count = 0;
-    for (u32 i = 0; i < mesh_count; i++)
-    {
-        surface_count += arena_index(renderer->test_meshes, mesh_asset, i).num_surfaces;
-    }
+    u32 total_surface_count = renderer->model.surface_count;
+    u32 total_mesh_count = renderer->model.mesh_count;
 
     VkDescriptorPoolSize sizes[2] = {};
-    sizes[0].descriptorCount = surface_count * MAX_FRAMES_IN_FLIGHT;
+    sizes[0].descriptorCount = total_surface_count * MAX_FRAMES_IN_FLIGHT;
     sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
-    sizes[1].descriptorCount = surface_count * MAX_FRAMES_IN_FLIGHT;
+    sizes[1].descriptorCount = total_surface_count * MAX_FRAMES_IN_FLIGHT;
     sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 
-    ykr_desc_pool_innit(renderer->device, surface_count * MAX_FRAMES_IN_FLIGHT, sizes, 2, &renderer->mesh_desc_pool);
+    ykr_desc_pool_innit(renderer->device, total_surface_count * MAX_FRAMES_IN_FLIGHT, sizes, 2, &renderer->mesh_desc_pool);
 
     renderer->trans_tx = ykr_load_textures(renderer, "res/textures/transparent.png");
 
@@ -594,44 +590,38 @@ void mesh_desc_data_innit(YkRenderer *renderer)
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
         // do in arena
-        renderer->frame_data[i].mesh_buffers = (YkBuffer *)malloc(sizeof(YkBuffer) * surface_count);
-        renderer->frame_data[i].mesh_sets = (VkDescriptorSet *)malloc(sizeof(VkDescriptorSet) * surface_count);
+        renderer->frame_data[i].mesh_buffers = (YkBuffer *)malloc(sizeof(YkBuffer) * total_surface_count);
+        renderer->frame_data[i].mesh_sets = (VkDescriptorSet *)malloc(sizeof(VkDescriptorSet) * total_surface_count);
 
-        for (u32 j = 0; j < surface_count; j++)
+        for (u32 j = 0; j < total_surface_count; j++)
         {
             renderer->frame_data[i].mesh_buffers[j] = ykr_create_buffer(renderer->vma_allocator, sizeof(object_data_ubo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
             desc_set_innit(renderer->device, &renderer->frame_data[i].mesh_sets[j], renderer->mesh_desc_pool, &renderer->mesh_desc_layout);
         }
-        u32 s = 0;
-        for (u32 m = 0; m < mesh_count; m++)
+
+        for (u32 _s = 0; _s < total_surface_count; _s++)
         {
-            mesh_asset *_mesh = &arena_index(renderer->test_meshes, mesh_asset, m);
+            b8 found = false;
+            geo_surface *_surf = &arena_index(renderer->model.surfaces, geo_surface, _s);
 
-            for (u32 _s = 0; _s < _mesh->num_surfaces; _s++, s++)
+            for (u32 k = 0; k < texture_count; k++)
             {
-                b8 found = false;
-                geo_surface *_surf = &_mesh->surfaces[_s];
+                texture_asset *_tex = &arena_index(renderer->textures, texture_asset, k);
 
-                for (u32 k = 0; k < texture_count; k++)
+                if (_tex->id == _surf->texture_id)
                 {
-                    texture_asset *_tex = &arena_index(renderer->textures, texture_asset, k);
-
-                    if (_tex->id == _surf->texture_id)
-                    {
-                        mesh_desc_data_write(renderer->device, renderer->frame_data[i].mesh_buffers[s].buffer,
-                                             _tex->image.imageView, _tex->sampler, renderer->frame_data[i].mesh_sets[s]);
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found)
-                {
-                    mesh_desc_data_write(renderer->device, renderer->frame_data[i].mesh_buffers[s].buffer,
-                                         renderer->trans_tx.image.imageView, renderer->trans_tx.sampler, renderer->frame_data[i].mesh_sets[s]);
+                    mesh_desc_data_write(renderer->device, renderer->frame_data[i].mesh_buffers[_s].buffer,
+                                         _tex->image.imageView, _tex->sampler, renderer->frame_data[i].mesh_sets[_s]);
+                    found = true;
+                    break;
                 }
             }
+            if (!found)
+            {
+                mesh_desc_data_write(renderer->device, renderer->frame_data[i].mesh_buffers[_s].buffer,
+                                     renderer->trans_tx.image.imageView, renderer->trans_tx.sampler, renderer->frame_data[i].mesh_sets[_s]);
+            }
         }
-        printf("%d", s);
     }
 }
 
@@ -641,14 +631,10 @@ void mesh_desc_data_destroy(YkRenderer *renderer)
     vkDestroyDescriptorPool(renderer->device, renderer->mesh_desc_pool, 0);
     vkDestroyDescriptorSetLayout(renderer->device, renderer->mesh_desc_layout, 0);
 
-    size_t mesh_count = arena_count(renderer->test_meshes, mesh_asset);
+    // size_t mesh_count = arena_count(renderer->test_meshes, mesh_asset);
 
-    u32 surface_count = 0;
-    for (u32 i = 0; i < mesh_count; i++)
-    {
-        surface_count += arena_index(renderer->test_meshes, mesh_asset, i).num_surfaces;
-    }
-
+    u32 surface_count = renderer->model.surface_count;
+   
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
         for (u32 j = 0; j < surface_count; j++)
@@ -768,7 +754,8 @@ void yk_renderer_draw_triangle(YkRenderer *renderer, VkCommandBuffer cmd)
     {
         f32 time = (f32)(current_time - renderer->clock) / CLOCKS_PER_SEC;
 
-        size_t mesh_count = arena_count(renderer->test_meshes, mesh_asset);
+        u32 total_surface_count = renderer->model.surface_count;
+        u32 total_mesh_count = renderer->model.mesh_count;
 
         // model = glm::rotate(model, time * 2.f, glm::vec3(0, 1, 0));
 
@@ -793,43 +780,50 @@ void yk_renderer_draw_triangle(YkRenderer *renderer, VkCommandBuffer cmd)
         ubo.ambient_pos = v4{renderer->cam.pos.x, renderer->cam.pos.y, renderer->cam.pos.z};
 
         ubo_update(renderer->vma_allocator, &renderer->frame_data[renderer->current_frame].scene_ubo, &ubo, sizeof(scene_data_ubo));
-        u32 sur_i = 0;
-        for (size_t i = 0; i < mesh_count; i++)
+
+        size_t mesh_index = 0;
+        u32 eep = 0;
+        for (size_t j = 0; j < renderer->model.surface_count; j++,eep++)
         {
-            mesh_asset *mesh = &arena_index(renderer->test_meshes, mesh_asset, i);
+            
+            mesh_asset *mesh = &arena_index(renderer->model.meshes, mesh_asset, mesh_index);
+            geo_surface *surf = &arena_index(renderer->model.surfaces, geo_surface, j);
 
-            for (size_t j = 0; j < mesh->num_surfaces; j++, sur_i++)
+            if(eep >= mesh->surface_count - 1)
             {
-                geo_surface *surf = &mesh->surfaces[j];
-                glm::mat4 model = mesh->model_mat;
-                // glm::mat4 model = glm::identity<glm::mat4>();
-                //   model = glm::translate(model, mesh->trans);
-                // model = glm::rotate(model, time * 0.5f, glm::vec3(0,1,0));
-                //    model = glm::rotate(model, mesh->rot.y, glm::vec3(0, 1, 0));
-                //    model = glm::rotate(model, mesh->rot.z, glm::vec3(0, 0, 1));
-                // model = glm::scale(model, glm::vec3(2));
-
-                glm::mat4 mvp = proj * view * model;
-
-                push_constants.world_matrix = mvp;
-
-                push_constants.v_buffer = mesh->buffer.v_address;
-
-                object_data_ubo obj_ubo = {};
-                obj_ubo.model = model;
-                ubo_update(renderer->vma_allocator, &renderer->frame_data[renderer->current_frame].mesh_buffers[sur_i], &obj_ubo, sizeof(object_data_ubo));
-
-                vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl);
-                vkCmdSetViewport(cmd, 0, 1, &renderer->viewport);
-                vkCmdSetScissor(cmd, 0, 1, &renderer->scissor);
-                vkCmdPushConstants(cmd, renderer->mesh_pl_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(YkDrawPushConstants), &push_constants);
-
-                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl_layout, 0, 1, &renderer->frame_data[renderer->current_frame].scene_set, 0, 0);
-                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl_layout, 1, 1, &renderer->frame_data[renderer->current_frame].mesh_sets[sur_i], 0, 0);
-
-                vkCmdBindIndexBuffer(cmd, mesh->buffer.i_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-                vkCmdDrawIndexed(cmd, mesh->surfaces[j].count, 1, mesh->surfaces[j].start, 0, 0);
+                mesh_index ++;
+                eep = 0;
             }
+
+            glm::mat4 model = mesh->model_mat;
+
+            // glm::mat4 model = glm::identity<glm::mat4>();
+            //   model = glm::translate(model, mesh->trans);
+            // model = glm::rotate(model, time * 0.5f, glm::vec3(0,1,0));
+            //    model = glm::rotate(model, mesh->rot.y, glm::vec3(0, 1, 0));
+            //    model = glm::rotate(model, mesh->rot.z, glm::vec3(0, 0, 1));
+            // model = glm::scale(model, glm::vec3(2));
+
+            glm::mat4 mvp = proj * view * model;
+
+            push_constants.world_matrix = mvp;
+
+            push_constants.v_buffer = mesh->buffer.v_address;
+
+            object_data_ubo obj_ubo = {};
+            obj_ubo.model = model;
+            ubo_update(renderer->vma_allocator, &renderer->frame_data[renderer->current_frame].mesh_buffers[j], &obj_ubo, sizeof(object_data_ubo));
+
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl);
+            vkCmdSetViewport(cmd, 0, 1, &renderer->viewport);
+            vkCmdSetScissor(cmd, 0, 1, &renderer->scissor);
+            vkCmdPushConstants(cmd, renderer->mesh_pl_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(YkDrawPushConstants), &push_constants);
+
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl_layout, 0, 1, &renderer->frame_data[renderer->current_frame].scene_set, 0, 0);
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl_layout, 1, 1, &renderer->frame_data[renderer->current_frame].mesh_sets[j], 0, 0);
+
+            vkCmdBindIndexBuffer(cmd, mesh->buffer.i_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+            vkCmdDrawIndexed(cmd, surf->count, 1, surf->start, 0, 0);
         }
     }
 
@@ -901,10 +895,12 @@ void yk_free_renderer(YkRenderer *renderer)
     vkDestroyFence(renderer->device, renderer->imm_fence, 0);
 
     // ToDo(facts): For the love of god, make a function to destroy all buffers
-    size_t mesh_count = arena_count(renderer->test_meshes, mesh_asset);
+    
+    size_t mesh_count = renderer->model.mesh_count;
+
     for (u32 i = 0; i < mesh_count; i++)
     {
-        YkMeshBuffer *buff = &arena_index(renderer->test_meshes, mesh_asset, i).buffer;
+        YkMeshBuffer *buff = &arena_index(renderer->model.meshes, mesh_asset, i).buffer;
 
         vmaDestroyBuffer(renderer->vma_allocator, buff->v_buffer.buffer, buff->v_buffer.alloc);
         vmaDestroyBuffer(renderer->vma_allocator, buff->i_buffer.buffer, buff->i_buffer.alloc);

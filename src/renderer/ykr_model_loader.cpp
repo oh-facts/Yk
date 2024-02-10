@@ -57,6 +57,8 @@ s: 103
 yk_internal size_t total_vertices;
 yk_internal size_t total_indices;
 
+yk_internal model_assets* model; 
+
 void ykr_load_mesh_cleanup()
 {
     mesh_index = 0;
@@ -70,6 +72,7 @@ void ykr_load_mesh_cleanup()
     _cxt = 0;
     total_vertices = 0;
     total_indices = 0;
+    model = 0;
     memset(root_path, 0,ROOT_PATH_SIZE);
 }
 
@@ -79,22 +82,16 @@ void traverse_node(cgltf_node* _node)
     if (_node->mesh)
     {
 
-        cgltf_mesh* mesh = _node->mesh;
+        cgltf_mesh* _mesh = _node->mesh;
         mesh_asset asset = {};
-        asset.name = mesh->name;
-        asset.surfaces = (geo_surface*)((u8*)surfaces + sizeof(geo_surface) * _cxt->total_surfaces);
-
-        if (asset.surfaces == 0)
-        {
-            exit(2);
-        }
-
+        asset.name = _mesh->name;
+        asset.surface_count = _mesh->primitives_count;
         index_num = 0;
         vertex_num = 0;
 
-        for (u32 j = 0; j < mesh->primitives_count; j++)
+        for (u32 j = 0; j < _mesh->primitives_count; j++)
         {
-            cgltf_primitive* p = &mesh->primitives[j];
+            cgltf_primitive* p = &_mesh->primitives[j];
             
             if (p->type != cgltf_primitive_type_triangles)
             {
@@ -291,10 +288,10 @@ void traverse_node(cgltf_node* _node)
                 }
                 
             }
- 
+            
+            model->surface_count ++;            
+            arena_push(model->surfaces,geo_surface, surface);
 
-            asset.num_surfaces++;
-            asset.surfaces[j] = surface;
             _cxt->total_surfaces++;
 
         }
@@ -309,9 +306,9 @@ void traverse_node(cgltf_node* _node)
             }
         }
 
-        out[mesh_index] = asset;
-        out[mesh_index].buffer = ykr_upload_mesh(_renderer, vertices, vertex_num, indices, index_num);
-        mesh_index++;
+        asset.buffer = ykr_upload_mesh(_renderer, vertices, vertex_num, indices, index_num);
+
+        arena_push(model->meshes,mesh_asset,asset);
 
         total_indices += index_num;
         total_vertices += vertex_num;
@@ -331,12 +328,12 @@ void traverse_node(cgltf_node* _node)
 
 }
 
-mesh_asset* ykr_load_mesh(YkRenderer* renderer, mesh_loader_context* cxt, const char* filepath, YkMemoryArena* scratch, YkMemoryArena* perm, size_t * num_mesh)
+void ykr_load_mesh(YkRenderer* renderer, mesh_loader_context* cxt, const char* filepath, YkMemoryArena* scratch, model_assets* inmodel)
 {
     ykr_load_mesh_cleanup();
 
     //feel free to suggest better method
-
+    model = inmodel;
     strcpy(root_path, filepath);
 
     out = 0;
@@ -355,8 +352,10 @@ mesh_asset* ykr_load_mesh(YkRenderer* renderer, mesh_loader_context* cxt, const 
             printf("Couldn't load buffers");
         }
 
-        *num_mesh = data->meshes_count;
-     
+        model->mesh_count += data->meshes_count;
+        
+        arena_push(model->per_model,size_t,data->meshes_count);
+        
         for(u32 i = 0; i < data->textures_count; i ++)
         {
             char fullpath[ROOT_PATH_SIZE] = {};
@@ -385,14 +384,11 @@ mesh_asset* ykr_load_mesh(YkRenderer* renderer, mesh_loader_context* cxt, const 
         // Maybe have two arenas? So I can actually make use of the "used" part?
         // Right now I partition this arena in part_ratio : 1
         
-
-        u32 part_ratio = 4;
-        out = (mesh_asset*)(perm->base + _cxt->total_meshes * sizeof(mesh_asset));
-        surfaces = (geo_surface*)((u8*)out + ( perm->size - perm->size / part_ratio) + _cxt->total_surfaces * sizeof(geo_surface));
         
-
-        *num_mesh = data->meshes_count;
-
+    //    out = (mesh_asset*)(perm->base + _cxt->total_meshes * sizeof(mesh_asset));
+      //  surfaces = (geo_surface*)out->surfaces.base;
+     //   surfaces = (geo_surface*)((u8*)out + ( perm->size - perm->size / part_ratio) + _cxt->total_surfaces * sizeof(geo_surface));
+        
         printf("%s\n", filepath);
         for (u32 _scene_index = 0; _scene_index < data->scenes_count; _scene_index++)
         {
@@ -413,10 +409,7 @@ mesh_asset* ykr_load_mesh(YkRenderer* renderer, mesh_loader_context* cxt, const 
 
     //a bit pointless since I am using the same arena.
     //Maybe I can have an array of used and available pairs?
-    perm->used = _cxt->total_meshes * sizeof(mesh_asset);
-    perm->used += _cxt->total_surfaces * sizeof(surfaces);
 
-    return out;
 }
 
 
