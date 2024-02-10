@@ -2,9 +2,9 @@
 
 An attempt at a Vulkan renderer
 
-1/26 2122
+2/10 1323
 
-<img src="https://github.com/oh-facts/Yk/assets/125090383/812c393e-b138-4b24-b8ef-93e82e46b852" alt="drawing" width="900"/>
+<img src="https://github.com/oh-facts/Yk/assets/125090383/3ac7e48e-3672-4aa1-9598-d3bef4b6ad89" alt="drawing" width="900"/>
 
 ## Quickstart
 
@@ -67,7 +67,7 @@ cmake .. -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE="Debug" -DYK_BUILD_SHARED=1
 
 - I will make a wiki to better explain design goals
 
-- engine is open source. games I make with it will be property of my studio, dear dear
+- engine is foss. Do whatever you want with it, except claiming you made it. Games that I make with it will be property of my studio, dear dear
 
 - 21st century schizoid man
 
