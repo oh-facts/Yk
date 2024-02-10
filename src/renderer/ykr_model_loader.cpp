@@ -8,25 +8,24 @@
 /*
     These variables don't persist. There is no global
     state. They are static to make life easy (see recursion
-    function). If you can find a way to avoid them 
+    function). If you can find a way to avoid them
     without making things messy. Go ahead.
 */
 
-yk_internal void join_paths(const char* model_path, const char* texture_path, char* joined_path);
+yk_internal void join_paths(const char *model_path, const char *texture_path, char *joined_path);
 
-//dear lawd, pwease forgive me
+// dear lawd, pwease forgive me
 yk_internal u32 mesh_index;
 
-yk_internal YkVertex* vertices;
-yk_internal u32* indices;
-yk_internal geo_surface* surfaces;
+yk_internal YkVertex *vertices;
+yk_internal u32 *indices;
+yk_internal geo_surface *surfaces;
 
 yk_internal size_t index_num;
 yk_internal size_t vertex_num;
 
-yk_internal mesh_asset* out;
-yk_internal YkRenderer* _renderer;
-yk_internal mesh_loader_context* _cxt;
+yk_internal mesh_asset *out;
+yk_internal YkRenderer *_renderer;
 
 #define ROOT_PATH_SIZE 256
 yk_internal char root_path[ROOT_PATH_SIZE];
@@ -34,7 +33,7 @@ yk_internal char root_path[ROOT_PATH_SIZE];
 #define debug_color 0
 #define material_color 1
 
-//perf reasons
+// perf reasons
 /*
 * some values
 *
@@ -57,7 +56,7 @@ s: 103
 yk_internal size_t total_vertices;
 yk_internal size_t total_indices;
 
-yk_internal model_assets* model; 
+yk_internal model_assets *model;
 
 void ykr_load_mesh_cleanup()
 {
@@ -69,30 +68,30 @@ void ykr_load_mesh_cleanup()
     vertex_num = 0;
     out = 0;
     _renderer = 0;
-    _cxt = 0;
     total_vertices = 0;
     total_indices = 0;
     model = 0;
-    memset(root_path, 0,ROOT_PATH_SIZE);
+    memset(root_path, 0, ROOT_PATH_SIZE);
 }
 
-void traverse_node(cgltf_node* _node)
+void traverse_node(cgltf_node *_node)
 {
 
     if (_node->mesh)
     {
 
-        cgltf_mesh* _mesh = _node->mesh;
+        cgltf_mesh *_mesh = _node->mesh;
         mesh_asset asset = {};
         asset.name = _mesh->name;
         asset.surface_count = _mesh->primitives_count;
+        model->surface_count += _mesh->primitives_count;
         index_num = 0;
         vertex_num = 0;
 
         for (u32 j = 0; j < _mesh->primitives_count; j++)
         {
-            cgltf_primitive* p = &_mesh->primitives[j];
-            
+            cgltf_primitive *p = &_mesh->primitives[j];
+
             if (p->type != cgltf_primitive_type_triangles)
             {
                 printf("%d\n", p->type);
@@ -106,15 +105,15 @@ void traverse_node(cgltf_node* _node)
 
             geo_surface surface = {};
 
-            cgltf_accessor* index_attrib = p->indices;
+            cgltf_accessor *index_attrib = p->indices;
 
-            surface.start = index_num;;
+            surface.start = index_num;
+            
             surface.count = index_attrib->count;
 
             size_t init_vtx = vertex_num;
 
-
-            //indices
+            // indices
 
             {
 
@@ -124,26 +123,25 @@ void traverse_node(cgltf_node* _node)
 
                     indices[k + index_num] = _index + init_vtx;
 
-                    //here
+                    // here
                 }
 
                 index_num += index_attrib->count;
             }
 
-            //attributes
-            //     1. Vertex
-            //     2. normals
-            //     3. colors
-            //     4. uv
+            // attributes
+            //      1. Vertex
+            //      2. normals
+            //      3. colors
+            //      4. uv
             {
                 for (u32 k = 0; k < p->attributes_count; k++)
                 {
-                    cgltf_attribute* attrib = &p->attributes[k];
-
+                    cgltf_attribute *attrib = &p->attributes[k];
 
                     if (attrib->type == cgltf_attribute_type_position)
                     {
-                        cgltf_accessor* vert_attrib = attrib->data;
+                        cgltf_accessor *vert_attrib = attrib->data;
                         vertex_num += attrib->data->count;
                         // vertices.reserve(attrib->data->count);
                         for (u32 l = 0; l < attrib->data->count; l++)
@@ -156,65 +154,59 @@ void traverse_node(cgltf_node* _node)
                                 printf("q");
                                 exit(69);
                             }
-                            //bleh bleh bleh
-                            //     -vampires
+                            // bleh bleh bleh
+                            //      -vampires
 
                             vertices[l + init_vtx].pos.x = _vertices[0];
                             vertices[l + init_vtx].pos.y = _vertices[1];
                             vertices[l + init_vtx].pos.z = _vertices[2];
 
-                            //yk_memory_arena_insert(&vertex_arena, sizeof(YkVertex), l + init_vtx, &_v);
+                            // yk_memory_arena_insert(&vertex_arena, sizeof(YkVertex), l + init_vtx, &_v);
 
-
-                            //Material colors
+                            // Material colors
 #if material_color
                             if (p->material)
                             {
                                 if (p->material->has_pbr_metallic_roughness)
                                 {
-                                    cgltf_material* _mat = p->material;
-                                    f32* base_color_factor = _mat->pbr_metallic_roughness.base_color_factor;
+                                    cgltf_material *_mat = p->material;
+                                    f32 *base_color_factor = _mat->pbr_metallic_roughness.base_color_factor;
                                     f32 red = base_color_factor[0];
                                     f32 green = base_color_factor[1];
                                     f32 blue = base_color_factor[2];
                                     f32 alpha = base_color_factor[3];
-                                    vertices[l + init_vtx].color = v4{ red, green, blue, alpha };
+                                    vertices[l + init_vtx].color = v4{red, green, blue, alpha};
                                 }
                             }
 #endif
-
                         }
-
-
                     }
 
                     if (attrib->type == cgltf_attribute_type_normal)
                     {
-                        cgltf_accessor* norm_attrib = attrib->data;
+                        cgltf_accessor *norm_attrib = attrib->data;
 
                         for (u32 l = 0; l < norm_attrib->count; l++)
                         {
                             f32 _norm[3] = {};
                             cgltf_accessor_read_float(norm_attrib, l, _norm, sizeof(f32));
 
-                            //I don't say bleh bleh bleh
-                            //             -Adam Sandler
+                            // I don't say bleh bleh bleh
+                            //              -Adam Sandler
 
                             vertices[l + init_vtx].normal.x = _norm[0];
                             vertices[l + init_vtx].normal.y = _norm[1];
                             vertices[l + init_vtx].normal.z = _norm[2];
 
 #if debug_color
-                            vertices[l + init_vtx].color = v4{ _norm[0], _norm[1], _norm[2], 1 };
-#endif                     
-
-
+                            vertices[l + init_vtx].color = v4{_norm[0], _norm[1], _norm[2], 1};
+#endif
                         }
                     }
 
                     if (attrib->type == cgltf_attribute_type_color)
                     {
-                        cgltf_accessor* color_attrib = attrib->data;
+                        cgltf_accessor *color_attrib = attrib->data;
 
                         for (u32 l = 0; l < color_attrib->count; l++)
                         {
@@ -225,14 +217,13 @@ void traverse_node(cgltf_node* _node)
                             f32 blue = _color[2];
                             f32 alpha = _color[3];
 
-                            vertices[l + init_vtx].color = v4{ red, green, blue, alpha };
+                            vertices[l + init_vtx].color = v4{red, green, blue, alpha};
                         }
-
                     }
 
                     if (attrib->type == cgltf_attribute_type_texcoord)
                     {
-                        cgltf_accessor* uv_attrib = attrib->data;
+                        cgltf_accessor *uv_attrib = attrib->data;
                         if (attrib->index == 0)
                         {
                             for (u32 l = 0; l < uv_attrib->count; l++)
@@ -244,56 +235,46 @@ void traverse_node(cgltf_node* _node)
                                 vertices[l + init_vtx].uv_y = _uv[1];
                             }
                         }
-
                     }
-
-
                 }
             }
-            
 
-            cgltf_material* material = p->material;
+            cgltf_material *material = p->material;
 
             if (material->has_pbr_metallic_roughness)
             {
-                cgltf_texture_view* base_view = &material->pbr_metallic_roughness.base_color_texture;
+                cgltf_texture_view *base_view = &material->pbr_metallic_roughness.base_color_texture;
                 if (base_view->texture)
                 {
                     size_t texture_count = arena_count(_renderer->textures, texture_asset);
                     char fullpath[ROOT_PATH_SIZE] = {};
-                    join_paths(root_path, base_view->texture->image->uri,fullpath);
-        
+                    join_paths(root_path, base_view->texture->image->uri, fullpath);
+
                     u64 hash = djb2_hash(fullpath);
-                    
-                    texture_asset* ass = (texture_asset*)_renderer->textures.base;
-  
-                    for(u32 k = 0; k < texture_count; k ++)
+
+                    texture_asset *ass = (texture_asset *)_renderer->textures.base;
+
+                    for (u32 k = 0; k < texture_count; k++)
                     {
-                        if(ass[k].id == hash)
+                        if (ass[k].id == hash)
                         {
                             surface.texture_id = hash;
                             break;
-//                            printf("%llu\n",hash);
+                            //                            printf("%llu\n",hash);
                         }
-                        
                     }
-                    
-                    //asset.image = ykr_load_textures(_renderer, fullpath);
-                    
-                    //printf("%s\n", asset.base_texture_path);
+
+                    // asset.image = ykr_load_textures(_renderer, fullpath);
+
+                    // printf("%s\n", asset.base_texture_path);
                 }
                 else
                 {
-                   // asset.image = ykr_load_textures(_renderer, "res/textures/transparent.png");
+                    // asset.image = ykr_load_textures(_renderer, "res/textures/transparent.png");
                 }
-                
             }
-            
-            model->surface_count ++;            
-            arena_push(model->surfaces,geo_surface, surface);
 
-            _cxt->total_surfaces++;
-
+            arena_push(model->surfaces, geo_surface, surface);
         }
         f32 mat[16] = {};
         cgltf_node_transform_world(_node, mat);
@@ -308,41 +289,32 @@ void traverse_node(cgltf_node* _node)
 
         asset.buffer = ykr_upload_mesh(_renderer, vertices, vertex_num, indices, index_num);
 
-        arena_push(model->meshes,mesh_asset,asset);
+        arena_push(model->meshes, mesh_asset, asset);
 
         total_indices += index_num;
         total_vertices += vertex_num;
-
-        _cxt->total_meshes++;
-
     }
-
-
 
     for (u32 _node_index = 0; _node_index < _node->children_count; _node_index++)
     {
-        cgltf_node* __node = _node->children[_node_index];
+        cgltf_node *__node = _node->children[_node_index];
         traverse_node(__node);
     }
-
-
 }
 
-void ykr_load_mesh(YkRenderer* renderer, mesh_loader_context* cxt, const char* filepath, YkMemoryArena* scratch, model_assets* inmodel)
+void ykr_load_mesh(YkRenderer *renderer, const char *filepath, load_mesh_scratch_arena* scratch, model_assets *inmodel)
 {
     ykr_load_mesh_cleanup();
 
-    //feel free to suggest better method
+    // feel free to suggest better method
     model = inmodel;
     strcpy(root_path, filepath);
 
     out = 0;
     cgltf_options options = {};
-    cgltf_data* data = 0;
+    cgltf_data *data = 0;
 
     _renderer = renderer;
-
-    _cxt = cxt;
 
     if (cgltf_parse_file(&options, filepath, &data) == cgltf_result_success)
     {
@@ -353,80 +325,69 @@ void ykr_load_mesh(YkRenderer* renderer, mesh_loader_context* cxt, const char* f
         }
 
         model->mesh_count += data->meshes_count;
-        
-        arena_push(model->per_model,size_t,data->meshes_count);
-        
-        for(u32 i = 0; i < data->textures_count; i ++)
+
+        arena_push(model->per_model, size_t, data->meshes_count);
+
+        for (u32 i = 0; i < data->textures_count; i++)
         {
             char fullpath[ROOT_PATH_SIZE] = {};
-            join_paths(root_path, data->textures[i].image->uri,fullpath);
+            join_paths(root_path, data->textures[i].image->uri, fullpath);
             printf("%s\n", fullpath);
-            
-            texture_asset texture = ykr_load_textures(renderer,fullpath);
+
+            texture_asset texture = ykr_load_textures(renderer, fullpath);
             texture.id = djb2_hash(fullpath);
             texture.name = data->textures[i].image->name;
-            arena_push(renderer->textures,texture_asset, texture);
-
+            arena_push(renderer->textures, texture_asset, texture);
         }
-         
-/*
-        for(u32 i = 0; i < data->textures_count; i ++)
-        {
-          
-            printf("%llu\n", view[i].id);
 
-        }
-*/
-        indices = (u32*)(scratch->base);
-        vertices = (YkVertex*)((u8*)indices + scratch->size / 2);
-        
+        /*
+                for(u32 i = 0; i < data->textures_count; i ++)
+                {
 
-        // Maybe have two arenas? So I can actually make use of the "used" part?
-        // Right now I partition this arena in part_ratio : 1
+                    printf("%llu\n", view[i].id);
+
+                }
+        */
         
-        
-    //    out = (mesh_asset*)(perm->base + _cxt->total_meshes * sizeof(mesh_asset));
-      //  surfaces = (geo_surface*)out->surfaces.base;
-     //   surfaces = (geo_surface*)((u8*)out + ( perm->size - perm->size / part_ratio) + _cxt->total_surfaces * sizeof(geo_surface));
-        
+        indices = (u32*)(scratch->indices.base);
+        vertices = (YkVertex *)(scratch->vertices.base);
+
         printf("%s\n", filepath);
         for (u32 _scene_index = 0; _scene_index < data->scenes_count; _scene_index++)
         {
 
-            cgltf_scene* _scene = &data->scenes[_scene_index];
+            cgltf_scene *_scene = &data->scenes[_scene_index];
 
             for (u32 _node_index = 0; _node_index < _scene->nodes_count; _node_index++)
             {
-                cgltf_node* _node = _scene->nodes[_node_index];
+                cgltf_node *_node = _scene->nodes[_node_index];
 
                 traverse_node(_node);
             }
-
-
         }
-
     }
 
-    //a bit pointless since I am using the same arena.
-    //Maybe I can have an array of used and available pairs?
+    scratch->indices.used += sizeof(u32) * total_indices;
+    scratch->vertices.used += sizeof(YkVertex) * total_vertices;
 
+    // a bit pointless since I am using the same arena.
+    // Maybe I can have an array of used and available pairs?
 }
 
-
-yk_internal void join_paths(const char* model_path, const char* texture_path, char* joined_path) 
+yk_internal void join_paths(const char *model_path, const char *texture_path, char *joined_path)
 {
 
-    const char* lastSlash = strrchr(model_path, '/');
+    const char *lastSlash = strrchr(model_path, '/');
 
-    if (lastSlash != NULL) 
+    if (lastSlash != NULL)
     {
         size_t model_len = lastSlash - model_path + 1;
 
         strncpy(joined_path, model_path, model_len);
 
         strcat(joined_path, texture_path);
-    } 
-    else 
+    }
+    else
     {
 
         printf("crash");

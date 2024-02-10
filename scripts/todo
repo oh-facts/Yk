@@ -228,7 +228,19 @@ ToDo(facts)
 
       pipeline abstraction
       desc abstraction (after implementing indexing)
-      
+
+      Ok. Model assets completely use arenas. And controling them is very simple.
+      Now I need to work on cleaning up how I hand vertices and indices (use 2 arenas)
+      and clean up the model load file properly. It should look impeccable. My naming scheme
+      for that file has gotten terrible. Also documenting what I did might help future me.
+
+      Need to work on descr sets next, and then "render models", which will contain model
+      assets that were asked to be rendered. My model assets struct just holds all models
+      loaded by the engine. I want to render whatever I want to render, which is not all of them.
+
+      So render models will be flattened up version of model assets and will be rebuilt everytime
+      I try to render a new model. This is significant work so I will get to it after I implement
+      the more basic things properly.
 
 2. vertex colors
 3. glb files texture parsing

@@ -2,10 +2,10 @@
 #define YKR_MODEL_LOADER_H
 #include <renderer/ykr_common.h>
 
-struct mesh_loader_context
+struct load_mesh_scratch_arena
 {
-   size_t total_meshes;
-   size_t total_surfaces;
+    YkMemoryArena vertices;
+    YkMemoryArena indices;
 };
 
 /*
@@ -14,7 +14,7 @@ struct mesh_loader_context
 	out_num_meshes stores the 
 	number of meshes.
 */
-void ykr_load_mesh(YkRenderer* renderer, mesh_loader_context* cxt, const char* filepath, YkMemoryArena* scratch, model_assets* model);
+void ykr_load_mesh(YkRenderer* renderer,  const char* filepath, load_mesh_scratch_arena* scratch, model_assets* model);
 
 /*
 	Clear mesh loading context. Uses local static variables to make mesh loading non-convulated

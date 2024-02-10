@@ -16,6 +16,7 @@ void yk_memory_arena_clean_reset(YkMemoryArena* arena)
 
 YkMemoryArena yk_memory_sub_arena(YkMemoryArena* arena, size_t size)
 {
+	Assert(arena->size - arena->used >= size, "out of space");
 	YkMemoryArena out = {};
 	out.base = (u8*)arena->base + arena->used;
 	arena->used += size;

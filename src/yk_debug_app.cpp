@@ -92,7 +92,10 @@ YK_API void _debug_app_start(struct YkDebugAppState *self)
     yk_renderer_innit(&self->ren, &self->window);
 
     size_t model_load_size = Gigabytes(1);
-    YkMemoryArena scratch = yk_memory_sub_arena(&self->engine_memory.temp_storage, model_load_size);
+
+    load_mesh_scratch_arena scratch = {};
+    scratch.indices = yk_memory_sub_arena(&self->engine_memory.temp_storage, model_load_size / 2);
+    scratch.vertices = yk_memory_sub_arena(&self->engine_memory.temp_storage, model_load_size / 2);
 
     size_t model_load_temp = Megabytes(1);
     self->ren.model.meshes = yk_memory_sub_arena(&self->engine_memory.perm_storage, model_load_temp);
@@ -112,7 +115,7 @@ YK_API void _debug_app_start(struct YkDebugAppState *self)
 
     for (u32 i = 0; i < obj_count; i++)
     {
-        ykr_load_mesh(&self->ren, &self->cxt, asset_paths[i], &scratch, &self->ren.model);
+        ykr_load_mesh(&self->ren, asset_paths[i], &scratch, &self->ren.model);
     }
     yk_memory_arena_clean_reset(&self->engine_memory.temp_storage);
 
