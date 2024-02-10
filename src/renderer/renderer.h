@@ -38,6 +38,7 @@ struct yk_frame_data
 	YkBuffer scene_ubo;
 	VkDescriptorSet scene_set;
 
+	YkBuffer* mesh_color_buffer;
 	YkBuffer* mesh_buffers;
 	VkDescriptorSet* mesh_sets;
 };

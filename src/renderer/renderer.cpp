@@ -523,7 +523,7 @@ void scene_data_destroy(YkRenderer *renderer)
     }
 }
 
-void mesh_desc_data_write(VkDevice device, VkBuffer buffer, VkImageView view, VkSampler sampler, VkDescriptorSet set)
+void mesh_desc_data_write(VkDevice device, VkBuffer buffer, VkBuffer color, VkImageView view, VkSampler sampler, VkDescriptorSet set)
 {
     VkDescriptorBufferInfo buffer_info = {};
     buffer_info.buffer = buffer;
@@ -535,7 +535,12 @@ void mesh_desc_data_write(VkDevice device, VkBuffer buffer, VkImageView view, Vk
     img_info.imageView = view;
     img_info.sampler = sampler;
 
-    VkWriteDescriptorSet writes[2] = {};
+    VkDescriptorBufferInfo color_buffer_info = {};
+    color_buffer_info.buffer = color;
+    color_buffer_info.offset = 0;
+    color_buffer_info.range = sizeof(v4);
+
+    VkWriteDescriptorSet writes[3] = {};
     writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     writes[0].dstSet = set;
     writes[0].dstBinding = 0;
@@ -552,12 +557,20 @@ void mesh_desc_data_write(VkDevice device, VkBuffer buffer, VkImageView view, Vk
     writes[1].descriptorCount = 1;
     writes[1].pImageInfo = &img_info;
 
-    vkUpdateDescriptorSets(device, 2, writes, 0, 0);
+    writes[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    writes[2].dstSet = set;
+    writes[2].dstBinding = 2;
+    writes[2].dstArrayElement = 0;
+    writes[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    writes[2].descriptorCount = 1;
+    writes[2].pBufferInfo = &color_buffer_info;
+
+    vkUpdateDescriptorSets(device, 3, writes, 0, 0);
 }
 
 void mesh_desc_data_innit(YkRenderer *renderer)
 {
-    VkDescriptorSetLayoutBinding bindings[2] = {};
+    VkDescriptorSetLayoutBinding bindings[3] = {};
     bindings[0].binding = 0;
     bindings[0].descriptorCount = 1;
     bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -568,19 +581,27 @@ void mesh_desc_data_innit(YkRenderer *renderer)
     bindings[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     bindings[1].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    ykr_desc_layout_innit(renderer->device, bindings, 2, &renderer->mesh_desc_layout);
+    bindings[2].binding = 2;
+    bindings[2].descriptorCount = 1;
+    bindings[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    bindings[2].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    ykr_desc_layout_innit(renderer->device, bindings, 3, &renderer->mesh_desc_layout);
 
     u32 total_surface_count = renderer->model.surface_count;
     u32 total_mesh_count = renderer->model.mesh_count;
 
-    VkDescriptorPoolSize sizes[2] = {};
+    VkDescriptorPoolSize sizes[3] = {};
     sizes[0].descriptorCount = total_surface_count * MAX_FRAMES_IN_FLIGHT;
     sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 
     sizes[1].descriptorCount = total_surface_count * MAX_FRAMES_IN_FLIGHT;
     sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 
-    ykr_desc_pool_innit(renderer->device, total_surface_count * MAX_FRAMES_IN_FLIGHT, sizes, 2, &renderer->mesh_desc_pool);
+    sizes[2].descriptorCount = total_surface_count * MAX_FRAMES_IN_FLIGHT;
+    sizes[2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+
+    ykr_desc_pool_innit(renderer->device, total_surface_count * MAX_FRAMES_IN_FLIGHT, sizes, 3, &renderer->mesh_desc_pool);
 
     renderer->trans_tx = ykr_load_textures(renderer, "res/textures/transparent.png");
 
@@ -591,11 +612,15 @@ void mesh_desc_data_innit(YkRenderer *renderer)
     {
         // do in arena
         renderer->frame_data[i].mesh_buffers = (YkBuffer *)malloc(sizeof(YkBuffer) * total_surface_count);
+        renderer->frame_data[i].mesh_color_buffer = (YkBuffer *)malloc(sizeof(YkBuffer) * total_surface_count);
+
         renderer->frame_data[i].mesh_sets = (VkDescriptorSet *)malloc(sizeof(VkDescriptorSet) * total_surface_count);
 
         for (u32 j = 0; j < total_surface_count; j++)
         {
             renderer->frame_data[i].mesh_buffers[j] = ykr_create_buffer(renderer->vma_allocator, sizeof(object_data_ubo), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+            renderer->frame_data[i].mesh_color_buffer[j] = ykr_create_buffer(renderer->vma_allocator, sizeof(v4), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
             desc_set_innit(renderer->device, &renderer->frame_data[i].mesh_sets[j], renderer->mesh_desc_pool, &renderer->mesh_desc_layout);
         }
 
@@ -608,9 +633,10 @@ void mesh_desc_data_innit(YkRenderer *renderer)
             {
                 texture_asset *_tex = &arena_index(renderer->textures, texture_asset, k);
 
-                if (_tex->id == _surf->texture_id)
+                if (_tex->id == _surf->material.texture_id)
                 {
                     mesh_desc_data_write(renderer->device, renderer->frame_data[i].mesh_buffers[_s].buffer,
+                                         renderer->frame_data[i].mesh_color_buffer[_s].buffer,
                                          _tex->image.imageView, _tex->sampler, renderer->frame_data[i].mesh_sets[_s]);
                     found = true;
                     break;
@@ -619,7 +645,9 @@ void mesh_desc_data_innit(YkRenderer *renderer)
             if (!found)
             {
                 mesh_desc_data_write(renderer->device, renderer->frame_data[i].mesh_buffers[_s].buffer,
-                                     renderer->trans_tx.image.imageView, renderer->trans_tx.sampler, renderer->frame_data[i].mesh_sets[_s]);
+                                     renderer->frame_data[i].mesh_color_buffer[_s].buffer,
+                                         renderer->trans_tx.image.imageView,
+                                     renderer->trans_tx.sampler, renderer->frame_data[i].mesh_sets[_s]);
             }
         }
     }
@@ -634,13 +662,16 @@ void mesh_desc_data_destroy(YkRenderer *renderer)
     // size_t mesh_count = arena_count(renderer->test_meshes, mesh_asset);
 
     u32 surface_count = renderer->model.surface_count;
-   
+
     for (u32 i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
         for (u32 j = 0; j < surface_count; j++)
         {
             vmaDestroyBuffer(renderer->vma_allocator, renderer->frame_data[i].mesh_buffers[j].buffer, renderer->frame_data[i].mesh_buffers[j].alloc);
+            vmaDestroyBuffer(renderer->vma_allocator, renderer->frame_data[i].mesh_color_buffer[j].buffer, renderer->frame_data[i].mesh_color_buffer[j].alloc);
         }
+
+        free(renderer->frame_data[i].mesh_color_buffer);
         free(renderer->frame_data[i].mesh_buffers);
         free(renderer->frame_data[i].mesh_sets);
     }
@@ -783,15 +814,15 @@ void yk_renderer_draw_triangle(YkRenderer *renderer, VkCommandBuffer cmd)
 
         size_t mesh_index = 0;
         u32 eep = 0;
-        for (size_t j = 0; j < renderer->model.surface_count; j++,eep++)
+        for (size_t j = 0; j < renderer->model.surface_count; j++, eep++)
         {
-            
+
             mesh_asset *mesh = &arena_index(renderer->model.meshes, mesh_asset, mesh_index);
             geo_surface *surf = &arena_index(renderer->model.surfaces, geo_surface, j);
 
-            if(eep >= mesh->surface_count - 1)
+            if (eep >= mesh->surface_count - 1)
             {
-                mesh_index ++;
+                mesh_index++;
                 eep = 0;
             }
 
@@ -812,7 +843,10 @@ void yk_renderer_draw_triangle(YkRenderer *renderer, VkCommandBuffer cmd)
 
             object_data_ubo obj_ubo = {};
             obj_ubo.model = model;
+
+            v4 mat_color = surf->material.base_color;
             ubo_update(renderer->vma_allocator, &renderer->frame_data[renderer->current_frame].mesh_buffers[j], &obj_ubo, sizeof(object_data_ubo));
+            ubo_update(renderer->vma_allocator, &renderer->frame_data[renderer->current_frame].mesh_color_buffer[j], &mat_color, sizeof(v4));
 
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer->mesh_pl);
             vkCmdSetViewport(cmd, 0, 1, &renderer->viewport);
@@ -895,7 +929,7 @@ void yk_free_renderer(YkRenderer *renderer)
     vkDestroyFence(renderer->device, renderer->imm_fence, 0);
 
     // ToDo(facts): For the love of god, make a function to destroy all buffers
-    
+
     size_t mesh_count = renderer->model.mesh_count;
 
     for (u32 i = 0; i < mesh_count; i++)

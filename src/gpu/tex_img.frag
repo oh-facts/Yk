@@ -11,8 +11,6 @@ layout (location = 3) in vec3 fragPos;
 
 layout (location = 0) out vec4 outFragColor;
 
-layout(set = 1, binding = 1) uniform sampler2D displayTexture;
-
 void main() 
 {
 	vec3 ambient = 0.1 * lightColor.xyz;

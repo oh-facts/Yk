@@ -38,7 +38,7 @@ void main()
 
 	//output data
 	gl_Position = PushConstants.render_matrix *vec4(v.position, 1.0f);
-	outColor = v.color.xyz;
+	outColor = v.color.xyz * color.xyz;
 	outUV.x = v.uv_x;
 	outUV.y = v.uv_y;
 	normal = mat3(transpose(inverse(model_mat))) * v.normal; 

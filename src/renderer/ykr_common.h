@@ -4,9 +4,9 @@
 /*
 	ToDo(facts): Dont use Vk as prefix. Comes off as vulkan provided macro
 */
-#define VkDEBUG 1
+#define VkDEBUG 0
 
-#define VK_USE_VALIDATION_LAYERS 1
+#define VK_USE_VALIDATION_LAYERS 0
 #define VK_EXT_PRINT_DEBUG 0
 #define VK_PRINT_SUCCESS 0
 #define LOG_DEVICE_DETAILS 1
@@ -59,12 +59,17 @@ struct YkDrawPushConstants
 	VkDeviceAddress v_buffer;
 };
 
+struct material
+{
+	u32 texture_id;
+	v4 base_color;
+};
 
 struct geo_surface
 {
 	u32 start;
 	u32 count;
-	u32 texture_id;
+	material material;
 };
 
 struct texture_asset
@@ -73,11 +78,6 @@ struct texture_asset
 	VkSampler sampler;
 	u64 id;
 	const char* name;
-};
-
-struct material
-{
-	texture_asset base;
 };
 
 

@@ -192,7 +192,9 @@ void traverse_node(cgltf_node *_node)
                                     f32 green = base_color_factor[1];
                                     f32 blue = base_color_factor[2];
                                     f32 alpha = base_color_factor[3];
-                                    m_vertices[k + init_vtx].color = v4{red, green, blue, alpha};
+
+                                    surface.material.base_color = v4{red, green, blue, alpha};
+
                                 }
                             }
 #endif
@@ -277,7 +279,7 @@ void traverse_node(cgltf_node *_node)
                     {
                         if (ass[j].id == hash)
                         {
-                            surface.texture_id = hash;
+                            surface.material.texture_id = hash;
                             // printf("%llu\n",hash);
                             break;
                         }
