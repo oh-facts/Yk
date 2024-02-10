@@ -244,6 +244,9 @@ ToDo(facts)
       the more basic things properly.
 
 2. vertex colors
+   I got it to work, but then it broke normal colors. I need to look up how this is done.
+   There are 3 moving parts. Vertex colors. Material color. Texture color. When one is absent,
+   it is black. Because it is black, multiplying makes it black. There is surely a better way.  
 3. glb files texture parsing
 4. shader compiling py script
       py * -r 

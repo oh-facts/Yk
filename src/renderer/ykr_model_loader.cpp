@@ -307,8 +307,8 @@ void traverse_node(cgltf_node *_node)
         m_total_indices += m_index_num;
         m_total_vertices += m_vertex_num;
 
-        // yk_memory_arena_clean_reset(&m_scratch->indices);
-        // yk_memory_arena_clean_reset(&m_scratch->vertices);
+        yk_memory_arena_clean_reset(&m_scratch->indices);
+        yk_memory_arena_clean_reset(&m_scratch->vertices);
     }
 
     for (u32 _node_index = 0; _node_index < _node->children_count; _node_index++)

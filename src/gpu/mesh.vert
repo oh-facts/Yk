@@ -5,11 +5,11 @@
 
 #include "scene_layout.glsl"
 
-layout (location = 0) out vec3 outColor;
+layout (location = 0) out vec4 outColor;
 layout (location = 1) out vec2 outUV;
 layout (location = 2) out vec3 normal;
 layout (location = 3) out vec3 fragPos;
-
+layout (location = 4) out vec3 matColor;
 
 struct Vertex {
 
@@ -38,11 +38,11 @@ void main()
 
 	//output data
 	gl_Position = PushConstants.render_matrix *vec4(v.position, 1.0f);
-	outColor = v.color.xyz * color.xyz;
+	outColor = v.color;
 	outUV.x = v.uv_x;
 	outUV.y = v.uv_y;
 	normal = mat3(transpose(inverse(model_mat))) * v.normal; 
-
+	matColor = color.xyz;
 	fragPos = vec3((model_mat * vec4(v.position, 1.0f)));
 
 }

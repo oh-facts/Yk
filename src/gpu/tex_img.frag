@@ -4,10 +4,12 @@
 
 #include "scene_layout.glsl"
 
-layout (location = 0) in vec3 inColor;
+layout (location = 0) in vec4 inColor;
 layout (location = 1) in vec2 inUV;
 layout (location = 2) in vec3 inNormal;
 layout (location = 3) in vec3 fragPos;
+layout (location = 4) in vec3 matColor;
+
 
 layout (location = 0) out vec4 outFragColor;
 
@@ -28,9 +30,11 @@ void main()
 
 	vec4 textureColor = texture(displayTexture, inUV);
 
-	vec3 result = (ambient + diffuse + specular) * 
-				  inColor * mix(vec3(1.0), textureColor.xyz, textureColor.a);
-	
+	vec3 result = (ambient + specular + diffuse) * textureColor.xyz * matColor;
+	if(inColor.a != 0)
+	{
+		result = result * inColor.xyz ;
+	}
 	outFragColor = vec4(result, 1.0);
 
 }
