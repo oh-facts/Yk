@@ -34,7 +34,9 @@ LPVOID base_address = 0;
 void engine_memory_innit(YkMemory *engine_memory)
 {
     size_t perm_storage_size = Megabytes(64);
-    size_t temp_storage_size = Gigabytes(1);
+
+    //bruh. fire in the sky has so so so many vertices (its vertex painted. Literally need half a gig)
+    size_t temp_storage_size = Megabytes(512);
 
     u64 total_size = perm_storage_size + temp_storage_size;
 
@@ -91,21 +93,21 @@ YK_API void _debug_app_start(struct YkDebugAppState *self)
     engine_memory_innit(&self->engine_memory);
     yk_renderer_innit(&self->ren, &self->window);
 
-    size_t model_load_size = Gigabytes(1);
+    size_t model_load_temp = Megabytes(512);
 
     load_mesh_scratch_arena scratch = {};
-    scratch.indices = yk_memory_sub_arena(&self->engine_memory.temp_storage, model_load_size / 2);
-    scratch.vertices = yk_memory_sub_arena(&self->engine_memory.temp_storage, model_load_size / 2);
+    scratch.indices = yk_memory_sub_arena(&self->engine_memory.temp_storage, model_load_temp / 2);
+    scratch.vertices = yk_memory_sub_arena(&self->engine_memory.temp_storage, model_load_temp / 2);
 
-    size_t model_load_temp = Megabytes(1);
-    self->ren.model.meshes = yk_memory_sub_arena(&self->engine_memory.perm_storage, model_load_temp);
-    self->ren.model.surfaces = yk_memory_sub_arena(&self->engine_memory.perm_storage, model_load_temp);
-    self->ren.model.per_model = yk_memory_sub_arena(&self->engine_memory.perm_storage, model_load_temp);
+    size_t model_load_perm = Megabytes(1);
+    self->ren.model.meshes = yk_memory_sub_arena(&self->engine_memory.perm_storage, model_load_perm);
+    self->ren.model.surfaces = yk_memory_sub_arena(&self->engine_memory.perm_storage, model_load_perm);
+    self->ren.model.per_model = yk_memory_sub_arena(&self->engine_memory.perm_storage, model_load_perm);
 
     self->ren.textures = yk_memory_sub_arena(&self->engine_memory.perm_storage, Megabytes(1));
 
     const char *asset_paths[obj_count] = {
-        sponza,
+        fits,
         shinchan,
         twob,
         bill_2,
@@ -116,10 +118,14 @@ YK_API void _debug_app_start(struct YkDebugAppState *self)
     for (u32 i = 0; i < obj_count; i++)
     {
         ykr_load_mesh(&self->ren, asset_paths[i], &scratch, &self->ren.model);
+//        yk_memory_arena_clean_reset(&self->engine_memory.temp_storage);
+//        yk_memory_arena_clean_reset(&self->engine_memory.temp_storage);
     }
-    yk_memory_arena_clean_reset(&self->engine_memory.temp_storage);
 
-    set_obj_pos(&self->ren.model, 0, glm::vec3{-35.51f, -30.31f, -10.13f}, 0, glm::vec3(1), glm::vec3(1));
+    //yk_memory_arena_clean_reset(&self->engine_memory.temp_storage);
+    self->engine_memory.temp_storage.used = 0;
+
+    //set_obj_pos(&self->ren.model, 0, glm::vec3{-35.51f, -30.31f, -10.13f}, 0, glm::vec3(1), glm::vec3(1));
     set_obj_pos(&self->ren.model, 1, glm::vec3(-32, -31, -9), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
     // set_obj_pos(&arena_index(self->ren.test_meshes,mesh_asset, size_sum_from(sizes,1)), sizes[2], glm::vec3(-32, -31.1, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(3.f));
     set_obj_pos(&self->ren.model, 2, glm::vec3(-32, -31.1, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.05f));
