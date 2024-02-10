@@ -107,7 +107,7 @@ YK_API void _debug_app_start(struct YkDebugAppState *self)
     self->ren.textures = yk_memory_sub_arena(&self->engine_memory.perm_storage, Megabytes(1));
 
     const char *asset_paths[obj_count] = {
-        fits,
+        room,
         shinchan,
         twob,
         bill_2,
@@ -127,7 +127,7 @@ YK_API void _debug_app_start(struct YkDebugAppState *self)
 
     //set_obj_pos(&self->ren.model, 0, glm::vec3{-35.51f, -30.31f, -10.13f}, 0, glm::vec3(1), glm::vec3(1));
     set_obj_pos(&self->ren.model, 1, glm::vec3(-32, -31, -9), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.5f));
-    // set_obj_pos(&arena_index(self->ren.test_meshes,mesh_asset, size_sum_from(sizes,1)), sizes[2], glm::vec3(-32, -31.1, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(3.f));
+    //set_obj_pos(&self->ren.model,1, glm::vec3(-32, -31.1, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(3.f));
     set_obj_pos(&self->ren.model, 2, glm::vec3(-32, -31.1, -12), 90 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.05f));
     set_obj_pos(&self->ren.model, 3, glm::vec3(0.5f, 1.54f, -0.01f), 120 * DEG_TO_RAD, glm::vec3(0, 1, 0), glm::vec3(0.08f));
     set_obj_pos(&self->ren.model, 4, glm::vec3(-28, -30.9f, -8.3f), -90 * DEG_TO_RAD, glm::vec3(1, 0, 0), glm::vec3(0.025f));

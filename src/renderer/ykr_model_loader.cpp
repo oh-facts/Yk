@@ -286,7 +286,7 @@ void traverse_node(cgltf_node *_node)
                     }
                 }
             }
-
+            // band aid fix. need to load materials properly
             arena_push(m_model->surfaces, geo_surface, surface);
         }
         f32 mat[16] = {};
