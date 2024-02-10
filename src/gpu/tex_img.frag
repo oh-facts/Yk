@@ -30,11 +30,9 @@ void main()
 
 	vec4 textureColor = texture(displayTexture, inUV);
 
-	vec3 result = (ambient + specular + diffuse) * textureColor.xyz * matColor;
-	if(inColor.a != 0)
-	{
-		result = result * inColor.xyz ;
-	}
+vec3 result = (ambient + specular + diffuse) * textureColor.xyz * matColor;
+result *= 1.0 - inColor.a + inColor.a * inColor.xyz;
+
 	outFragColor = vec4(result, 1.0);
 
 }

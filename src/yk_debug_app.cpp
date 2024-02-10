@@ -107,7 +107,7 @@ YK_API void _debug_app_start(struct YkDebugAppState *self)
     self->ren.textures = yk_memory_sub_arena(&self->engine_memory.perm_storage, Megabytes(1));
 
     const char *asset_paths[obj_count] = {
-        room,
+        fits,
         shinchan,
         asuka_2,
         bill_2,
